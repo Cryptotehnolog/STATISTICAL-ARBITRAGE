@@ -1,0 +1,137 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# uv
+.uv/
+# uv.lock should be committed for reproducible environments
+
+# Local tool caches
+.ruff_cache/
+.kiro/skills/
+
+# Testing
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.hypothesis/
+.pytest_cache/
+.pytest-tmp/
+htmlcov/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Data files
+data/
+*.parquet
+*.csv
+*.h5
+*.hdf5
+*.db
+*.sqlite
+*.sqlite3
+
+# LightRAG and vector stores
+lightrag/
+vector_store/
+*.faiss
+*.index
+
+# Reports and outputs
+reports/
+outputs/
+logs/
+*.html
+*.pdf
+
+# Secrets and credentials
+.env
+.env.local
+.env.*.local
+secrets/
+*.key
+*.pem
+*.crt
+credentials.json
+
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# Profiling
+*.prof
+*.lprof
+
+# Backups
+*.backup
+*.old
