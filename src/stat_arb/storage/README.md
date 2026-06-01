@@ -228,5 +228,5 @@ This module implements:
 
 - The database uses SQLite by default for v1 MVP (minimal setup, zero configuration)
 - Foreign key constraints are enabled automatically
-- All timestamps use UTC (note: `datetime.utcnow()` is deprecated, will be updated to `datetime.now(datetime.UTC)` in future)
+- All generated timestamps use UTC. The current SQLite schema stores them as naive UTC datetimes for compatibility.
 - The database can be upgraded to PostgreSQL for production use without code changes

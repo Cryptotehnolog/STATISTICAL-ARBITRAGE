@@ -6,7 +6,7 @@ Tests the SQLAlchemy ORM models for the Structured Registry.
 Requirements: 9.1-9.11, 27.14
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from uuid import uuid4
 
 import pytest
@@ -29,14 +29,14 @@ from stat_arb.storage.models import (
 def engine():
     """Create an in-memory SQLite database for testing."""
     engine = create_engine("sqlite:///:memory:", echo=False)
-    
+
     # Manually enable foreign keys for this connection
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
-    
+
     Base.metadata.create_all(engine)
     return engine
 
@@ -363,10 +363,10 @@ def test_critic_review_creation(session: Session):
 
     session.add_all([hypothesis, dataset_a, dataset_b])
     session.flush()  # Flush to ensure these are inserted first
-    
+
     session.add(test_result)
     session.flush()  # Flush to ensure test_result is inserted before backtest
-    
+
     session.add(backtest)
     session.commit()
 

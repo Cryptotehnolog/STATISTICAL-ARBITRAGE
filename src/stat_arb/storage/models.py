@@ -12,8 +12,7 @@ This module defines SQLAlchemy ORM models for all entities in the system:
 Requirements: 9.1-9.11, 27.14
 """
 
-from datetime import datetime
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -25,9 +24,13 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    create_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+def _utc_now() -> datetime:
+    """Return a naive UTC timestamp for the current SQLite schema."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class Base(DeclarativeBase):
@@ -62,9 +65,7 @@ class Hypothesis(Base):
     )  # "llm_generated", "rule_based", "user_provided"
 
     # Novelty tracking
-    similar_hypotheses: Mapped[Optional[str]] = mapped_column(
-        JSON, nullable=True
-    )  # List of UUIDs
+    similar_hypotheses: Mapped[str | None] = mapped_column(JSON, nullable=True)  # List of UUIDs
     novelty_score: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
 
     # Status tracking
@@ -73,9 +74,7 @@ class Hypothesis(Base):
     )  # "new", "testing", "rejected", "approved", "quarantined"
 
     # Metadata
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)
     created_by: Mapped[str] = mapped_column(
         String(100), nullable=False
     )  # "hypothesis_agent" or user ID
@@ -116,19 +115,15 @@ class Dataset(Base):
     bar_count: Mapped[int] = mapped_column(Integer, nullable=False)
     missing_bars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     outlier_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    quality_score: Mapped[float] = mapped_column(
-        Float, nullable=False, default=1.0
-    )  # 0.0-1.0
+    quality_score: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)  # 0.0-1.0
 
     # Provenance
     adjustment_mode: Mapped[str] = mapped_column(
         String(20), nullable=False
     )  # "split", "dividend", "none"
-    downloaded_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
-    )
+    downloaded_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    extra_metadata: Mapped[Optional[dict]] = mapped_column(
+    extra_metadata: Mapped[dict | None] = mapped_column(
         JSON, nullable=True
     )  # Timezone, exchange, etc.
 
@@ -144,9 +139,7 @@ class StatisticalTestResult(Base):
     __tablename__ = "statistical_test_results"
 
     # Primary key
-    test_id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid4())
-    )
+    test_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
 
     # Foreign keys
     hypothesis_id: Mapped[str] = mapped_column(
@@ -185,12 +178,10 @@ class StatisticalTestResult(Base):
 
     # Pass/fail
     passed: Mapped[bool] = mapped_column(Boolean, nullable=False, index=True)
-    rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Metadata
-    tested_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
-    )
+    tested_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)
 
 
 class BacktestResult(Base):
@@ -269,9 +260,7 @@ class BacktestResult(Base):
     baseline_sharpe: Mapped[float] = mapped_column(Float, nullable=False)
 
     # Metadata
-    tested_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
-    )
+    tested_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)
 
 
 class CriticReview(Base):
@@ -296,17 +285,15 @@ class CriticReview(Base):
 
     # Detected issues
     lookahead_bias_detected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    overfitting_indicators: Mapped[Optional[list]] = mapped_column(
+    overfitting_indicators: Mapped[list | None] = mapped_column(
         JSON, nullable=True
     )  # List of strings
-    weak_assumptions: Mapped[Optional[list]] = mapped_column(
+    weak_assumptions: Mapped[list | None] = mapped_column(JSON, nullable=True)  # List of strings
+    insufficient_testing: Mapped[list | None] = mapped_column(
         JSON, nullable=True
     )  # List of strings
-    insufficient_testing: Mapped[Optional[list]] = mapped_column(
-        JSON, nullable=True
-    )  # List of strings
-    cost_concerns: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)  # List of strings
-    operational_concerns: Mapped[Optional[list]] = mapped_column(
+    cost_concerns: Mapped[list | None] = mapped_column(JSON, nullable=True)  # List of strings
+    operational_concerns: Mapped[list | None] = mapped_column(
         JSON, nullable=True
     )  # List of strings
 
@@ -318,9 +305,7 @@ class CriticReview(Base):
     objections: Mapped[str] = mapped_column(Text, nullable=False)  # Human-readable summary
 
     # Metadata
-    reviewed_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
-    )
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)
 
 
 class Experiment(Base):
@@ -347,7 +332,7 @@ class Experiment(Base):
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="new", index=True
     )  # "new", "data_validation", "statistical_testing", "backtesting", "critic_review", "reporting", "completed"
-    current_agent: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    current_agent: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Stage completion flags
     data_quality_passed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -356,16 +341,14 @@ class Experiment(Base):
     critic_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Final decision
-    final_decision: Mapped[Optional[str]] = mapped_column(
+    final_decision: Mapped[str | None] = mapped_column(
         String(50), nullable=True, index=True
     )  # "rejected", "quarantined", "approved", "eligible_for_demo"
-    rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
-    )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     hypothesis: Mapped["Hypothesis"] = relationship("Hypothesis", back_populates="experiments")
@@ -399,9 +382,7 @@ class ReportArtifact(Base):
     format: Mapped[str] = mapped_column(String(20), nullable=False)  # "html", "pdf", "png", "json"
 
     # Metadata
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)
 
 
 # Export all models
