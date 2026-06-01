@@ -77,18 +77,54 @@ class TestLightRAGClient:
         assert len(embeddings[1]) == temp_config.embedding_dim
         assert all(isinstance(x, float) for x in embeddings[0])
 
+    def test_initialize_lightrag_uses_configured_vector_storage(
+        self, temp_config: LightRAGConfig
+    ) -> None:
+        """Test LightRAG receives the configured vector storage backend."""
+        client = LightRAGClient(temp_config)
+
+        with patch("stat_arb.memory.lightrag_client.LightRAG") as lightrag:
+            rag = client._initialize_lightrag()
+
+        assert rag == lightrag.return_value
+        _, kwargs = lightrag.call_args
+        assert kwargs["vector_storage"] == "FaissVectorDBStorage"
+        assert kwargs["vector_db_storage_cls_kwargs"] == {
+            "cosine_better_than_threshold": temp_config.cosine_threshold
+        }
+        assert kwargs["embedding_batch_num"] == temp_config.batch_size
+        assert kwargs["embedding_func_max_async"] == temp_config.max_workers
+
     def test_health_check(self, temp_config: LightRAGConfig) -> None:
-        """Test health check."""
+        """Test lightweight health check."""
+        client = LightRAGClient(temp_config)
+
+        health = client.health_check()
+
+        assert "status" in health
+        assert health["status"] in ["healthy", "degraded", "unhealthy"]
+        assert health["embedding_checked"] is False
+        assert health["embedding_model"] == temp_config.embedding_model
+        assert health["embedding_dim"] == temp_config.embedding_dim
+        assert health["vector_store"] == temp_config.vector_store
+        assert health["vector_storage_class"] == temp_config.vector_storage_class
+        assert health["chunk_size"] == temp_config.chunk_size
+        assert health["chunk_overlap"] == temp_config.chunk_overlap
+        assert client._embedding_model is None
+
+    def test_health_check_with_embedding(self, temp_config: LightRAGConfig) -> None:
+        """Test optional embedding health check."""
         client = LightRAGClient(temp_config)
 
         with patch(
             "stat_arb.memory.lightrag_client.SentenceTransformer",
             return_value=self._mock_embedding_model(temp_config.embedding_dim),
         ):
-            health = client.health_check()
+            health = client.health_check(check_embedding=True)
 
         assert "status" in health
         assert health["status"] in ["healthy", "degraded", "unhealthy"]
+        assert health["embedding_checked"] is True
         assert health["embedding_model"] == temp_config.embedding_model
         assert health["embedding_dim"] == temp_config.embedding_dim
         assert health["vector_store"] == temp_config.vector_store

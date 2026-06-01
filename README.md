@@ -29,7 +29,7 @@ This system is designed as a **staged development platform** for quantitative re
 4. **Memory from day one**: LightRAG provides long-term memory and knowledge graph
 5. **Human in the loop**: Mandatory approval gates for critical decisions
 6. **Python-first with optional Rust optimization**: Start with Python, add Rust only when profiling proves necessary
-7. **Minimal infrastructure for v1**: SQLite + embedded vector store (FAISS/Chroma)
+7. **Minimal infrastructure for v1**: SQLite + embedded vector store (FAISS/NanoVectorDB)
 
 ### Agent Architecture
 
@@ -131,6 +131,11 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
 6. **Initialize LightRAG:**
    ```bash
    uv run python -m stat_arb.scripts.init_lightrag
+   ```
+   For a heavier local verification that loads the embedding model and performs
+   an insert/query smoke test:
+   ```bash
+   uv run python -m stat_arb.scripts.init_lightrag --smoke-test
    ```
 
 ### Running the System

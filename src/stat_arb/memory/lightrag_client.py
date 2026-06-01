@@ -21,7 +21,7 @@ class LightRAGClient:
     and retrieving agent decisions, development knowledge, and research insights.
 
     Features:
-    - Embedded vector store (FAISS or Chroma) - no Docker required
+    - Embedded vector store (FAISS or NanoVectorDB) - no Docker required
     - Local sentence-transformers embeddings
     - Minimal infrastructure setup
     - Knowledge graph for relationship modeling
@@ -90,7 +90,11 @@ class LightRAGClient:
         # Note: LLM is optional for basic storage/retrieval operations
         rag = LightRAG(
             working_dir=working_dir,
+            vector_storage=self.config.vector_storage_class,
+            vector_db_storage_cls_kwargs=self.config.vector_storage_kwargs,
             embedding_func=embedding_func,
+            embedding_batch_num=self.config.batch_size,
+            embedding_func_max_async=self.config.max_workers,
             chunk_token_size=self.config.chunk_size,
             chunk_overlap_token_size=self.config.chunk_overlap,
         )
@@ -418,26 +422,28 @@ Rationale: {rationale}
         query = f"Show all information related to hypothesis {hypothesis_id}"
         return self.query(query, mode="global", top_k=10)
 
-    def health_check(self) -> dict[str, Any]:
+    def health_check(self, check_embedding: bool = False) -> dict[str, Any]:
         """Check LightRAG health and configuration.
+
+        Args:
+            check_embedding: If True, load the embedding model and encode a
+                small sample. Keep False for fast config/storage checks.
 
         Returns:
             Health check results.
         """
         try:
-            # Check embedding model
-            test_embedding = self.embedding_model.encode(["test"])
-            embedding_ok = len(test_embedding) > 0
-
             # Check storage paths
             storage_exists = self.config.storage_path.exists()
             vector_store_exists = self.config.vector_store_path.exists()
 
-            return {
-                "status": "healthy" if embedding_ok else "degraded",
+            result: dict[str, Any] = {
+                "status": "healthy" if storage_exists and vector_store_exists else "degraded",
                 "embedding_model": self.config.embedding_model,
                 "embedding_dim": self.config.embedding_dim,
+                "embedding_checked": False,
                 "vector_store": self.config.vector_store,
+                "vector_storage_class": self.config.vector_storage_class,
                 "storage_path": str(self.config.storage_path),
                 "vector_store_path": str(self.config.vector_store_path),
                 "storage_exists": storage_exists,
@@ -445,6 +451,18 @@ Rationale: {rationale}
                 "chunk_size": self.config.chunk_size,
                 "chunk_overlap": self.config.chunk_overlap,
             }
+
+            if check_embedding:
+                test_embedding = self.embedding_model.encode(["test"])
+                embedding_ok = len(test_embedding) > 0
+                result["embedding_checked"] = True
+                result["status"] = (
+                    "healthy"
+                    if embedding_ok and storage_exists and vector_store_exists
+                    else "degraded"
+                )
+
+            return result
 
         except Exception as e:
             logger.error(f"Health check failed: {e}")

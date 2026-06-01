@@ -11,7 +11,7 @@ class LightRAGConfig(BaseSettings):
     """Configuration for LightRAG with embedded vector store.
 
     This configuration supports minimal infrastructure setup using
-    embedded vector stores (FAISS or Chroma) without requiring Docker
+    embedded vector stores (FAISS or NanoVectorDB) without requiring Docker
     or separate server processes.
     """
 
@@ -23,9 +23,16 @@ class LightRAGConfig(BaseSettings):
     )
 
     # Vector store backend
-    vector_store: Literal["faiss", "chroma"] = Field(
+    vector_store: Literal["faiss", "nano"] = Field(
         default="faiss",
-        description="Vector store backend: 'faiss' or 'chroma' (both embedded)",
+        description="Vector store backend: 'faiss' or 'nano' (both embedded)",
+    )
+
+    cosine_threshold: float = Field(
+        default=0.2,
+        description="Minimum cosine similarity threshold for vector retrieval",
+        ge=0.0,
+        le=1.0,
     )
 
     # Embedding model
@@ -42,7 +49,7 @@ class LightRAGConfig(BaseSettings):
 
     vector_store_path: Path = Field(
         default=Path("./data/vector_store"),
-        description="Path for embedded vector store (FAISS index or Chroma DB)",
+        description="Path for embedded vector store metadata and indexes",
     )
 
     # Chunking configuration
@@ -81,6 +88,21 @@ class LightRAGConfig(BaseSettings):
         le=16,
     )
 
+    @property
+    def vector_storage_class(self) -> str:
+        """LightRAG vector storage class name for the configured backend."""
+        return {
+            "faiss": "FaissVectorDBStorage",
+            "nano": "NanoVectorDBStorage",
+        }[self.vector_store]
+
+    @property
+    def vector_storage_kwargs(self) -> dict[str, float]:
+        """Backend-specific LightRAG vector storage kwargs."""
+        if self.vector_store == "faiss":
+            return {"cosine_better_than_threshold": self.cosine_threshold}
+        return {}
+
     def ensure_directories(self) -> None:
         """Create storage directories if they don't exist."""
         self.storage_path.mkdir(parents=True, exist_ok=True)
@@ -95,8 +117,3 @@ class LightRAGConfig(BaseSettings):
     def faiss_metadata_path(self) -> Path:
         """Path to FAISS metadata file."""
         return self.vector_store_path / "metadata.json"
-
-    @property
-    def chroma_db_path(self) -> Path:
-        """Path to Chroma database directory."""
-        return self.vector_store_path / "chroma_db"

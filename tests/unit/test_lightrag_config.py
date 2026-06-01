@@ -20,7 +20,9 @@ class TestLightRAGConfig:
         """Test default configuration values."""
         config = LightRAGConfig()
 
-        assert config.vector_store in ["faiss", "chroma"]
+        assert config.vector_store in ["faiss", "nano"]
+        assert config.vector_storage_class == "FaissVectorDBStorage"
+        assert config.vector_storage_kwargs == {"cosine_better_than_threshold": 0.2}
         assert config.embedding_model == "sentence-transformers/all-MiniLM-L6-v2"
         assert config.chunk_size == 512
         assert config.chunk_overlap == 50
@@ -35,14 +37,16 @@ class TestLightRAGConfig:
         vector_store_path = test_dir / "vector_store"
 
         config = LightRAGConfig(
-            vector_store="chroma",
+            vector_store="nano",
             chunk_size=256,
             chunk_overlap=25,
             storage_path=storage_path,
             vector_store_path=vector_store_path,
         )
 
-        assert config.vector_store == "chroma"
+        assert config.vector_store == "nano"
+        assert config.vector_storage_class == "NanoVectorDBStorage"
+        assert config.vector_storage_kwargs == {}
         assert config.chunk_size == 256
         assert config.chunk_overlap == 25
         assert config.storage_path == storage_path
@@ -84,16 +88,19 @@ class TestLightRAGConfig:
         assert config.faiss_index_path == vector_store_path / "index.faiss"
         assert config.faiss_metadata_path == vector_store_path / "metadata.json"
 
-    def test_chroma_path(self) -> None:
-        """Test Chroma-specific path."""
-        vector_store_path = self._test_dir("chroma") / "vector_store"
+    def test_cosine_threshold_validation(self) -> None:
+        """Test cosine threshold validation."""
+        config = LightRAGConfig(cosine_threshold=0.0)
+        assert config.cosine_threshold == 0.0
 
-        config = LightRAGConfig(
-            vector_store="chroma",
-            vector_store_path=vector_store_path,
-        )
+        config = LightRAGConfig(cosine_threshold=1.0)
+        assert config.cosine_threshold == 1.0
 
-        assert config.chroma_db_path == vector_store_path / "chroma_db"
+        with pytest.raises(ValidationError):
+            LightRAGConfig(cosine_threshold=-0.1)
+
+        with pytest.raises(ValidationError):
+            LightRAGConfig(cosine_threshold=1.1)
 
     def test_chunk_size_validation(self) -> None:
         """Test chunk size validation."""

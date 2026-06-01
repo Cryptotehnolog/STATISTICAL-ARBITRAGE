@@ -9,6 +9,7 @@ Usage:
 
 import logging
 import sys
+from argparse import ArgumentParser
 
 from rich.console import Console
 from rich.panel import Panel
@@ -27,8 +28,30 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 
-def init_lightrag() -> int:
+TEST_DOCUMENT = """
+This is a test document to verify LightRAG initialization.
+
+LightRAG provides long-term memory and knowledge graph capabilities
+for the multi-agent quantitative research system. It stores:
+- Hypothesis rationale and source references
+- Statistical test summaries
+- Backtest conclusions and lessons learned
+- Critic objections and detected risks
+- Architecture decisions and rationales
+- Agent lessons learned
+- Manual notes and human decisions
+
+The system uses embedded vector stores (FAISS or NanoVectorDB) to minimize
+infrastructure requirements for the MVP.
+"""
+
+
+def init_lightrag(check_embedding: bool = False, smoke_test: bool = False) -> int:
     """Initialize LightRAG with embedded vector store.
+
+    Args:
+        check_embedding: Load the embedding model and encode a sample.
+        smoke_test: Insert and query a test document. Implies check_embedding.
 
     Returns:
         Exit code (0 for success, 1 for failure).
@@ -45,6 +68,7 @@ def init_lightrag() -> int:
         config_table.add_column("Value", style="green")
 
         config_table.add_row("Vector Store", config.vector_store)
+        config_table.add_row("Vector Storage Class", config.vector_storage_class)
         config_table.add_row("Embedding Model", config.embedding_model)
         config_table.add_row("Embedding Dimensions", str(config.embedding_dim))
         config_table.add_row("Chunk Size", f"{config.chunk_size} tokens")
@@ -70,17 +94,9 @@ def init_lightrag() -> int:
         console.print("✓ LightRAG client initialized")
         console.print()
 
-        # Load embedding model
-        console.print("[yellow]Loading embedding model...[/yellow]")
-        console.print(f"  Model: {config.embedding_model}")
-        console.print("  This may take a moment on first run...")
-        _ = client.embedding_model  # Trigger lazy loading
-        console.print("✓ Embedding model loaded")
-        console.print()
-
         # Run health check
         console.print("[yellow]Running health check...[/yellow]")
-        health = client.health_check()
+        health = client.health_check(check_embedding=check_embedding or smoke_test)
 
         health_table = Table(title="Health Check Results")
         health_table.add_column("Check", style="cyan")
@@ -102,35 +118,18 @@ def init_lightrag() -> int:
         console.print(health_table)
         console.print()
 
-        # Insert test document
-        console.print("[yellow]Inserting test document...[/yellow]")
-        test_text = """
-This is a test document to verify LightRAG initialization.
+        if smoke_test:
+            console.print("[yellow]Inserting test document...[/yellow]")
+            client.insert(TEST_DOCUMENT, metadata={"type": "test", "purpose": "initialization"})
+            console.print("✓ Test document inserted")
+            console.print()
 
-LightRAG provides long-term memory and knowledge graph capabilities
-for the multi-agent quantitative research system. It stores:
-- Hypothesis rationale and source references
-- Statistical test summaries
-- Backtest conclusions and lessons learned
-- Critic objections and detected risks
-- Architecture decisions and rationales
-- Agent lessons learned
-- Manual notes and human decisions
-
-The system uses embedded vector stores (FAISS or Chroma) to minimize
-infrastructure requirements for the MVP.
-"""
-        client.insert(test_text, metadata={"type": "test", "purpose": "initialization"})
-        console.print("✓ Test document inserted")
-        console.print()
-
-        # Test query
-        console.print("[yellow]Testing query functionality...[/yellow]")
-        result = client.query("What does LightRAG store?", mode="hybrid", top_k=1)
-        console.print("✓ Query successful")
-        console.print("\n[dim]Query result preview:[/dim]")
-        console.print(Panel(result[:200] + "..." if len(result) > 200 else result))
-        console.print()
+            console.print("[yellow]Testing query functionality...[/yellow]")
+            result = client.query("What does LightRAG store?", mode="hybrid", top_k=1)
+            console.print("✓ Query successful")
+            console.print("\n[dim]Query result preview:[/dim]")
+            console.print(Panel(result[:200] + "..." if len(result) > 200 else result))
+            console.print()
 
         # Success message
         console.print(
@@ -158,7 +157,19 @@ infrastructure requirements for the MVP.
 
 def main() -> None:
     """Main entry point."""
-    sys.exit(init_lightrag())
+    parser = ArgumentParser(description="Initialize LightRAG local storage.")
+    parser.add_argument(
+        "--check-embedding",
+        action="store_true",
+        help="Load the embedding model and encode a small sample.",
+    )
+    parser.add_argument(
+        "--smoke-test",
+        action="store_true",
+        help="Insert and query a test document. Implies --check-embedding.",
+    )
+    args = parser.parse_args()
+    sys.exit(init_lightrag(check_embedding=args.check_embedding, smoke_test=args.smoke_test))
 
 
 if __name__ == "__main__":
