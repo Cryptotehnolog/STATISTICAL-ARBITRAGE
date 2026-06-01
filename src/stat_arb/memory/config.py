@@ -41,6 +41,11 @@ class LightRAGConfig(BaseSettings):
         description="Sentence-transformers model for embeddings (384 dimensions)",
     )
 
+    embedding_local_files_only: bool = Field(
+        default=False,
+        description="Load embedding model only from local cache",
+    )
+
     # Storage paths
     storage_path: Path = Field(
         default=Path("./data/lightrag"),

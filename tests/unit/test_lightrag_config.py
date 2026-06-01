@@ -24,6 +24,7 @@ class TestLightRAGConfig:
         assert config.vector_storage_class == "FaissVectorDBStorage"
         assert config.vector_storage_kwargs == {"cosine_better_than_threshold": 0.2}
         assert config.embedding_model == "sentence-transformers/all-MiniLM-L6-v2"
+        assert config.embedding_local_files_only is False
         assert config.chunk_size == 512
         assert config.chunk_overlap == 50
         assert config.embedding_dim == 384

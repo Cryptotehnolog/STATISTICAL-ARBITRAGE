@@ -1,5 +1,7 @@
 """LightRAG client for long-term memory and knowledge graph operations."""
 
+import asyncio
+import inspect
 import json
 import logging
 from typing import Any
@@ -12,6 +14,30 @@ from sentence_transformers import SentenceTransformer
 from stat_arb.memory.config import LightRAGConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _run_sync(awaitable: Any) -> None:
+    """Run an awaitable from synchronous entrypoints."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(awaitable)
+        return
+
+    msg = "Cannot synchronously initialize LightRAG while an event loop is already running"
+    raise RuntimeError(msg)
+
+
+async def local_noop_llm_model_func(prompt: str, **_kwargs: Any) -> str:
+    """Local fallback LLM function for LightRAG storage-only operations.
+
+    The installed LightRAG build accepts ``llm_model_func=None`` in its
+    signature, but internally expects a callable during initialization.
+    Returning an empty response keeps local inserts available without requiring
+    network access or API credentials. Full generation can be wired later.
+    """
+    logger.debug("Using local no-op LightRAG LLM fallback for prompt length %s", len(prompt))
+    return ""
 
 
 class LightRAGClient:
@@ -46,7 +72,10 @@ class LightRAGClient:
         """Lazy-load sentence-transformers embedding model."""
         if self._embedding_model is None:
             logger.info(f"Loading embedding model: {self.config.embedding_model}")
-            self._embedding_model = SentenceTransformer(self.config.embedding_model)
+            self._embedding_model = SentenceTransformer(
+                self.config.embedding_model,
+                local_files_only=self.config.embedding_local_files_only,
+            )
             logger.info(f"Embedding model loaded (dim={self.config.embedding_dim})")
         return self._embedding_model
 
@@ -93,11 +122,15 @@ class LightRAGClient:
             vector_storage=self.config.vector_storage_class,
             vector_db_storage_cls_kwargs=self.config.vector_storage_kwargs,
             embedding_func=embedding_func,
+            llm_model_func=local_noop_llm_model_func,
             embedding_batch_num=self.config.batch_size,
             embedding_func_max_async=self.config.max_workers,
             chunk_token_size=self.config.chunk_size,
             chunk_overlap_token_size=self.config.chunk_overlap,
         )
+        initialize_result = rag.initialize_storages()
+        if inspect.isawaitable(initialize_result):
+            _run_sync(initialize_result)
 
         logger.info(
             f"LightRAG initialized at {working_dir} "

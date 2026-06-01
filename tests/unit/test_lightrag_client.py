@@ -57,7 +57,10 @@ class TestLightRAGClient:
             model = client.embedding_model
 
         # Model should now be loaded
-        sentence_transformer.assert_called_once_with(temp_config.embedding_model)
+        sentence_transformer.assert_called_once_with(
+            temp_config.embedding_model,
+            local_files_only=temp_config.embedding_local_files_only,
+        )
         assert model is not None
         assert client._embedding_model is not None
 
@@ -92,6 +95,7 @@ class TestLightRAGClient:
         assert kwargs["vector_db_storage_cls_kwargs"] == {
             "cosine_better_than_threshold": temp_config.cosine_threshold
         }
+        assert callable(kwargs["llm_model_func"])
         assert kwargs["embedding_batch_num"] == temp_config.batch_size
         assert kwargs["embedding_func_max_async"] == temp_config.max_workers
 

@@ -137,6 +137,15 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    uv run python -m stat_arb.scripts.init_lightrag --smoke-test
    ```
+   To populate LightRAG with curated project knowledge from README, docs, and
+   `.kiro/specs` using the Windows-friendly NanoVectorDB backend:
+   ```bash
+   .\scripts\seed_lightrag.ps1
+   ```
+   On the first machine run, allow the embedding model download once:
+   ```bash
+   .\scripts\seed_lightrag.ps1 --allow-model-download
+   ```
 
 ### Running the System
 

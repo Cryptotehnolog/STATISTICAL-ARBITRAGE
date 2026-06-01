@@ -8,6 +8,7 @@ This repository uses a local-first Python package layout for the Statistical Arb
 - `.kiro/skills/` is a local Kiro tool/cache directory and is intentionally ignored.
 - `data/` contains runtime data, local databases, LightRAG stores, vector indexes, and test scratch data. It is intentionally ignored.
 - `docs/` contains project documentation that should be committed.
+- `docs/knowledge/` contains curated decisions and future ideas that are seeded into LightRAG.
 - `scripts/` contains developer and operator scripts, mostly PowerShell wrappers for local checks and workflows.
 - `src/stat_arb/` contains importable Python package code.
 - `tests/` contains automated tests split by test type.
@@ -42,3 +43,4 @@ This repository uses a local-first Python package layout for the Statistical Arb
 
 - `scripts/check_unit.ps1` runs the fast unit baseline.
 - `scripts/check.ps1` runs Ruff plus the fast unit baseline and should be used before commits.
+- `scripts/seed_lightrag.ps1` seeds changed curated project knowledge into local LightRAG storage.
