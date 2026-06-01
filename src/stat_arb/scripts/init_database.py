@@ -32,9 +32,7 @@ def main() -> int:
     Returns:
         Exit code (0 for success, 1 for failure).
     """
-    parser = argparse.ArgumentParser(
-        description="Initialize the Structured Registry database."
-    )
+    parser = argparse.ArgumentParser(description="Initialize the Structured Registry database.")
     parser.add_argument(
         "--db-path",
         type=Path,

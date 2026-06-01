@@ -9,7 +9,6 @@ Usage:
 
 import logging
 import sys
-from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
@@ -30,21 +29,21 @@ console = Console()
 
 def init_lightrag() -> int:
     """Initialize LightRAG with embedded vector store.
-    
+
     Returns:
         Exit code (0 for success, 1 for failure).
     """
     try:
         console.print("\n[bold blue]Initializing LightRAG...[/bold blue]\n")
-        
+
         # Load configuration
         config = LightRAGConfig()
-        
+
         # Display configuration
         config_table = Table(title="LightRAG Configuration")
         config_table.add_column("Setting", style="cyan")
         config_table.add_column("Value", style="green")
-        
+
         config_table.add_row("Vector Store", config.vector_store)
         config_table.add_row("Embedding Model", config.embedding_model)
         config_table.add_row("Embedding Dimensions", str(config.embedding_dim))
@@ -54,23 +53,23 @@ def init_lightrag() -> int:
         config_table.add_row("Vector Store Path", str(config.vector_store_path))
         config_table.add_row("Batch Size", str(config.batch_size))
         config_table.add_row("Max Workers", str(config.max_workers))
-        
+
         console.print(config_table)
         console.print()
-        
+
         # Create directories
         console.print("[yellow]Creating storage directories...[/yellow]")
         config.ensure_directories()
         console.print(f"✓ Created {config.storage_path}")
         console.print(f"✓ Created {config.vector_store_path}")
         console.print()
-        
+
         # Initialize client
         console.print("[yellow]Initializing LightRAG client...[/yellow]")
         client = LightRAGClient(config)
         console.print("✓ LightRAG client initialized")
         console.print()
-        
+
         # Load embedding model
         console.print("[yellow]Loading embedding model...[/yellow]")
         console.print(f"  Model: {config.embedding_model}")
@@ -78,15 +77,15 @@ def init_lightrag() -> int:
         _ = client.embedding_model  # Trigger lazy loading
         console.print("✓ Embedding model loaded")
         console.print()
-        
+
         # Run health check
         console.print("[yellow]Running health check...[/yellow]")
         health = client.health_check()
-        
+
         health_table = Table(title="Health Check Results")
         health_table.add_column("Check", style="cyan")
         health_table.add_column("Status", style="green")
-        
+
         for key, value in health.items():
             if key == "status":
                 status_color = "green" if value == "healthy" else "red"
@@ -99,10 +98,10 @@ def init_lightrag() -> int:
                     key.replace("_", " ").title(),
                     str(value),
                 )
-        
+
         console.print(health_table)
         console.print()
-        
+
         # Insert test document
         console.print("[yellow]Inserting test document...[/yellow]")
         test_text = """
@@ -124,15 +123,15 @@ infrastructure requirements for the MVP.
         client.insert(test_text, metadata={"type": "test", "purpose": "initialization"})
         console.print("✓ Test document inserted")
         console.print()
-        
+
         # Test query
         console.print("[yellow]Testing query functionality...[/yellow]")
         result = client.query("What does LightRAG store?", mode="hybrid", top_k=1)
-        console.print(f"✓ Query successful")
-        console.print(f"\n[dim]Query result preview:[/dim]")
+        console.print("✓ Query successful")
+        console.print("\n[dim]Query result preview:[/dim]")
         console.print(Panel(result[:200] + "..." if len(result) > 200 else result))
         console.print()
-        
+
         # Success message
         console.print(
             Panel.fit(
@@ -148,9 +147,9 @@ infrastructure requirements for the MVP.
                 border_style="green",
             )
         )
-        
+
         return 0
-        
+
     except Exception as e:
         console.print(f"\n[bold red]✗ Initialization failed:[/bold red] {e}\n")
         logger.exception("LightRAG initialization failed")

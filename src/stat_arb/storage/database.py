@@ -10,9 +10,9 @@ Requirements: 9.1-9.11, 27.14
 """
 
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator, Optional
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_DB_PATH = Path("data/registry.db")
 
 
-def get_database_url(db_path: Optional[Path] = None) -> str:
+def get_database_url(db_path: Path | None = None) -> str:
     """
     Get the database URL for SQLite.
 
@@ -50,7 +50,7 @@ def get_database_url(db_path: Optional[Path] = None) -> str:
 
 
 @event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_conn, connection_record):
+def set_sqlite_pragma(dbapi_conn, _connection_record):
     """
     Enable foreign key constraints for SQLite.
 
@@ -62,9 +62,7 @@ def set_sqlite_pragma(dbapi_conn, connection_record):
     cursor.close()
 
 
-def create_database_engine(
-    db_path: Optional[Path] = None, echo: bool = False
-) -> Engine:
+def create_database_engine(db_path: Path | None = None, echo: bool = False) -> Engine:
     """
     Create a SQLAlchemy engine for the database.
 
@@ -89,7 +87,7 @@ def create_database_engine(
     return engine
 
 
-def init_database(db_path: Optional[Path] = None, drop_existing: bool = False) -> Engine:
+def init_database(db_path: Path | None = None, drop_existing: bool = False) -> Engine:
     """
     Initialize the database by creating all tables.
 
@@ -129,7 +127,7 @@ def create_session_factory(engine: Engine) -> sessionmaker:
 
 @contextmanager
 def get_session(
-    db_path: Optional[Path] = None, engine: Optional[Engine] = None
+    db_path: Path | None = None, engine: Engine | None = None
 ) -> Generator[Session, None, None]:
     """
     Context manager for database sessions.
@@ -171,7 +169,7 @@ class DatabaseManager:
     connection pooling and session management.
     """
 
-    def __init__(self, db_path: Optional[Path] = None, echo: bool = False):
+    def __init__(self, db_path: Path | None = None, echo: bool = False):
         """
         Initialize the database manager.
 

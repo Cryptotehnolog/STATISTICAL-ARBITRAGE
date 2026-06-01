@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class LightRAGConfig(BaseSettings):
     """Configuration for LightRAG with embedded vector store.
-    
+
     This configuration supports minimal infrastructure setup using
     embedded vector stores (FAISS or Chroma) without requiring Docker
     or separate server processes.

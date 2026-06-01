@@ -17,17 +17,6 @@ Requirements: 9.1-9.11, 27.14
 """
 
 # Import models
-from .models import (
-    BacktestResult,
-    Base,
-    CriticReview,
-    Dataset,
-    Experiment,
-    Hypothesis,
-    ReportArtifact,
-    StatisticalTestResult,
-)
-
 # Import database utilities
 from .database import (
     DEFAULT_DB_PATH,
@@ -50,6 +39,16 @@ from .migrations import (
     show_migration_history,
     stamp_database,
     upgrade_database,
+)
+from .models import (
+    BacktestResult,
+    Base,
+    CriticReview,
+    Dataset,
+    Experiment,
+    Hypothesis,
+    ReportArtifact,
+    StatisticalTestResult,
 )
 
 __all__ = [

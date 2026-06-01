@@ -1,31 +1,18 @@
-param(
-    [switch]$WithCoverage
-)
-
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
+$unitCheck = Join-Path $PSScriptRoot "check_unit.ps1"
 $env:PYTHONDONTWRITEBYTECODE = "1"
 
 if (-not (Test-Path -LiteralPath $python)) {
     Write-Error "Expected virtualenv Python at $python. Run 'uv sync' first."
 }
 
-$pytestArgs = @(
-    "-m", "pytest",
-    "tests/unit",
-    "-m", "not slow",
-    "-p", "no:cacheprovider"
-)
-
-if (-not $WithCoverage) {
-    $pytestArgs += "--no-cov"
-}
-
 Push-Location $repoRoot
 try {
-    & $python @pytestArgs
+    & $python -m ruff check --no-cache src tests
+    & $unitCheck
 }
 finally {
     Pop-Location

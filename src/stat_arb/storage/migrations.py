@@ -13,7 +13,6 @@ Requirements: 9.1-9.11, 27.14
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from alembic import command
 from alembic.config import Config
@@ -25,9 +24,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_ALEMBIC_DIR = Path("alembic")
 
 
-def get_alembic_config(
-    alembic_dir: Optional[Path] = None, db_url: Optional[str] = None
-) -> Config:
+def get_alembic_config(alembic_dir: Path | None = None, db_url: str | None = None) -> Config:
     """
     Get Alembic configuration.
 
@@ -60,8 +57,8 @@ def get_alembic_config(
 
 def create_migration(
     message: str,
-    alembic_dir: Optional[Path] = None,
-    db_url: Optional[str] = None,
+    alembic_dir: Path | None = None,
+    db_url: str | None = None,
     autogenerate: bool = True,
 ) -> None:
     """
@@ -87,8 +84,8 @@ def create_migration(
 
 def upgrade_database(
     revision: str = "head",
-    alembic_dir: Optional[Path] = None,
-    db_url: Optional[str] = None,
+    alembic_dir: Path | None = None,
+    db_url: str | None = None,
 ) -> None:
     """
     Upgrade the database to a specific revision.
@@ -107,8 +104,8 @@ def upgrade_database(
 
 def downgrade_database(
     revision: str = "-1",
-    alembic_dir: Optional[Path] = None,
-    db_url: Optional[str] = None,
+    alembic_dir: Path | None = None,
+    db_url: str | None = None,
 ) -> None:
     """
     Downgrade the database to a specific revision.
@@ -125,9 +122,7 @@ def downgrade_database(
     logger.info("Database downgrade complete.")
 
 
-def show_current_revision(
-    alembic_dir: Optional[Path] = None, db_url: Optional[str] = None
-) -> None:
+def show_current_revision(alembic_dir: Path | None = None, db_url: str | None = None) -> None:
     """
     Show the current database revision.
 
@@ -141,9 +136,7 @@ def show_current_revision(
     command.current(config)
 
 
-def show_migration_history(
-    alembic_dir: Optional[Path] = None, db_url: Optional[str] = None
-) -> None:
+def show_migration_history(alembic_dir: Path | None = None, db_url: str | None = None) -> None:
     """
     Show the migration history.
 
@@ -159,8 +152,8 @@ def show_migration_history(
 
 def stamp_database(
     revision: str = "head",
-    alembic_dir: Optional[Path] = None,
-    db_url: Optional[str] = None,
+    alembic_dir: Path | None = None,
+    db_url: str | None = None,
 ) -> None:
     """
     Stamp the database with a specific revision without running migrations.
@@ -186,9 +179,7 @@ class MigrationManager:
     Provides a high-level interface for database migrations using Alembic.
     """
 
-    def __init__(
-        self, alembic_dir: Optional[Path] = None, db_url: Optional[str] = None
-    ):
+    def __init__(self, alembic_dir: Path | None = None, db_url: str | None = None):
         """
         Initialize the migration manager.
 
