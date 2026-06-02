@@ -243,6 +243,18 @@ Smoke-query persistent curated LightRAG memory:
 .\scripts\check_secret_leaks.ps1 -IncludeGitHistory
 ```
 
+Показать regenerable runtime/cache artifacts для безопасной чистки:
+
+```bash
+.\scripts\clean_runtime_artifacts.ps1
+```
+
+Удалить найденные runtime/cache artifacts:
+
+```bash
+.\scripts\clean_runtime_artifacts.ps1 -Apply
+```
+
 Проверить, что user-facing labels и messages остаются русифицированными:
 
 ```bash

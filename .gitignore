@@ -112,7 +112,6 @@ credentials.json
 
 # Rust
 target/
-Cargo.lock
 **/*.rs.bk
 
 # Docker
