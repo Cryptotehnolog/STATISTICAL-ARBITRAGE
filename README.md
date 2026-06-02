@@ -179,6 +179,10 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\query_lightrag_curated.ps1
    ```
+   To export the persistent LightRAG graph to a local HTML viewer:
+   ```bash
+   .\scripts\export_lightrag_graph.ps1
+   ```
    To run the local pre-commit checklist without LLM dependencies:
    ```bash
    .\scripts\pre_commit_check.ps1

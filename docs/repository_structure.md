@@ -9,6 +9,7 @@ This repository uses a local-first Python package layout for the Statistical Arb
 - `data/` contains runtime data, local databases, LightRAG stores, vector indexes, and test scratch data. It is intentionally ignored.
 - `docs/` contains project documentation that should be committed.
 - `docs/knowledge/` contains curated decisions and future ideas that are seeded into LightRAG.
+- `docs/knowledge_graph/` contains the generated local HTML viewer and JSON export for LightRAG.
 - `scripts/` contains developer and operator scripts, mostly PowerShell wrappers for local checks and workflows.
 - `src/stat_arb/` contains importable Python package code.
 - `tests/` contains automated tests split by test type.
@@ -51,4 +52,5 @@ This repository uses a local-first Python package layout for the Statistical Arb
 - `scripts/check_omniroute.ps1` verifies OmniRoute container health, API models, chat, and LightRAG smoke.
 - `scripts/smoke_lightrag_omniroute.ps1` runs a small isolated LightRAG + OmniRoute graph extraction smoke test.
 - `scripts/query_lightrag_curated.ps1` verifies that persistent curated LightRAG memory answers project questions.
+- `scripts/export_lightrag_graph.ps1` exports persistent LightRAG GraphML to `docs/knowledge_graph/`.
 - `scripts/benchmark_lightrag_omniroute.ps1` compares OmniRoute models on the same LightRAG extraction document.
