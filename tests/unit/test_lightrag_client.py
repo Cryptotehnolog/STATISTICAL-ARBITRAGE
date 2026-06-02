@@ -12,7 +12,6 @@ import pytest
 from stat_arb.memory.config import LightRAGConfig
 from stat_arb.memory.lightrag_client import (
     LightRAGClient,
-    ollama_llm_model_func,
     openai_compatible_llm_model_func,
 )
 
@@ -114,40 +113,6 @@ class TestLightRAGClient:
         result = asyncio.run(client._llm_model_func("Extract entities"))
 
         assert result == ""
-
-    def test_ollama_llm_model_func_calls_generate_api(self) -> None:
-        """Test Ollama LLM provider calls the local generate endpoint."""
-        class FakeAsyncClient:
-            def __init__(self, **_kwargs):
-                pass
-
-            async def __aenter__(self):
-                return self
-
-            async def __aexit__(self, *_args):
-                return None
-
-            async def post(self, url, json):
-                assert url == "http://localhost:11434/api/generate"
-                assert json["model"] == "qwen2.5:3b"
-                assert json["prompt"] == "Extract entities"
-                return httpx.Response(
-                    200,
-                    json={"response": "entity extraction result"},
-                    request=httpx.Request("POST", url),
-                )
-
-        with patch("stat_arb.memory.lightrag_client.httpx.AsyncClient", FakeAsyncClient):
-            result = asyncio.run(
-                ollama_llm_model_func(
-                    "Extract entities",
-                    model="qwen2.5:3b",
-                    base_url="http://localhost:11434",
-                    timeout=1.0,
-                )
-            )
-
-        assert result == "entity extraction result"
 
     def test_openai_compatible_llm_model_func_calls_chat_completions(self) -> None:
         """Test OpenAI-compatible provider calls chat completions endpoint."""

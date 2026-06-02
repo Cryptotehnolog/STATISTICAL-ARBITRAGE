@@ -53,7 +53,7 @@ Status: accepted
 
 Decision: Provide a local no-op `llm_model_func` by default so LightRAG can initialize and
 store vector chunks without requiring API keys, network access, or a local LLM service.
-Enable Ollama explicitly when graph extraction is needed.
+Enable an OpenAI-compatible provider explicitly when graph extraction is needed.
 
 Rationale: The current LightRAG build requires `llm_model_func` to be callable during
 initialization even though the signature allows `None`. A no-op fallback keeps local
@@ -63,11 +63,11 @@ Alternatives considered: Block all LightRAG writes until an LLM provider exists;
 cloud LLM immediately.
 
 Risks: Entity and relationship extraction remains empty with the no-op fallback, so this is
-vector memory only until Ollama or another real LLM provider is enabled.
+vector memory only until a real OpenAI-compatible LLM provider is enabled.
 
 ## DEC-0005: Use NanoVectorDB for automated knowledge seeding on Windows
 
-Status: accepted
+Status: superseded by DEC-0007
 
 Decision: Default the knowledge seed command to `NanoVectorDBStorage`, while keeping FAISS
 available through an explicit `--vector-store faiss` flag.
@@ -96,3 +96,22 @@ Alternatives considered: `qwen2.5:1.5b`, `qwen2.5:0.5b`, Dockerized Ollama.
 
 Risks: Even 3B may be slow on CPU for large seed runs. If it blocks development, fall back
 to `qwen2.5:1.5b` or keep `noop` for routine seed updates.
+
+## DEC-0007: Use OmniRoute as the active LightRAG LLM gateway
+
+Status: accepted
+
+Decision: Use OmniRoute in Docker as the active OpenAI-compatible gateway for LightRAG
+entity/relation extraction. Keep the project integration generic through the
+`openai_compatible` provider and the `my-ai` combo instead of hard-coding one upstream
+model.
+
+Rationale: On the same tiny LightRAG smoke document, local Ollama `qwen2.5:3b` took about
+113 seconds and extracted 7 nodes / 1 edge. OmniRoute through `my-ai` took about 57 seconds
+and extracted 12 nodes / 12 edges. The gateway is faster and provides model fallback.
+
+Alternatives considered: Keep local Ollama as the primary extractor; use kiro-gateway
+directly; wire each model as a separate container.
+
+Risks: OmniRoute depends on external provider availability and account/session health.
+Keep the no-op provider as the safe default and make provider smoke tests explicit.

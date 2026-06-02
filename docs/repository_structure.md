@@ -44,6 +44,4 @@ This repository uses a local-first Python package layout for the Statistical Arb
 - `scripts/check_unit.ps1` runs the fast unit baseline.
 - `scripts/check.ps1` runs Ruff plus the fast unit baseline and should be used before commits.
 - `scripts/seed_lightrag.ps1` seeds changed curated project knowledge into local LightRAG storage.
-- `scripts/check_ollama_lightrag.ps1` verifies the optional local Ollama model for LightRAG graph extraction.
-- `scripts/smoke_lightrag_ollama.ps1` runs a small isolated LightRAG + Ollama graph extraction smoke test.
 - `scripts/smoke_lightrag_omniroute.ps1` runs a small isolated LightRAG + OmniRoute graph extraction smoke test.

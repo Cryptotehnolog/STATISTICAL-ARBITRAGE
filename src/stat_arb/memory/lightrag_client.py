@@ -41,34 +41,6 @@ async def local_noop_llm_model_func(prompt: str, **_kwargs: Any) -> str:
     return ""
 
 
-async def ollama_llm_model_func(
-    prompt: str,
-    *,
-    model: str,
-    base_url: str,
-    timeout: float,
-    system_prompt: str | None = None,
-    **_kwargs: Any,
-) -> str:
-    """Call a local Ollama model using the generate API."""
-    payload: dict[str, Any] = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": 0,
-        },
-    }
-    if system_prompt:
-        payload["system"] = system_prompt
-
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(f"{base_url.rstrip('/')}/api/generate", json=payload)
-        response.raise_for_status()
-        data = response.json()
-    return str(data.get("response", ""))
-
-
 def _join_chat_completion_content(data: dict[str, Any]) -> str:
     """Extract text from a non-streaming OpenAI-compatible response."""
     chunks: list[str] = []
@@ -181,14 +153,6 @@ class LightRAGClient:
 
     async def _llm_model_func(self, prompt: str, **kwargs: Any) -> str:
         """Dispatch LightRAG LLM calls to the configured provider."""
-        if self.config.llm_provider == "ollama":
-            return await ollama_llm_model_func(
-                prompt,
-                model=self.config.ollama_model,
-                base_url=self.config.ollama_base_url,
-                timeout=self.config.ollama_timeout,
-                **kwargs,
-            )
         if self.config.llm_provider == "openai_compatible":
             return await openai_compatible_llm_model_func(
                 prompt,

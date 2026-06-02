@@ -25,13 +25,14 @@ touch `README.md`, `.kiro/specs/`, `docs/`, or architecture-relevant source file
 Why later: The seed command writes local runtime state and may load embeddings, so it should
 remain opt-in until the workflow is proven stable and fast enough.
 
-## IDEA-0003: Add quality checks for LightRAG graph extraction
+## IDEA-0003: Benchmark LightRAG graph extraction providers
 
 Status: proposed
 
-Idea: Add a smoke test that seeds a tiny document through Ollama and asserts that LightRAG
-extracts at least one entity or relationship.
+Idea: Add a benchmark command that runs the same tiny LightRAG graph extraction document
+through each configured OpenAI-compatible model or combo and records latency, extracted
+nodes, extracted edges, and status.
 
-Why later: Provider wiring exists, but graph extraction quality should be validated
-separately from the fast unit baseline because it depends on a local Ollama service and
-model runtime.
+Why later: The OmniRoute smoke test validates the current active combo, but model ordering
+inside `my-ai` should be based on extraction quality and latency measured on the real
+LightRAG prompt, not only dashboard ping tests.

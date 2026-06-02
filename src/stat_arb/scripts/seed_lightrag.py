@@ -159,7 +159,6 @@ def seed_lightrag(
     allow_model_download: bool = False,
     vector_store: str = "nano",
     llm_provider: str = "noop",
-    ollama_model: str = "qwen2.5:3b",
     openai_compatible_model: str = "my-ai",
     openai_compatible_base_url: str = "http://localhost:20128/v1",
     openai_compatible_api_key: str = "",
@@ -170,7 +169,6 @@ def seed_lightrag(
         embedding_local_files_only=not allow_model_download,
         vector_store=vector_store,
         llm_provider=llm_provider,
-        ollama_model=ollama_model,
         openai_compatible_model=openai_compatible_model,
         openai_compatible_base_url=openai_compatible_base_url,
         openai_compatible_api_key=openai_compatible_api_key,
@@ -248,14 +246,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--llm-provider",
-        choices=("noop", "ollama", "openai_compatible"),
+        choices=("noop", "openai_compatible"),
         default="noop",
         help="LLM provider for LightRAG extraction. Defaults to noop.",
-    )
-    parser.add_argument(
-        "--ollama-model",
-        default="qwen2.5:3b",
-        help="Ollama model to use when --llm-provider ollama is selected.",
     )
     parser.add_argument(
         "--openai-compatible-model",
@@ -279,7 +272,6 @@ def main() -> None:
             allow_model_download=args.allow_model_download,
             vector_store=args.vector_store,
             llm_provider=args.llm_provider,
-            ollama_model=args.ollama_model,
             openai_compatible_model=args.openai_compatible_model,
             openai_compatible_base_url=args.openai_compatible_base_url,
             openai_compatible_api_key=args.openai_compatible_api_key,

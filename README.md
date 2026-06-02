@@ -146,17 +146,9 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\seed_lightrag.ps1 --allow-model-download
    ```
-   To enable local LightRAG entity/relation extraction through Ollama:
+   To enable LightRAG entity/relation extraction through an OpenAI-compatible gateway:
    ```bash
-   .\scripts\seed_lightrag.ps1 --llm-provider ollama --ollama-model qwen2.5:3b
-   ```
-   To check local Ollama readiness for LightRAG:
-   ```bash
-   .\scripts\check_ollama_lightrag.ps1
-   ```
-   To run a small isolated LightRAG graph extraction smoke test:
-   ```bash
-   .\scripts\smoke_lightrag_ollama.ps1
+   .\scripts\seed_lightrag.ps1 --llm-provider openai_compatible --openai-compatible-model my-ai
    ```
    To run the same graph extraction smoke test through OmniRoute:
    ```bash
