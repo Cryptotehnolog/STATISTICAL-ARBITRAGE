@@ -245,6 +245,25 @@ def _html_template(graph_json: str) -> str:
       height: 16px;
       padding: 0;
     }}
+    .preset-row {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 8px;
+    }}
+    .preset-row button {{
+      margin-top: 0;
+      padding: 8px 7px;
+      background: #fff;
+      color: var(--text);
+      border-color: var(--line);
+      font-size: 13px;
+    }}
+    .preset-row button.active {{
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }}
     button {{
       cursor: pointer;
       background: var(--accent);
@@ -322,6 +341,14 @@ def _html_template(graph_json: str) -> str:
       </div>
       <label for="search">Поиск</label>
       <input id="search" type="search" placeholder="Entity, relation, keyword">
+      <label>Быстрые presets</label>
+      <div class="preset-row" id="presetRow">
+        <button type="button" data-preset="all" class="active">Все</button>
+        <button type="button" data-preset="important">Важные</button>
+        <button type="button" data-preset="agents">Agents</button>
+        <button type="button" data-preset="risks">Risks</button>
+        <button type="button" data-preset="decisions">Decisions</button>
+      </div>
       <label for="typeFilter">Тип entity</label>
       <select id="typeFilter"></select>
       <label class="check-row" for="importantOnly">
@@ -352,6 +379,7 @@ def _html_template(graph_json: str) -> str:
     const ctx = canvas.getContext("2d");
     const controls = {{
       search: document.getElementById("search"),
+      presetButtons: Array.from(document.querySelectorAll("#presetRow button")),
       type: document.getElementById("typeFilter"),
       importantOnly: document.getElementById("importantOnly"),
       minDegree: document.getElementById("minDegree"),
@@ -373,6 +401,7 @@ def _html_template(graph_json: str) -> str:
     let pan = {{ x: 0, y: 0 }};
     let zoom = 1;
     let simulationTicks = 0;
+    let activePreset = "all";
 
     function colorFor(type) {{
       if (!typeColors.has(type)) {{
@@ -411,6 +440,7 @@ def _html_template(graph_json: str) -> str:
         if (type !== "all" && node.type !== type) return false;
         if (controls.importantOnly.checked && (node.degree <= 1 || node.type.toLowerCase() === "unknown")) return false;
         if (node.degree < minDegree) return false;
+        if (!matchesPreset(node)) return false;
         if (!q) return true;
         const text = [node.label, node.type, node.description, node.file_path].join(" ").toLowerCase();
         return text.includes(q);
@@ -429,6 +459,44 @@ def _html_template(graph_json: str) -> str:
       renderTopNodes();
       resetPositions();
       simulationTicks = 80;
+    }}
+    function nodeText(node) {{
+      return [node.label, node.type, node.description, node.file_path].join(" ").toLowerCase();
+    }}
+    function matchesPreset(node) {{
+      const text = nodeText(node);
+      if (activePreset === "agents") {{
+        return node.type.toLowerCase() === "agent" || /\\bagent\\b/.test(text);
+      }}
+      if (activePreset === "risks") {{
+        return /(risk|bias|overfitting|lookahead|drawdown|turnover|cost|quarantine|reject|negative|failure|regime|риск)/.test(text);
+      }}
+      if (activePreset === "decisions") {{
+        return /(decision|approve|approval|reject|quarantine|rationale|alternative|dec-|решение)/.test(text);
+      }}
+      return true;
+    }}
+    function setActivePreset(name) {{
+      activePreset = name;
+      controls.presetButtons.forEach(button => {{
+        button.classList.toggle("active", button.dataset.preset === name);
+      }});
+      if (name === "all") {{
+        controls.importantOnly.checked = false;
+        controls.type.value = "all";
+        controls.minDegree.value = "0";
+      }}
+      if (name === "important") {{
+        controls.importantOnly.checked = true;
+        controls.type.value = "all";
+        controls.minDegree.value = "0";
+      }}
+      if (name === "agents" || name === "risks" || name === "decisions") {{
+        controls.importantOnly.checked = false;
+        controls.type.value = "all";
+        controls.minDegree.value = "0";
+      }}
+      applyFilters();
     }}
     function tick() {{
       const byId = new Map(nodes.map(node => [node.id, node]));
@@ -542,9 +610,9 @@ def _html_template(graph_json: str) -> str:
     function describe(item) {{
       if (!item) return "Выберите node или edge.";
       if (item.source && item.target) {{
-        return `Relation: ${{item.source}} -> ${{item.target}}\\nWeight: ${{item.weight}}\\nKeywords: ${{item.keywords || "нет"}}\\n\\n${{item.description || "Нет описания."}}`;
+        return `Relation: ${{item.source}} -> ${{item.target}}\\nВес: ${{item.weight}}\\nKeywords: ${{item.keywords || "нет"}}\\n\\n${{item.description || "Нет описания."}}`;
       }}
-      return `Entity: ${{item.label}}\\nType: ${{item.type}}\\nDegree: ${{item.degree}}\\nSource chunks: ${{item.source_count}}\\n\\n${{item.description || "Нет описания."}}`;
+      return `Entity: ${{item.label}}\\nТип: ${{item.type}}\\nDegree: ${{item.degree}}\\nФрагменты источника: ${{item.source_count}}\\n\\n${{item.description || "Нет описания."}}`;
     }}
     function renderTopNodes() {{
       controls.topNodes.innerHTML = "";
@@ -567,6 +635,9 @@ def _html_template(graph_json: str) -> str:
       controls.type.innerHTML = types.map(type => `<option value="${{type}}">${{type === "all" ? "все" : type}}</option>`).join("");
       const maxDegree = Math.max(1, ...graphData.nodes.map(node => node.degree));
       controls.minDegree.max = maxDegree;
+      controls.presetButtons.forEach(button => {{
+        button.addEventListener("click", () => setActivePreset(button.dataset.preset));
+      }});
       controls.search.addEventListener("input", applyFilters);
       controls.type.addEventListener("change", applyFilters);
       controls.importantOnly.addEventListener("change", applyFilters);

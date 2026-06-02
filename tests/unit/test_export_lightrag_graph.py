@@ -87,3 +87,6 @@ def test_export_lightrag_graph_writes_json_and_html() -> None:
     assert "Граф знаний LightRAG" in html
     assert "importantOnly" in html
     assert "Только важные узлы" in html
+    assert "data-preset=\"agents\"" in html
+    assert "data-preset=\"risks\"" in html
+    assert "data-preset=\"decisions\"" in html
