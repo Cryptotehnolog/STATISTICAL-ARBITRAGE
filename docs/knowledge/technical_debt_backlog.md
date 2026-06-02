@@ -1,0 +1,42 @@
+# Technical Debt Backlog Memory
+
+This shard summarizes deferred follow-up work that must not be kept only in chat.
+The full tracked backlog is `docs/technical_debt.md`.
+
+## Operating Rule
+
+Any "do later" item must be implemented immediately, added to `.kiro/tasks.md`, or added
+to `docs/technical_debt.md`. If it matters for agent memory, also update a curated
+`docs/knowledge/*.md` shard.
+
+## Active Follow-up Themes
+
+- Ubuntu portability: add Linux-friendly commands or shell wrappers, then verify `uv sync`,
+  checks, SQLite, Parquet, LightRAG, Infisical Docker Compose, graph export, and CCXT smoke
+  on Ubuntu before server deployment.
+- Live CCXT smoke: keep live exchange checks outside fast pre-commit; add the smoke after
+  data quality validation exists.
+- Domain conversion helpers: add domain to parquet/storage helpers only when ingestion,
+  validation, registry, or CLI code first needs that boundary.
+- Runtime memory backend: revisit FAISS versus NanoVectorDB once memory-agent workflows
+  are implemented.
+- Chroma: run a compatibility spike before advertising Chroma as an active LightRAG backend.
+- Knowledge seeding automation: consider post-commit or scheduled local seeding only after
+  seed runs are stable and bounded.
+- Curated shards: keep `docs/knowledge/*.md` synchronized with material Kiro planning
+  changes and reseed LightRAG after updates.
+- Infisical recovery: define backup and restore discipline before deleting Docker volumes
+  or rotating encryption keys.
+- Kiro skills cleanup: verify Codex can use installed `rust-skills`, then remove duplicate
+  `.kiro/skills` source if no longer needed.
+- Rust boundary: keep Python-first MVP; introduce Rust only after profiling identifies a
+  stable compute hotspot.
+- Runtime cleanup: keep cleanup manual and scoped to regenerable artifacts.
+- LightRAG viewer: improve filters, labels, and readability as graph size grows.
+- OmniRoute benchmarking: re-run model ordering benchmark when provider behavior changes.
+- Data ingestion CLI: add user-facing ingestion command only after data quality validation
+  is implemented.
+
+## Closed Follow-up
+
+- Coverage artifacts are now included in `scripts/clean_runtime_artifacts.ps1`.
