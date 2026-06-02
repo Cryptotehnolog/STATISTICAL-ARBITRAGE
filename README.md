@@ -225,6 +225,12 @@ Smoke-query persistent curated LightRAG memory:
 .\scripts\open_lightrag_graph.ps1
 ```
 
+Создать локальный desktop shortcut для открытия viewer-а:
+
+```bash
+.\scripts\create_lightrag_graph_shortcut.ps1
+```
+
 Остановить локальный server viewer-а LightRAG graph:
 
 ```bash
