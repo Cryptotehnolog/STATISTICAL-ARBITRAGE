@@ -67,7 +67,7 @@ vector memory only until a real OpenAI-compatible LLM provider is enabled.
 
 ## DEC-0005: Use NanoVectorDB for automated knowledge seeding on Windows
 
-Status: superseded by DEC-0007
+Status: accepted
 
 Decision: Default the knowledge seed command to `NanoVectorDBStorage`, while keeping FAISS
 available through an explicit `--vector-store faiss` flag.
@@ -83,7 +83,7 @@ be revisited once the memory agent and query workflows are implemented.
 
 ## DEC-0006: Use local Ollama qwen2.5:3b for optional LightRAG graph extraction
 
-Status: accepted
+Status: superseded by DEC-0007
 
 Decision: Use Ollama with `qwen2.5:3b` as the first optional local LLM for LightRAG
 entity/relation extraction. Store Ollama models on `E:\AI_Models\Ollama`, not on the
@@ -115,3 +115,9 @@ directly; wire each model as a separate container.
 
 Risks: OmniRoute depends on external provider availability and account/session health.
 Keep the no-op provider as the safe default and make provider smoke tests explicit.
+
+Benchmark result: On the same tiny LightRAG extraction document, the measured model order
+was `kiro/deepseek-3.2` (14 nodes / 15 edges), `kiro/glm-5` (13 nodes / 13 edges),
+`kiro/claude-sonnet-4.5` (9 nodes / 13 edges), `kiro/minimax-m2.5` (10 nodes / 12 edges),
+then `kiro/qwen3-coder-next` (14 nodes / 9 edges). Prefer this order for `my-ai` until a
+new benchmark says otherwise.

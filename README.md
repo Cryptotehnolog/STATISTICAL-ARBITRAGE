@@ -154,6 +154,10 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\smoke_lightrag_omniroute.ps1
    ```
+   To benchmark OmniRoute model ordering for LightRAG extraction:
+   ```bash
+   .\scripts\benchmark_lightrag_omniroute.ps1
+   ```
 
 ### Running the System
 
