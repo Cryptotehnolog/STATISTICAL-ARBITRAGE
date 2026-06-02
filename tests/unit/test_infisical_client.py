@@ -7,6 +7,23 @@ from stat_arb.secrets.config import InfisicalConfig
 from stat_arb.secrets.infisical_client import InfisicalClient, InfisicalError, SecretValue
 
 
+@pytest.fixture(autouse=True)
+def clear_infisical_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep unit tests isolated from local runtime Infisical credentials."""
+    for name in (
+        "INFISICAL_API_URL",
+        "INFISICAL_CLIENT_ID",
+        "INFISICAL_CLIENT_SECRET",
+        "INFISICAL_PROJECT_ID",
+        "INFISICAL_PROJECT_SLUG",
+        "INFISICAL_ORGANIZATION_SLUG",
+        "INFISICAL_ENVIRONMENT",
+        "INFISICAL_SECRET_PATH",
+        "INFISICAL_TIMEOUT_SECONDS",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
 def make_client(handler: httpx.MockTransport) -> InfisicalClient:
     """Create a test client with fake Infisical transport."""
     config = InfisicalConfig(
@@ -15,6 +32,7 @@ def make_client(handler: httpx.MockTransport) -> InfisicalClient:
         client_secret="client-secret",
         project_id="project-id",
         environment="dev",
+        _env_file=None,
     )
     return InfisicalClient(config, http_client=httpx.Client(transport=handler))
 
