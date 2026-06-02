@@ -25,12 +25,13 @@ touch `README.md`, `.kiro/specs/`, `docs/`, or architecture-relevant source file
 Why later: The seed command writes local runtime state and may load embeddings, so it should
 remain opt-in until the workflow is proven stable and fast enough.
 
-## IDEA-0003: Configure a real LightRAG LLM provider for graph extraction
+## IDEA-0003: Add quality checks for LightRAG graph extraction
 
 Status: proposed
 
-Idea: Add a configurable `llm_model_func` provider so LightRAG can extract entities and
-relationships from seeded project documents instead of storing only vector chunks.
+Idea: Add a smoke test that seeds a tiny document through Ollama and asserts that LightRAG
+extracts at least one entity or relationship.
 
-Why later: The MVP can start with vector memory. Graph extraction requires choosing a
-provider, handling secrets, cost controls, retries, and tests.
+Why later: Provider wiring exists, but graph extraction quality should be validated
+separately from the fast unit baseline because it depends on a local Ollama service and
+model runtime.

@@ -47,12 +47,13 @@ Rationale: Seeding loads the embedding model and writes runtime state, so coupli
 Risks: Developers must run the seed command when they want local LightRAG memory updated.
 This can later be automated through a post-commit or scheduled local workflow if needed.
 
-## DEC-0004: Use no-op LLM fallback until a project LLM provider is configured
+## DEC-0004: Use no-op LLM fallback until an optional LLM provider is enabled
 
 Status: accepted
 
-Decision: Provide a local no-op `llm_model_func` so LightRAG can initialize and store vector
-chunks without requiring API keys or a network LLM.
+Decision: Provide a local no-op `llm_model_func` by default so LightRAG can initialize and
+store vector chunks without requiring API keys, network access, or a local LLM service.
+Enable Ollama explicitly when graph extraction is needed.
 
 Rationale: The current LightRAG build requires `llm_model_func` to be callable during
 initialization even though the signature allows `None`. A no-op fallback keeps local
@@ -62,7 +63,7 @@ Alternatives considered: Block all LightRAG writes until an LLM provider exists;
 cloud LLM immediately.
 
 Risks: Entity and relationship extraction remains empty with the no-op fallback, so this is
-vector memory only until a real LLM provider is configured.
+vector memory only until Ollama or another real LLM provider is enabled.
 
 ## DEC-0005: Use NanoVectorDB for automated knowledge seeding on Windows
 
@@ -79,3 +80,19 @@ Alternatives considered: Keep FAISS default for seed; require elevated seed runs
 
 Risks: Runtime experiment memory may still use FAISS by default. The backend choice should
 be revisited once the memory agent and query workflows are implemented.
+
+## DEC-0006: Use local Ollama qwen2.5:3b for optional LightRAG graph extraction
+
+Status: accepted
+
+Decision: Use Ollama with `qwen2.5:3b` as the first optional local LLM for LightRAG
+entity/relation extraction. Store Ollama models on `E:\AI_Models\Ollama`, not on the
+system drive.
+
+Rationale: `qwen2.5:3b` is still small enough for local CPU use but should extract
+technical entities and relationships more reliably than sub-1B models.
+
+Alternatives considered: `qwen2.5:1.5b`, `qwen2.5:0.5b`, Dockerized Ollama.
+
+Risks: Even 3B may be slow on CPU for large seed runs. If it blocks development, fall back
+to `qwen2.5:1.5b` or keep `noop` for routine seed updates.

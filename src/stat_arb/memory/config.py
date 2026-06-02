@@ -46,6 +46,28 @@ class LightRAGConfig(BaseSettings):
         description="Load embedding model only from local cache",
     )
 
+    # LLM provider for LightRAG entity and relationship extraction
+    llm_provider: Literal["noop", "ollama"] = Field(
+        default="noop",
+        description="LLM provider for LightRAG extraction: 'noop' or 'ollama'",
+    )
+
+    ollama_model: str = Field(
+        default="qwen2.5:3b",
+        description="Ollama model for LightRAG extraction",
+    )
+
+    ollama_base_url: str = Field(
+        default="http://localhost:11434",
+        description="Base URL for the local Ollama server",
+    )
+
+    ollama_timeout: float = Field(
+        default=120.0,
+        description="Timeout in seconds for Ollama generation requests",
+        ge=1.0,
+    )
+
     # Storage paths
     storage_path: Path = Field(
         default=Path("./data/lightrag"),

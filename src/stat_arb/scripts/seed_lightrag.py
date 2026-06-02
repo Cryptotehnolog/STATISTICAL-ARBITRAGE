@@ -158,12 +158,16 @@ def seed_lightrag(
     repo_root: Path | None = None,
     allow_model_download: bool = False,
     vector_store: str = "nano",
+    llm_provider: str = "noop",
+    ollama_model: str = "qwen2.5:3b",
 ) -> int:
     """Seed changed project knowledge documents into LightRAG."""
     root = repo_root_from(repo_root)
     config = LightRAGConfig(
         embedding_local_files_only=not allow_model_download,
         vector_store=vector_store,
+        llm_provider=llm_provider,
+        ollama_model=ollama_model,
     )
     manifest_path = root / "data" / "lightrag_seed_manifest.json"
     documents = [load_document(path, root) for path in discover_source_paths(root)]
@@ -236,12 +240,25 @@ def main() -> None:
         default="nano",
         help="Embedded vector store for knowledge seeding. Defaults to nano on Windows.",
     )
+    parser.add_argument(
+        "--llm-provider",
+        choices=("noop", "ollama"),
+        default="noop",
+        help="LLM provider for LightRAG extraction. Defaults to noop.",
+    )
+    parser.add_argument(
+        "--ollama-model",
+        default="qwen2.5:3b",
+        help="Ollama model to use when --llm-provider ollama is selected.",
+    )
     args = parser.parse_args()
     sys.exit(
         seed_lightrag(
             dry_run=args.dry_run,
             allow_model_download=args.allow_model_download,
             vector_store=args.vector_store,
+            llm_provider=args.llm_provider,
+            ollama_model=args.ollama_model,
         )
     )
 

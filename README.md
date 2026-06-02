@@ -146,6 +146,14 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\seed_lightrag.ps1 --allow-model-download
    ```
+   To enable local LightRAG entity/relation extraction through Ollama:
+   ```bash
+   .\scripts\seed_lightrag.ps1 --llm-provider ollama --ollama-model qwen2.5:3b
+   ```
+   To check local Ollama readiness for LightRAG:
+   ```bash
+   .\scripts\check_ollama_lightrag.ps1
+   ```
 
 ### Running the System
 

@@ -6,6 +6,7 @@ import json
 import logging
 from typing import Any
 
+import httpx
 import numpy as np
 from lightrag import LightRAG, QueryParam
 from lightrag.base import EmbeddingFunc
@@ -40,6 +41,34 @@ async def local_noop_llm_model_func(prompt: str, **_kwargs: Any) -> str:
     return ""
 
 
+async def ollama_llm_model_func(
+    prompt: str,
+    *,
+    model: str,
+    base_url: str,
+    timeout: float,
+    system_prompt: str | None = None,
+    **_kwargs: Any,
+) -> str:
+    """Call a local Ollama model using the generate API."""
+    payload: dict[str, Any] = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "temperature": 0,
+        },
+    }
+    if system_prompt:
+        payload["system"] = system_prompt
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(f"{base_url.rstrip('/')}/api/generate", json=payload)
+        response.raise_for_status()
+        data = response.json()
+    return str(data.get("response", ""))
+
+
 class LightRAGClient:
     """Client for LightRAG with embedded vector store.
 
@@ -66,6 +95,18 @@ class LightRAGClient:
         self._rag: LightRAG | None = None
 
         logger.info(f"Initialized LightRAG client with {self.config.vector_store} backend")
+
+    async def _llm_model_func(self, prompt: str, **kwargs: Any) -> str:
+        """Dispatch LightRAG LLM calls to the configured provider."""
+        if self.config.llm_provider == "ollama":
+            return await ollama_llm_model_func(
+                prompt,
+                model=self.config.ollama_model,
+                base_url=self.config.ollama_base_url,
+                timeout=self.config.ollama_timeout,
+                **kwargs,
+            )
+        return await local_noop_llm_model_func(prompt, **kwargs)
 
     @property
     def embedding_model(self) -> SentenceTransformer:
@@ -122,7 +163,7 @@ class LightRAGClient:
             vector_storage=self.config.vector_storage_class,
             vector_db_storage_cls_kwargs=self.config.vector_storage_kwargs,
             embedding_func=embedding_func,
-            llm_model_func=local_noop_llm_model_func,
+            llm_model_func=self._llm_model_func,
             embedding_batch_num=self.config.batch_size,
             embedding_func_max_async=self.config.max_workers,
             chunk_token_size=self.config.chunk_size,

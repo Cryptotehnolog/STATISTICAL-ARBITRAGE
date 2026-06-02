@@ -1,14 +1,16 @@
 """Unit tests for LightRAG client."""
 
+import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+import httpx
 import numpy as np
 import pytest
 
 from stat_arb.memory.config import LightRAGConfig
-from stat_arb.memory.lightrag_client import LightRAGClient
+from stat_arb.memory.lightrag_client import LightRAGClient, ollama_llm_model_func
 
 
 class TestLightRAGClient:
@@ -98,6 +100,48 @@ class TestLightRAGClient:
         assert callable(kwargs["llm_model_func"])
         assert kwargs["embedding_batch_num"] == temp_config.batch_size
         assert kwargs["embedding_func_max_async"] == temp_config.max_workers
+
+    def test_llm_model_func_uses_noop_by_default(self, temp_config: LightRAGConfig) -> None:
+        """Test default LightRAG LLM provider is local no-op."""
+        client = LightRAGClient(temp_config)
+
+        result = asyncio.run(client._llm_model_func("Extract entities"))
+
+        assert result == ""
+
+    def test_ollama_llm_model_func_calls_generate_api(self) -> None:
+        """Test Ollama LLM provider calls the local generate endpoint."""
+        class FakeAsyncClient:
+            def __init__(self, **_kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def post(self, url, json):
+                assert url == "http://localhost:11434/api/generate"
+                assert json["model"] == "qwen2.5:3b"
+                assert json["prompt"] == "Extract entities"
+                return httpx.Response(
+                    200,
+                    json={"response": "entity extraction result"},
+                    request=httpx.Request("POST", url),
+                )
+
+        with patch("stat_arb.memory.lightrag_client.httpx.AsyncClient", FakeAsyncClient):
+            result = asyncio.run(
+                ollama_llm_model_func(
+                    "Extract entities",
+                    model="qwen2.5:3b",
+                    base_url="http://localhost:11434",
+                    timeout=1.0,
+                )
+            )
+
+        assert result == "entity extraction result"
 
     def test_health_check(self, temp_config: LightRAGConfig) -> None:
         """Test lightweight health check."""
