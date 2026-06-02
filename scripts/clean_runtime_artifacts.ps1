@@ -51,6 +51,18 @@ Get-ChildItem -LiteralPath $repoRoot -Force -File -ErrorAction SilentlyContinue 
 
 Get-ChildItem -LiteralPath (Join-Path $repoRoot "data") -Force -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -like "lightrag_graph_viewer_server*.json" } |
+    Where-Object {
+        try {
+            $state = Get-Content -Raw -LiteralPath $_.FullName | ConvertFrom-Json
+            if ($state.pid -and (Get-Process -Id $state.pid -ErrorAction SilentlyContinue)) {
+                return $false
+            }
+        }
+        catch {
+            return $true
+        }
+        return $true
+    } |
     ForEach-Object { [void]$targets.Add($_.FullName) }
 
 Add-ExistingDirectoriesByName `

@@ -219,6 +219,12 @@ Smoke-query persistent curated LightRAG memory:
 .\scripts\serve_lightrag_graph.ps1
 ```
 
+Поднять server при необходимости и открыть viewer в browser:
+
+```bash
+.\scripts\open_lightrag_graph.ps1
+```
+
 Остановить локальный server viewer-а LightRAG graph:
 
 ```bash
