@@ -159,3 +159,20 @@ Python SDK.
 Risks: The local `.env` encryption key and PostgreSQL volume are coupled. Losing the key
 can make stored secrets unrecoverable, so local backup discipline is required before any
 volume cleanup.
+
+## DEC-0011: Separate Pydantic domain contracts from SQLAlchemy persistence models
+
+Status: accepted
+
+Decision: Keep Pydantic research entity models in `src/stat_arb/domain/` and SQLAlchemy
+ORM models in `src/stat_arb/storage/models.py`.
+
+Rationale: Agents and services need strict runtime validation contracts, while the
+Structured Registry needs persistence mappings and relationships. Keeping these layers
+separate avoids coupling API payload validation to database implementation details.
+
+Alternatives considered: Reuse SQLAlchemy models as runtime contracts; put Pydantic models
+under `src/stat_arb/models/`.
+
+Risks: Field drift is possible between domain and storage layers. Conversion helpers should
+be added when repository/service code starts moving data between them.
