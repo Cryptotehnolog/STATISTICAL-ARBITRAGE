@@ -84,4 +84,6 @@ def test_export_lightrag_graph_writes_json_and_html() -> None:
     html = export.html_path.read_text(encoding="utf-8")
     assert payload["meta"]["node_count"] == 2
     assert "<canvas id=\"graphCanvas\"" in html
-    assert "LightRAG Knowledge Graph" in html
+    assert "Граф знаний LightRAG" in html
+    assert "importantOnly" in html
+    assert "Только важные узлы" in html

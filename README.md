@@ -179,19 +179,19 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\query_lightrag_curated.ps1
    ```
-   To export the persistent LightRAG graph to a local HTML viewer:
+   Экспортировать persistent LightRAG graph в локальный HTML viewer:
    ```bash
    .\scripts\export_lightrag_graph.ps1
    ```
-   To verify the LightRAG graph export without opening a browser:
+   Проверить экспорт LightRAG graph без открытия браузера:
    ```bash
    .\scripts\check_lightrag_graph_export.ps1
    ```
-   To serve the generated LightRAG graph viewer locally:
+   Запустить локальный server для viewer-а LightRAG graph:
    ```bash
    .\scripts\serve_lightrag_graph.ps1
    ```
-   To stop the local LightRAG graph viewer server:
+   Остановить локальный server viewer-а LightRAG graph:
    ```bash
    .\scripts\serve_lightrag_graph.ps1 -Stop
    ```

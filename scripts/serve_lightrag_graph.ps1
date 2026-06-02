@@ -22,7 +22,7 @@ function Stop-ViewerServer {
     }
 
     if (-not (Test-Path -LiteralPath $activePidPath)) {
-        Write-Output "No LightRAG graph viewer PID file found."
+        Write-Output "PID-файл viewer-а LightRAG не найден."
         return
     }
 
@@ -30,10 +30,10 @@ function Stop-ViewerServer {
     $process = Get-Process -Id $state.pid -ErrorAction SilentlyContinue
     if ($process) {
         Stop-Process -Id $state.pid -Force
-        Write-Output "Stopped LightRAG graph viewer server process $($state.pid)."
+        Write-Output "Остановлен процесс viewer-а LightRAG: $($state.pid)."
     }
     else {
-        Write-Output "LightRAG graph viewer server process $($state.pid) is not running."
+        Write-Output "Процесс viewer-а LightRAG $($state.pid) не запущен."
     }
     Remove-Item -LiteralPath $activePidPath -Force -ErrorAction SilentlyContinue
 }
@@ -62,7 +62,7 @@ if ($Stop) {
 }
 
 if (-not (Test-Path -LiteralPath $python)) {
-    Write-Error "Expected virtualenv Python at $python. Run 'uv sync' first."
+    Write-Error "Ожидался Python из virtualenv: $python. Сначала выполните 'uv sync'."
 }
 
 if (-not $SkipExport) {
@@ -73,13 +73,13 @@ if (-not $SkipExport) {
 }
 
 if (-not (Test-Path -LiteralPath $viewerPath)) {
-    Write-Error "Expected generated viewer at $viewerPath. Run scripts/export_lightrag_graph.ps1 first."
+    Write-Error "Сгенерированный viewer не найден: $viewerPath. Сначала выполните scripts/export_lightrag_graph.ps1."
 }
 
 $url = "http://$Bind`:$Port/docs/knowledge_graph/index.html"
 
 if (Test-ViewerUrl -Url $url) {
-    Write-Output "LightRAG graph viewer is already served at $url"
+    Write-Output "Viewer графа LightRAG уже доступен: $url"
     exit 0
 }
 
@@ -90,8 +90,8 @@ if (-not (Test-Path -LiteralPath (Split-Path $pidPath))) {
 Push-Location $repoRoot
 try {
     if ($Foreground) {
-        Write-Output "Serving LightRAG graph viewer at $url"
-        Write-Output "Press Ctrl+C to stop the server."
+        Write-Output "Viewer графа LightRAG доступен: $url"
+        Write-Output "Нажмите Ctrl+C, чтобы остановить server."
         & $python -m http.server $Port --bind $Bind
         exit $LASTEXITCODE
     }
@@ -118,7 +118,7 @@ try {
         if ($maybeProcess) {
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         }
-        Write-Error "Failed to start LightRAG graph viewer server on $Bind`:$Port."
+        Write-Error "Не удалось запустить viewer графа LightRAG на $Bind`:$Port."
     }
 
     @{
@@ -127,9 +127,9 @@ try {
         started_at = (Get-Date).ToString("o")
     } | ConvertTo-Json | Set-Content -Path $pidPath -Encoding UTF8
 
-    Write-Output "LightRAG graph viewer started at $url"
-    Write-Output "Server process: $($process.Id)"
-    Write-Output "Stop it with: .\scripts\serve_lightrag_graph.ps1 -Port $Port -Stop"
+    Write-Output "Viewer графа LightRAG запущен: $url"
+    Write-Output "Процесс server-а: $($process.Id)"
+    Write-Output "Остановить: .\scripts\serve_lightrag_graph.ps1 -Port $Port -Stop"
 }
 finally {
     Pop-Location

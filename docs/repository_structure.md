@@ -9,7 +9,7 @@ This repository uses a local-first Python package layout for the Statistical Arb
 - `data/` contains runtime data, local databases, LightRAG stores, vector indexes, and test scratch data. It is intentionally ignored.
 - `docs/` contains project documentation that should be committed.
 - `docs/knowledge/` contains curated decisions and future ideas that are seeded into LightRAG.
-- `docs/knowledge_graph/` contains the generated local HTML viewer and JSON export for LightRAG.
+- `docs/knowledge_graph/` содержит generated HTML viewer и JSON export для LightRAG.
 - `scripts/` contains developer and operator scripts, mostly PowerShell wrappers for local checks and workflows.
 - `src/stat_arb/` contains importable Python package code.
 - `tests/` contains automated tests split by test type.
@@ -52,7 +52,7 @@ This repository uses a local-first Python package layout for the Statistical Arb
 - `scripts/check_omniroute.ps1` verifies OmniRoute container health, API models, chat, and LightRAG smoke.
 - `scripts/smoke_lightrag_omniroute.ps1` runs a small isolated LightRAG + OmniRoute graph extraction smoke test.
 - `scripts/query_lightrag_curated.ps1` verifies that persistent curated LightRAG memory answers project questions.
-- `scripts/export_lightrag_graph.ps1` exports persistent LightRAG GraphML to `docs/knowledge_graph/`.
-- `scripts/check_lightrag_graph_export.ps1` verifies that the LightRAG GraphML export produces valid non-empty viewer files.
-- `scripts/serve_lightrag_graph.ps1` exports and starts/stops the local LightRAG graph viewer server over `127.0.0.1`.
+- `scripts/export_lightrag_graph.ps1` экспортирует persistent LightRAG GraphML в `docs/knowledge_graph/`.
+- `scripts/check_lightrag_graph_export.ps1` проверяет, что экспорт LightRAG GraphML создает валидные непустые viewer-файлы.
+- `scripts/serve_lightrag_graph.ps1` экспортирует и запускает/останавливает локальный server viewer-а LightRAG graph на `127.0.0.1`.
 - `scripts/benchmark_lightrag_omniroute.ps1` compares OmniRoute models on the same LightRAG extraction document.

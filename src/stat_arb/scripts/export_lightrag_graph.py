@@ -142,11 +142,11 @@ def parse_lightrag_graphml(graphml_path: Path) -> dict[str, Any]:
 def _html_template(graph_json: str) -> str:
     escaped_graph_json = graph_json.replace("</", "<\\/")
     return f"""<!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LightRAG Knowledge Graph</title>
+  <title>Граф знаний LightRAG</title>
   <style>
     :root {{
       color-scheme: light;
@@ -231,6 +231,20 @@ def _html_template(graph_json: str) -> str:
       font: inherit;
     }}
     input[type="range"] {{ padding: 0; }}
+    .check-row {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      color: var(--text);
+      font-size: 13px;
+    }}
+    .check-row input {{
+      width: auto;
+      min-width: 16px;
+      height: 16px;
+      padding: 0;
+    }}
     button {{
       cursor: pointer;
       background: var(--accent);
@@ -301,29 +315,33 @@ def _html_template(graph_json: str) -> str:
 <body>
   <div class="app">
     <aside>
-      <h1>LightRAG Knowledge Graph</h1>
+      <h1>Граф знаний LightRAG</h1>
       <div class="stats">
         <div class="stat"><strong id="nodeCount">0</strong><span>nodes</span></div>
         <div class="stat"><strong id="edgeCount">0</strong><span>edges</span></div>
       </div>
-      <label for="search">Search</label>
+      <label for="search">Поиск</label>
       <input id="search" type="search" placeholder="Entity, relation, keyword">
-      <label for="typeFilter">Entity type</label>
+      <label for="typeFilter">Тип entity</label>
       <select id="typeFilter"></select>
-      <label for="minDegree">Minimum degree: <span id="minDegreeValue">0</span></label>
+      <label class="check-row" for="importantOnly">
+        <input id="importantOnly" type="checkbox">
+        Только важные узлы
+      </label>
+      <label for="minDegree">Минимальный degree: <span id="minDegreeValue">0</span></label>
       <input id="minDegree" type="range" min="0" max="20" value="0">
-      <label for="maxNodes">Max visible nodes</label>
+      <label for="maxNodes">Максимум видимых nodes</label>
       <input id="maxNodes" type="number" min="20" max="600" value="120">
-      <button id="resetView" type="button">Reset View</button>
-      <h2>Selection</h2>
-      <div id="detail" class="detail">Click a node or edge.</div>
-      <h2>Top Nodes</h2>
+      <button id="resetView" type="button">Сбросить вид</button>
+      <h2>Выбор</h2>
+      <div id="detail" class="detail">Выберите node или edge.</div>
+      <h2>Главные nodes</h2>
       <div id="topNodes" class="list"></div>
     </aside>
     <main>
       <canvas id="graphCanvas"></canvas>
       <div class="toolbar">
-        <div id="visibleStats" class="badge">Loading graph...</div>
+        <div id="visibleStats" class="badge">Загрузка графа...</div>
       </div>
     </main>
   </div>
@@ -335,6 +353,7 @@ def _html_template(graph_json: str) -> str:
     const controls = {{
       search: document.getElementById("search"),
       type: document.getElementById("typeFilter"),
+      importantOnly: document.getElementById("importantOnly"),
       minDegree: document.getElementById("minDegree"),
       minDegreeValue: document.getElementById("minDegreeValue"),
       maxNodes: document.getElementById("maxNodes"),
@@ -390,6 +409,7 @@ def _html_template(graph_json: str) -> str:
       const maxNodes = Number(controls.maxNodes.value || 180);
       let filtered = graphData.nodes.filter(node => {{
         if (type !== "all" && node.type !== type) return false;
+        if (controls.importantOnly.checked && (node.degree <= 1 || node.type.toLowerCase() === "unknown")) return false;
         if (node.degree < minDegree) return false;
         if (!q) return true;
         const text = [node.label, node.type, node.description, node.file_path].join(" ").toLowerCase();
@@ -405,7 +425,7 @@ def _html_template(graph_json: str) -> str:
       nodes = filtered.nodes.map(node => Object.assign({{}}, node));
       edges = filtered.edges;
       controls.minDegreeValue.textContent = controls.minDegree.value;
-      controls.visibleStats.textContent = `${{nodes.length}} visible nodes, ${{edges.length}} visible edges`;
+      controls.visibleStats.textContent = `${{nodes.length}} видимых nodes, ${{edges.length}} видимых edges`;
       renderTopNodes();
       resetPositions();
       simulationTicks = 80;
@@ -520,11 +540,11 @@ def _html_template(graph_json: str) -> str:
       return null;
     }}
     function describe(item) {{
-      if (!item) return "Click a node or edge.";
+      if (!item) return "Выберите node или edge.";
       if (item.source && item.target) {{
-        return `Relation: ${{item.source}} -> ${{item.target}}\\nWeight: ${{item.weight}}\\nKeywords: ${{item.keywords || "none"}}\\n\\n${{item.description || "No description."}}`;
+        return `Relation: ${{item.source}} -> ${{item.target}}\\nWeight: ${{item.weight}}\\nKeywords: ${{item.keywords || "нет"}}\\n\\n${{item.description || "Нет описания."}}`;
       }}
-      return `Entity: ${{item.label}}\\nType: ${{item.type}}\\nDegree: ${{item.degree}}\\nSource chunks: ${{item.source_count}}\\n\\n${{item.description || "No description."}}`;
+      return `Entity: ${{item.label}}\\nType: ${{item.type}}\\nDegree: ${{item.degree}}\\nSource chunks: ${{item.source_count}}\\n\\n${{item.description || "Нет описания."}}`;
     }}
     function renderTopNodes() {{
       controls.topNodes.innerHTML = "";
@@ -544,11 +564,12 @@ def _html_template(graph_json: str) -> str:
       controls.nodeCount.textContent = graphData.meta.node_count;
       controls.edgeCount.textContent = graphData.meta.edge_count;
       const types = ["all", ...Object.keys(graphData.meta.type_counts).sort()];
-      controls.type.innerHTML = types.map(type => `<option value="${{type}}">${{type}}</option>`).join("");
+      controls.type.innerHTML = types.map(type => `<option value="${{type}}">${{type === "all" ? "все" : type}}</option>`).join("");
       const maxDegree = Math.max(1, ...graphData.nodes.map(node => node.degree));
       controls.minDegree.max = maxDegree;
       controls.search.addEventListener("input", applyFilters);
       controls.type.addEventListener("change", applyFilters);
+      controls.importantOnly.addEventListener("change", applyFilters);
       controls.minDegree.addEventListener("input", applyFilters);
       controls.maxNodes.addEventListener("change", applyFilters);
       controls.reset.addEventListener("click", applyFilters);
@@ -634,9 +655,9 @@ def main() -> None:
     args = parser.parse_args()
 
     export = export_lightrag_graph(graphml_path=args.graphml, output_dir=args.output_dir)
-    table = Table(title="LightRAG Graph Export")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="green")
+    table = Table(title="Экспорт графа LightRAG")
+    table.add_column("Метрика", style="cyan")
+    table.add_column("Значение", style="green")
     table.add_row("Nodes", str(export.payload["meta"]["node_count"]))
     table.add_row("Edges", str(export.payload["meta"]["edge_count"]))
     table.add_row("JSON", str(export.json_path))
