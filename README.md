@@ -183,6 +183,10 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\export_lightrag_graph.ps1
    ```
+   To verify the LightRAG graph export without opening a browser:
+   ```bash
+   .\scripts\check_lightrag_graph_export.ps1
+   ```
    To serve the generated LightRAG graph viewer locally:
    ```bash
    .\scripts\serve_lightrag_graph.ps1
