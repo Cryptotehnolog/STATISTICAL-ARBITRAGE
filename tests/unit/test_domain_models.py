@@ -8,6 +8,8 @@ from pydantic import ValidationError
 
 from stat_arb.domain import (
     AdjustmentMode,
+    ArtifactFormat,
+    ArtifactType,
     BacktestResult,
     CriticReview,
     Dataset,
@@ -18,6 +20,7 @@ from stat_arb.domain import (
     Hypothesis,
     HypothesisSource,
     HypothesisStatus,
+    ReportArtifact,
     ReviewStatus,
     StatisticalTestResult,
 )
@@ -212,3 +215,100 @@ def test_domain_models_forbid_extra_fields() -> None:
             created_by="test",
             unexpected=True,
         )
+
+
+def test_hypothesis_json_round_trip_preserves_core_types() -> None:
+    """JSON round-trip should preserve UUID, datetime, enum values, and lists."""
+    similar_id = uuid4()
+    hypothesis = Hypothesis(
+        asset_a="AAPL",
+        asset_b="MSFT",
+        rationale="Large-cap technology pair.",
+        source=HypothesisSource.LLM_GENERATED,
+        similar_hypotheses=[similar_id],
+        created_by="hypothesis_agent",
+        status=HypothesisStatus.TESTING,
+        created_at=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
+    )
+
+    restored = Hypothesis.model_validate_json(hypothesis.model_dump_json())
+
+    assert restored == hypothesis
+    assert restored.hypothesis_id == hypothesis.hypothesis_id
+    assert restored.similar_hypotheses == [similar_id]
+    assert restored.created_at.tzinfo == UTC
+    assert restored.model_dump(mode="json")["status"] == "testing"
+
+
+def test_dataset_json_round_trip_serializes_paths_and_metadata() -> None:
+    """Dataset JSON serialization should preserve paths and metadata."""
+    dataset = Dataset(
+        symbol="BTC/USDT",
+        source=DatasetSource.CCXT,
+        timeframe="5m",
+        start_date=datetime(2024, 1, 1, tzinfo=UTC),
+        end_date=datetime(2024, 1, 2, tzinfo=UTC),
+        bar_count=288,
+        file_path="data/parquet/btc_usdt.parquet",
+        metadata={"exchange": "binance", "timezone": "UTC"},
+    )
+
+    restored = Dataset.model_validate_json(dataset.model_dump_json())
+
+    assert restored == dataset
+    assert restored.file_path == dataset.file_path
+    assert restored.metadata["exchange"] == "binance"
+
+
+def test_assignment_validation_rechecks_model_invariants() -> None:
+    """Assignment validation should keep existing objects inside contract bounds."""
+    hypothesis = Hypothesis(
+        asset_a="AAPL",
+        asset_b="MSFT",
+        rationale="Technology pair.",
+        source=HypothesisSource.TEST,
+        created_by="test",
+    )
+
+    with pytest.raises(ValidationError, match="less than or equal"):
+        hypothesis.novelty_score = 1.5
+
+    with pytest.raises(ValidationError, match="asset_a and asset_b"):
+        hypothesis.asset_b = "AAPL"
+
+
+def test_mutable_defaults_are_not_shared_between_instances() -> None:
+    """List and dict defaults should not leak across model instances."""
+    first_review = CriticReview(
+        backtest_id=uuid4(),
+        status=ReviewStatus.QUARANTINED,
+        recommendation="Retest",
+        objections="Weak assumptions",
+    )
+    second_review = CriticReview(
+        backtest_id=uuid4(),
+        status=ReviewStatus.QUARANTINED,
+        recommendation="Retest",
+        objections="Weak assumptions",
+    )
+
+    first_review.weak_assumptions.append("Short sample")
+
+    assert second_review.weak_assumptions == []
+
+
+def test_report_artifact_round_trip_preserves_format_and_type() -> None:
+    """Report artifacts should round-trip through JSON for report workflows."""
+    artifact = ReportArtifact(
+        experiment_id=uuid4(),
+        artifact_type=ArtifactType.BACKTEST_REPORT,
+        file_path="reports/backtest.html",
+        format=ArtifactFormat.HTML,
+        created_at=datetime(2024, 1, 3, tzinfo=UTC),
+    )
+
+    restored = ReportArtifact.model_validate_json(artifact.model_dump_json())
+
+    assert restored == artifact
+    assert restored.model_dump(mode="json")["artifact_type"] == "backtest_report"
+    assert restored.model_dump(mode="json")["format"] == "html"

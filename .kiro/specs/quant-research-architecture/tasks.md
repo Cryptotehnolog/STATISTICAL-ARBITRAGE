@@ -68,7 +68,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Add validation rules and type constraints
     - _Requirements: 2.10, 3.1-3.7, 4.1-4.12, 5.1-5.14_
   
-  - [ ]* 3.2 Write unit tests for data model validation
+  - [x]* 3.2 Write unit tests for data model validation
     - Test edge cases and validation rules
     - Test serialization/deserialization
     - _Requirements: 18.8_
