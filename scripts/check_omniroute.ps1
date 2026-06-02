@@ -5,6 +5,7 @@ param(
     [string]$ApiKey = $env:OMNIROUTE_API_KEY,
     [int]$TimeoutSeconds = 60,
     [double]$SmokeTimeoutSeconds = 180,
+    [switch]$SkipDocStatus,
     [switch]$SkipSmoke
 )
 
@@ -12,6 +13,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $smokeScript = Join-Path $PSScriptRoot "smoke_lightrag_omniroute.ps1"
+$python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 
 function New-OmniRouteHeaders {
     if ($ApiKey) {
@@ -76,6 +78,20 @@ if ($chatResponse.Content -notmatch "OK") {
     Write-Error "Chat endpoint did not return expected OK response."
 }
 Write-Output "Chat endpoint OK"
+
+if (-not $SkipDocStatus) {
+    Write-Output "Checking persistent LightRAG doc_status..."
+    Push-Location $repoRoot
+    try {
+        & $python -m stat_arb.scripts.check_lightrag_doc_status
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
 
 if (-not $SkipSmoke) {
     Write-Output "Running LightRAG OmniRoute smoke..."

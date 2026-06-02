@@ -50,4 +50,5 @@ This repository uses a local-first Python package layout for the Statistical Arb
 - `scripts/suggest_knowledge_shards.ps1` reports large markdown files and candidate sections for curated memory shards.
 - `scripts/check_omniroute.ps1` verifies OmniRoute container health, API models, chat, and LightRAG smoke.
 - `scripts/smoke_lightrag_omniroute.ps1` runs a small isolated LightRAG + OmniRoute graph extraction smoke test.
+- `scripts/query_lightrag_curated.ps1` verifies that persistent curated LightRAG memory answers project questions.
 - `scripts/benchmark_lightrag_omniroute.ps1` compares OmniRoute models on the same LightRAG extraction document.
