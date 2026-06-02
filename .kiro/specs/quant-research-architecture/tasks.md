@@ -74,7 +74,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 18.8_
 
 - [ ] 4. Build Data Agent with quality validation
-  - [ ] 4.1 Implement OHLCV data ingestion from CCXT (crypto)
+  - [x] 4.1 Implement OHLCV data ingestion from CCXT (crypto)
     - Create data source adapter for CCXT
     - Implement download logic for multiple exchanges (Binance, Coinbase, Kraken)
     - Handle rate limiting and retries with exponential backoff

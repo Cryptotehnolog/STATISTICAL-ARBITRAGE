@@ -195,3 +195,23 @@ the expected payload shape in markdown.
 
 Risks: The domain contract may need narrow extensions once the first parquet/storage
 service exists. Add conversion helpers only when a real service boundary needs them.
+
+## DEC-0013: Keep CCXT ingestion separate from data quality validation
+
+Status: accepted
+
+Decision: Implement CCXT OHLCV ingestion as a narrow adapter under `stat_arb.ingestion`.
+The adapter fetches exchange rows, normalizes them into `OHLCVBatch`, applies retry
+behavior, and writes raw parquet partitions. Data quality reports, registry writes, and
+LightRAG summaries remain separate tasks.
+
+Rationale: Task 4.1 should prove source access and raw persistence without mixing in the
+validation/reporting responsibilities from tasks 4.3, 4.9, and 4.10. Keeping ingestion
+small makes it easier to test without network access and prevents Data Agent code from
+returning informal payloads.
+
+Alternatives considered: Put CCXT logic directly in a future Data Agent; combine ingestion,
+quality validation, and registry writes in one service.
+
+Risks: A thin adapter still needs a later live smoke test against a real exchange and a
+service-level integration point once quality validation exists.
