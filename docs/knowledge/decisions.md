@@ -105,3 +105,21 @@ was `kiro/deepseek-3.2` (14 nodes / 15 edges), `kiro/glm-5` (13 nodes / 13 edges
 `kiro/claude-sonnet-4.5` (9 nodes / 13 edges), `kiro/minimax-m2.5` (10 nodes / 12 edges),
 then `kiro/qwen3-coder-next` (14 nodes / 9 edges). Prefer this order for `my-ai` until a
 new benchmark says otherwise.
+
+## DEC-0008: Keep OmniRoute knowledge seeding opt-in and size-limited
+
+Status: accepted
+
+Decision: Use a dedicated OmniRoute seed wrapper that defaults to dry-run and applies
+per-document and total character limits. Require an explicit apply flag before writing to
+LightRAG through the LLM-backed provider.
+
+Rationale: Curated project sources include large Kiro design documents. Sending those
+documents through the LLM extraction path accidentally would make seed runs slow, expensive,
+and hard to review.
+
+Alternatives considered: Make the base seed command dry-run by default; seed every changed
+document through OmniRoute automatically.
+
+Risks: Large but useful sources may be skipped until they are split into smaller curated
+documents.

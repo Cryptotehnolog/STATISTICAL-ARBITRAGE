@@ -36,3 +36,14 @@ nodes, extracted edges, and status.
 Why later: The OmniRoute smoke test validates the current active combo, but model ordering
 inside `my-ai` should be based on extraction quality and latency measured on the real
 LightRAG prompt, not only dashboard ping tests.
+
+## IDEA-0004: Split large Kiro design knowledge into curated memory shards
+
+Status: proposed
+
+Idea: Extract durable architecture decisions, interface contracts, and implementation notes
+from large Kiro design files into smaller markdown shards under `docs/knowledge/`.
+
+Why later: The OmniRoute seed wrapper intentionally skips large documents. Splitting useful
+knowledge into smaller curated files will improve LightRAG extraction quality without
+sending bulky planning documents through the LLM path.

@@ -43,7 +43,9 @@ This repository uses a local-first Python package layout for the Statistical Arb
 
 - `scripts/check_unit.ps1` runs the fast unit baseline.
 - `scripts/check.ps1` runs Ruff plus the fast unit baseline and should be used before commits.
+- `scripts/pre_commit_check.ps1` runs the local pre-commit checklist without LLM dependencies.
 - `scripts/seed_lightrag.ps1` seeds changed curated project knowledge into local LightRAG storage.
+- `scripts/seed_lightrag_omniroute.ps1` previews or applies a limited OmniRoute-backed knowledge seed.
 - `scripts/check_omniroute.ps1` verifies OmniRoute container health, API models, chat, and LightRAG smoke.
 - `scripts/smoke_lightrag_omniroute.ps1` runs a small isolated LightRAG + OmniRoute graph extraction smoke test.
 - `scripts/benchmark_lightrag_omniroute.ps1` compares OmniRoute models on the same LightRAG extraction document.

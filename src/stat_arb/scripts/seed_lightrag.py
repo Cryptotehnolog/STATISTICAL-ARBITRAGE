@@ -60,6 +60,14 @@ class KnowledgeDocument:
     content_hash: str
 
 
+@dataclass(frozen=True)
+class SkippedDocument:
+    """A source document skipped by seed safety limits."""
+
+    document: KnowledgeDocument
+    reason: str
+
+
 def repo_root_from(start: Path | None = None) -> Path:
     """Find the repository root by walking up to pyproject.toml."""
     current = (start or Path.cwd()).resolve()
@@ -141,6 +149,42 @@ def changed_documents(
     ]
 
 
+def limit_documents(
+    documents: list[KnowledgeDocument],
+    max_document_chars: int | None = None,
+    max_total_chars: int | None = None,
+) -> tuple[list[KnowledgeDocument], list[SkippedDocument]]:
+    """Apply per-document and total character limits to seed inputs."""
+    selected: list[KnowledgeDocument] = []
+    skipped: list[SkippedDocument] = []
+    total_chars = 0
+
+    for document in documents:
+        document_chars = len(document.content)
+        if max_document_chars is not None and document_chars > max_document_chars:
+            skipped.append(
+                SkippedDocument(
+                    document=document,
+                    reason=f"{document_chars} chars exceeds max document {max_document_chars}",
+                )
+            )
+            continue
+
+        if max_total_chars is not None and total_chars + document_chars > max_total_chars:
+            skipped.append(
+                SkippedDocument(
+                    document=document,
+                    reason=f"total would exceed max {max_total_chars} chars",
+                )
+            )
+            continue
+
+        selected.append(document)
+        total_chars += document_chars
+
+    return selected, skipped
+
+
 def render_document_for_lightrag(document: KnowledgeDocument) -> str:
     """Wrap source content with stable metadata for retrieval."""
     return "\n".join(
@@ -162,6 +206,8 @@ def seed_lightrag(
     openai_compatible_model: str = "my-ai",
     openai_compatible_base_url: str = "http://localhost:20128/v1",
     openai_compatible_api_key: str = "",
+    max_document_chars: int | None = None,
+    max_total_chars: int | None = None,
 ) -> int:
     """Seed changed project knowledge documents into LightRAG."""
     root = repo_root_from(repo_root)
@@ -176,18 +222,36 @@ def seed_lightrag(
     manifest_path = root / "data" / "lightrag_seed_manifest.json"
     documents = [load_document(path, root) for path in discover_source_paths(root)]
     manifest = load_manifest(manifest_path)
-    to_seed = changed_documents(documents, manifest)
+    changed = changed_documents(documents, manifest)
+    to_seed, skipped = limit_documents(
+        changed,
+        max_document_chars=max_document_chars,
+        max_total_chars=max_total_chars,
+    )
 
     table = Table(title="LightRAG Knowledge Seed")
     table.add_column("Source", style="cyan")
     table.add_column("Status", style="green")
     for document in documents:
-        status = "changed" if document in to_seed else "unchanged"
+        if document in to_seed:
+            status = "changed"
+        elif skipped_document := next(
+            (skipped_item for skipped_item in skipped if skipped_item.document == document),
+            None,
+        ):
+            status = f"skipped: {skipped_document.reason}"
+        elif document in changed:
+            status = "changed"
+        else:
+            status = "unchanged"
         table.add_row(document.source_id, status)
     console.print(table)
 
     if dry_run:
-        console.print(f"[yellow]Dry run:[/yellow] {len(to_seed)} changed document(s).")
+        console.print(
+            f"[yellow]Dry run:[/yellow] {len(to_seed)} changed document(s), "
+            f"{len(skipped)} skipped by limits."
+        )
         return 0
 
     if not to_seed:
@@ -265,6 +329,18 @@ def main() -> None:
         default="",
         help="API key for --llm-provider openai_compatible.",
     )
+    parser.add_argument(
+        "--max-document-chars",
+        type=int,
+        default=None,
+        help="Skip changed documents larger than this character count.",
+    )
+    parser.add_argument(
+        "--max-total-chars",
+        type=int,
+        default=None,
+        help="Stop adding changed documents once this total character count would be exceeded.",
+    )
     args = parser.parse_args()
     sys.exit(
         seed_lightrag(
@@ -275,6 +351,8 @@ def main() -> None:
             openai_compatible_model=args.openai_compatible_model,
             openai_compatible_base_url=args.openai_compatible_base_url,
             openai_compatible_api_key=args.openai_compatible_api_key,
+            max_document_chars=args.max_document_chars,
+            max_total_chars=args.max_total_chars,
         )
     )
 

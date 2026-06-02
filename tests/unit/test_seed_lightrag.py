@@ -62,6 +62,50 @@ def test_changed_documents_uses_manifest_hash() -> None:
     assert seed_lightrag_module.changed_documents([document], changed_manifest) == [document]
 
 
+def test_limit_documents_skips_large_documents() -> None:
+    """Per-document limits should skip oversized sources."""
+    test_dir = _test_dir("seed-limit-document")
+    small = test_dir / "small.md"
+    large = test_dir / "large.md"
+    small.write_text("# Small\nok\n", encoding="utf-8")
+    large.write_text("# Large\n" + ("x" * 20), encoding="utf-8")
+    documents = [
+        seed_lightrag_module.load_document(small, test_dir),
+        seed_lightrag_module.load_document(large, test_dir),
+    ]
+
+    selected, skipped = seed_lightrag_module.limit_documents(
+        documents,
+        max_document_chars=15,
+    )
+
+    assert [document.source_id for document in selected] == ["small.md"]
+    assert [item.document.source_id for item in skipped] == ["large.md"]
+    assert "exceeds max document" in skipped[0].reason
+
+
+def test_limit_documents_respects_total_limit() -> None:
+    """Total limits should keep the first fitting documents and skip the rest."""
+    test_dir = _test_dir("seed-limit-total")
+    first = test_dir / "first.md"
+    second = test_dir / "second.md"
+    first.write_text("# First\n12345\n", encoding="utf-8")
+    second.write_text("# Second\n12345\n", encoding="utf-8")
+    documents = [
+        seed_lightrag_module.load_document(first, test_dir),
+        seed_lightrag_module.load_document(second, test_dir),
+    ]
+
+    selected, skipped = seed_lightrag_module.limit_documents(
+        documents,
+        max_total_chars=len(documents[0].content),
+    )
+
+    assert [document.source_id for document in selected] == ["first.md"]
+    assert [item.document.source_id for item in skipped] == ["second.md"]
+    assert "total would exceed" in skipped[0].reason
+
+
 def test_seed_lightrag_dry_run_does_not_insert_or_write_manifest() -> None:
     """Dry run should report changed sources without touching LightRAG."""
     test_dir = _test_dir("seed-dry-run")

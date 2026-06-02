@@ -150,6 +150,14 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\seed_lightrag.ps1 --llm-provider openai_compatible --openai-compatible-model my-ai
    ```
+   To preview a limited OmniRoute knowledge seed without writing:
+   ```bash
+   .\scripts\seed_lightrag_omniroute.ps1
+   ```
+   To apply that limited OmniRoute seed:
+   ```bash
+   .\scripts\seed_lightrag_omniroute.ps1 -Apply
+   ```
    To run the same graph extraction smoke test through OmniRoute:
    ```bash
    .\scripts\smoke_lightrag_omniroute.ps1
@@ -161,6 +169,10 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    To check the local OmniRoute container, API, chat route, and LightRAG smoke:
    ```bash
    .\scripts\check_omniroute.ps1
+   ```
+   To run the local pre-commit checklist without LLM dependencies:
+   ```bash
+   .\scripts\pre_commit_check.ps1
    ```
 
 ### Running the System
