@@ -47,4 +47,4 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   up the previous runtime storage. Post-rebuild status had 7 processed docs, 0 failed docs,
   0 duplicate failed docs, valid graph export, and successful control queries.
 - LightRAG memory freshness guard now checks curated seed freshness, OmniRoute/doc_status,
-  graph export, and a control query in one command.
+  graph export, human-facing viewer export, and a control query in one command.

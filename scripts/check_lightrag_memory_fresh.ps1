@@ -3,7 +3,8 @@ param(
     [string[]]$Expect = @("technical_debt.md", "docs/knowledge"),
     [int]$QueryTimeoutSeconds = 240,
     [switch]$SkipQuery,
-    [switch]$SkipDocker
+    [switch]$SkipDocker,
+    [switch]$SkipViewerExport
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,6 +13,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $seedScript = Join-Path $PSScriptRoot "seed_lightrag_curated.ps1"
 $omniRouteScript = Join-Path $PSScriptRoot "check_omniroute.ps1"
 $graphExportScript = Join-Path $PSScriptRoot "check_lightrag_graph_export.ps1"
+$viewerExportScript = Join-Path $PSScriptRoot "export_lightrag_graph.ps1"
 $queryScript = Join-Path $PSScriptRoot "query_lightrag_curated.ps1"
 $docStatusPath = Join-Path $repoRoot "data\lightrag\kv_store_doc_status.json"
 $knowledgeDir = Join-Path $repoRoot "docs\knowledge"
@@ -97,6 +99,15 @@ else {
 Invoke-CheckedCommand `
     -Description "Экспорт графа LightRAG" `
     -Command { & $graphExportScript }
+
+if (-not $SkipViewerExport) {
+    Invoke-CheckedCommand `
+        -Description "Обновление human-facing viewer export" `
+        -Command { & $viewerExportScript }
+}
+else {
+    Write-Output "- Human-facing viewer export пропущен по флагу -SkipViewerExport"
+}
 
 if (-not $SkipQuery) {
     Invoke-CheckedCommand `

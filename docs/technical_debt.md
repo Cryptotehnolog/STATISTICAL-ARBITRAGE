@@ -243,6 +243,7 @@ Closed by: local runtime rebuild on 2026-06-03.
 Status: closed
 
 Resolution: Added `scripts/check_lightrag_memory_fresh.ps1` to verify curated seed
-freshness, OmniRoute/doc_status, graph export, and a control query in one command.
+freshness, OmniRoute/doc_status, graph export, human-facing viewer export, and a control
+query in one command.
 
 Closed by: `scripts/check_lightrag_memory_fresh.ps1`.

@@ -14,6 +14,7 @@ def test_memory_fresh_guard_checks_seed_doc_status_export_and_query() -> None:
     assert "check_omniroute.ps1" in script
     assert "-SkipSmoke" in script
     assert "check_lightrag_graph_export.ps1" in script
+    assert "export_lightrag_graph.ps1" in script
     assert "query_lightrag_curated.ps1" in script
     assert "technical_debt.md" in script
     assert "docs/knowledge" in script
@@ -28,5 +29,7 @@ def test_memory_fresh_guard_supports_skip_flags() -> None:
 
     assert "[switch]$SkipQuery" in script
     assert "[switch]$SkipDocker" in script
+    assert "[switch]$SkipViewerExport" in script
     assert "Query smoke пропущен" in script
     assert "Docker/OmniRoute readiness пропущен" in script
+    assert "Human-facing viewer export пропущен" in script
