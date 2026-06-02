@@ -114,6 +114,12 @@ CRITIC_REVIEW -> REPORTING -> FINAL_DECISION
      INFISICAL_PROJECT_ID=your_project_id
      ```
 
+   Затем создайте test secret `STAT_ARB_INFISICAL_SMOKE_SECRET` и проверьте runtime access:
+
+   ```powershell
+   .\scripts\check_infisical_auth.ps1
+   ```
+
 5. Инициализировать database:
 
    ```bash
@@ -376,11 +382,15 @@ uv run pytest && uv run ruff check . && uv run mypy src/stat_arb
 .\scripts\init_infisical_env.ps1
 .\scripts\start_infisical.ps1
 .\scripts\check_infisical.ps1
+.\scripts\check_infisical_auth.ps1
 ```
 
 Сервис открывается только на `127.0.0.1:8080`; PostgreSQL и Redis не публикуются наружу.
 Файл `infra/infisical/.env` содержит bootstrap keys для шифрования Infisical. Не удаляйте
 его без backup, иначе восстановить secrets из Docker volume будет нельзя.
+
+`check_infisical_auth.ps1` проверяет Universal Auth и чтение test secret
+`STAT_ARB_INFISICAL_SMOKE_SECRET`. Значение secret не выводится в консоль.
 
 Нельзя коммитить secrets в Git:
 
