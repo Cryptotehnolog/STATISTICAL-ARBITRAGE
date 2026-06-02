@@ -50,12 +50,13 @@ large markdown candidates.
 
 ## IDEA-0005: Controlled rebuild for a clean LightRAG graph
 
-Status: proposed
+Status: implemented
 
 Idea: Add a safe rebuild command that backs up the current `data/lightrag`, creates clean
 runtime storage, and reseeds only `docs/knowledge/*.md` through the OpenAI-compatible
 provider.
 
-Why later: Repeated forced seeding updates retrieval and query behavior, but persistent
-graph entities, relationships, and LLM cache entries can keep older extraction artifacts.
-A controlled rebuild is safer than manually editing generated `graph.json`.
+Outcome: Performed a controlled rebuild by moving the previous `data/lightrag` and seed
+manifest to `data/backups/`, then reseeding only curated `docs/knowledge/*.md` shards.
+Post-rebuild status: all curated documents processed, no duplicate failed documents, no
+real failed documents, and graph export/query checks passed.

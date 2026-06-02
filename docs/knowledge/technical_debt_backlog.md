@@ -14,6 +14,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Ubuntu portability: add Linux-friendly commands or shell wrappers, then verify `uv sync`,
   checks, SQLite, Parquet, LightRAG, Infisical Docker Compose, graph export, and CCXT smoke
   on Ubuntu before server deployment.
+- Ubuntu migration checklist: write exact Ubuntu operator commands, expected paths,
+  environment variables, and validation steps before server migration.
 - Live CCXT smoke: keep live exchange checks outside fast pre-commit; add the smoke after
   data quality validation exists.
 - Domain conversion helpers: add domain to parquet/storage helpers only when ingestion,
@@ -40,3 +42,6 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 ## Closed Follow-up
 
 - Coverage artifacts are now included in `scripts/clean_runtime_artifacts.ps1`.
+- Persistent LightRAG was rebuilt from curated `docs/knowledge/*.md` shards after backing
+  up the previous runtime storage. Post-rebuild status had 7 processed docs, 0 failed docs,
+  0 duplicate failed docs, valid graph export, and successful control queries.

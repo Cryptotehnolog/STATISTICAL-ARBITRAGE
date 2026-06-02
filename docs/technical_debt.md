@@ -22,6 +22,21 @@ Follow-up:
 
 Related tasks: 18.1, 19.1, 22.4.
 
+### TD-0015: Write detailed Ubuntu migration checklist
+
+Status: open
+
+Why deferred: LightRAG can answer the high-level Ubuntu portability theme, but the project
+does not yet have a concrete operator checklist for server migration.
+
+Follow-up:
+- Document exact Ubuntu setup commands for `uv sync`, Docker, Infisical, OmniRoute,
+  LightRAG seeding, graph export, and checks.
+- Include expected paths, environment variables, and validation commands.
+- Keep this separate from Windows PowerShell commands or provide equivalent `.sh` wrappers.
+
+Related tasks: TD-0001, 19.1, 22.4.
+
 ### TD-0002: Add live CCXT smoke test after data quality validation exists
 
 Status: open
@@ -209,3 +224,14 @@ Resolution: `scripts/clean_runtime_artifacts.ps1` now removes `coverage.xml` and
 alongside `.coverage`, pytest caches, Ruff cache, and test temp data.
 
 Closed by: `ca4b224 Add OHLCV data quality domain contracts`.
+
+### TD-CLOSED-0002: Clean rebuild persistent LightRAG from curated shards
+
+Status: closed
+
+Resolution: Backed up the previous persistent `data/lightrag` and
+`data/lightrag_seed_manifest.json` under `data/backups/`, then reseeded only
+`docs/knowledge/*.md` through OmniRoute. Post-rebuild checks passed with 7 processed docs,
+0 failed docs, 0 duplicate failed docs, valid graph export, and successful control queries.
+
+Closed by: local runtime rebuild on 2026-06-03.
