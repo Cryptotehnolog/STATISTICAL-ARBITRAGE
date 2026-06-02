@@ -154,6 +154,10 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\check_ollama_lightrag.ps1
    ```
+   To run a small isolated LightRAG graph extraction smoke test:
+   ```bash
+   .\scripts\smoke_lightrag_ollama.ps1
+   ```
 
 ### Running the System
 

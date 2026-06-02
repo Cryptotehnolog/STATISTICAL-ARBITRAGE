@@ -166,6 +166,8 @@ class LightRAGClient:
             llm_model_func=self._llm_model_func,
             embedding_batch_num=self.config.batch_size,
             embedding_func_max_async=self.config.max_workers,
+            llm_model_max_async=self.config.max_workers,
+            default_llm_timeout=int(self.config.ollama_timeout),
             chunk_token_size=self.config.chunk_size,
             chunk_overlap_token_size=self.config.chunk_overlap,
         )
