@@ -42,6 +42,8 @@ $targets = [System.Collections.ArrayList]::new()
 
 Add-ExistingPath -Paths $targets -Path ".ruff_cache"
 Add-ExistingPath -Paths $targets -Path ".pytest_cache"
+Add-ExistingPath -Paths $targets -Path "coverage.xml"
+Add-ExistingPath -Paths $targets -Path "htmlcov"
 Add-ExistingPath -Paths $targets -Path "data/test_tmp"
 Add-ExistingPath -Paths $targets -Path "data/test_registry.db"
 

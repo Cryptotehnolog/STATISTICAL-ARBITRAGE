@@ -176,3 +176,22 @@ under `src/stat_arb/models/`.
 
 Risks: Field drift is possible between domain and storage layers. Conversion helpers should
 be added when repository/service code starts moving data between them.
+
+## DEC-0012: Require strict OHLCV and data quality domain contracts before CCXT ingestion
+
+Status: accepted
+
+Decision: Data Agent services must exchange normalized `OHLCVBar`, `OHLCVBatch`, and
+`DataQualityReport` domain models instead of ad-hoc DataFrame or dictionary payloads.
+
+Rationale: CCXT ingestion, data quality validation, statistical testing, and backtesting
+all depend on the same candle semantics: UTC timestamps, valid OHLC bounds, ordered bars,
+missing-bar counts, duplicate detection, outlier counts, and pass/fail quality decisions.
+Making this contract executable before the adapter is implemented prevents downstream
+agents from depending on informal payload shapes.
+
+Alternatives considered: Start with raw DataFrames and add validation later; only document
+the expected payload shape in markdown.
+
+Risks: The domain contract may need narrow extensions once the first parquet/storage
+service exists. Add conversion helpers only when a real service boundary needs them.

@@ -52,6 +52,14 @@ class AdjustmentMode(StrEnum):
     NONE = "none"
 
 
+class DataQualitySeverity(StrEnum):
+    """Severity for data quality findings."""
+
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+
+
 class ReviewStatus(StrEnum):
     """Critic review decision status."""
 
@@ -185,6 +193,163 @@ class Dataset(DomainModel):
         """Ensure dataset time range is ordered."""
         if self.end_date <= self.start_date:
             raise ValueError("end_date must be after start_date")
+        return self
+
+
+class OHLCVBar(DomainModel):
+    """Single normalized OHLCV bar."""
+
+    symbol: str = Field(min_length=1, max_length=50)
+    source: DatasetSource
+    timeframe: str = Field(pattern=r"^\d+[mhdw]$")
+    timestamp: datetime
+    open: float = Field(gt=0.0)
+    high: float = Field(gt=0.0)
+    low: float = Field(gt=0.0)
+    close: float = Field(gt=0.0)
+    volume: float = Field(ge=0.0)
+    exchange: str | None = Field(default=None, min_length=1, max_length=100)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        """Normalize asset symbols to uppercase compact strings."""
+        return value.strip().upper()
+
+    @field_validator("exchange")
+    @classmethod
+    def normalize_exchange(cls, value: str | None) -> str | None:
+        """Normalize exchange identifiers when provided."""
+        if value is None:
+            return None
+        return value.strip().lower()
+
+    @model_validator(mode="after")
+    def validate_candle_bounds(self) -> OHLCVBar:
+        """Reject impossible candles."""
+        if self.high < max(self.open, self.low, self.close):
+            raise ValueError("high must be greater than or equal to open, low, and close")
+        if self.low > min(self.open, self.high, self.close):
+            raise ValueError("low must be less than or equal to open, high, and close")
+        return self
+
+
+class OHLCVBatch(DomainModel):
+    """Ordered batch of normalized OHLCV bars for one symbol/timeframe/source."""
+
+    dataset_id: UUID = Field(default_factory=new_uuid)
+    symbol: str = Field(min_length=1, max_length=50)
+    source: DatasetSource
+    timeframe: str = Field(pattern=r"^\d+[mhdw]$")
+    bars: list[OHLCVBar] = Field(min_length=1)
+    exchange: str | None = Field(default=None, min_length=1, max_length=100)
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        """Normalize asset symbols to uppercase compact strings."""
+        return value.strip().upper()
+
+    @field_validator("exchange")
+    @classmethod
+    def normalize_exchange(cls, value: str | None) -> str | None:
+        """Normalize exchange identifiers when provided."""
+        if value is None:
+            return None
+        return value.strip().lower()
+
+    @model_validator(mode="after")
+    def validate_batch_consistency(self) -> OHLCVBatch:
+        """Ensure bars belong to the batch contract and timestamps are unique and ordered."""
+        previous_timestamp: datetime | None = None
+        for bar in self.bars:
+            if bar.symbol != self.symbol:
+                raise ValueError("all bars must match batch symbol")
+            if bar.source != self.source:
+                raise ValueError("all bars must match batch source")
+            if bar.timeframe != self.timeframe:
+                raise ValueError("all bars must match batch timeframe")
+            if self.exchange is not None and bar.exchange not in {None, self.exchange}:
+                raise ValueError("bar exchange must match batch exchange")
+            if previous_timestamp is not None and bar.timestamp <= previous_timestamp:
+                raise ValueError("bar timestamps must be strictly increasing")
+            previous_timestamp = bar.timestamp
+        return self
+
+
+class DataQualityIssue(DomainModel):
+    """Single data quality finding."""
+
+    code: str = Field(min_length=1, max_length=100)
+    severity: DataQualitySeverity
+    message: str = Field(min_length=1)
+    count: int = Field(default=1, ge=1)
+    first_timestamp: datetime | None = None
+    last_timestamp: datetime | None = None
+
+    @field_validator("code")
+    @classmethod
+    def normalize_code(cls, value: str) -> str:
+        """Normalize finding codes for stable matching."""
+        return value.strip().lower()
+
+    @model_validator(mode="after")
+    def validate_timestamp_range(self) -> DataQualityIssue:
+        """Ensure issue timestamp ranges are ordered."""
+        if (
+            self.first_timestamp is not None
+            and self.last_timestamp is not None
+            and self.last_timestamp < self.first_timestamp
+        ):
+            raise ValueError("last_timestamp must be on or after first_timestamp")
+        return self
+
+
+class DataQualityReport(DomainModel):
+    """Validation summary for an OHLCV dataset."""
+
+    report_id: UUID = Field(default_factory=new_uuid)
+    dataset_id: UUID
+    symbol: str = Field(min_length=1, max_length=50)
+    source: DatasetSource
+    timeframe: str = Field(pattern=r"^\d+[mhdw]$")
+    start_date: datetime
+    end_date: datetime
+    bar_count: int = Field(ge=0)
+    expected_bar_count: int = Field(ge=0)
+    missing_bars: int = Field(default=0, ge=0)
+    duplicate_timestamps: int = Field(default=0, ge=0)
+    outlier_count: int = Field(default=0, ge=0)
+    zero_price_count: int = Field(default=0, ge=0)
+    impossible_candle_count: int = Field(default=0, ge=0)
+    abnormal_volume_count: int = Field(default=0, ge=0)
+    timezone_normalized: bool
+    alignment_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    quality_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    passed: bool
+    issues: list[DataQualityIssue] = Field(default_factory=list)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        """Normalize asset symbols to uppercase compact strings."""
+        return value.strip().upper()
+
+    @model_validator(mode="after")
+    def validate_report_consistency(self) -> DataQualityReport:
+        """Validate report time range, counts, and pass/fail explanation."""
+        if self.end_date <= self.start_date:
+            raise ValueError("end_date must be after start_date")
+        if self.bar_count > self.expected_bar_count:
+            raise ValueError("bar_count cannot exceed expected_bar_count")
+        if self.missing_bars > self.expected_bar_count:
+            raise ValueError("missing_bars cannot exceed expected_bar_count")
+        if not self.passed and not self.issues:
+            raise ValueError("failed data quality reports require issues")
+        if self.passed and any(issue.severity == DataQualitySeverity.ERROR for issue in self.issues):
+            raise ValueError("passed data quality reports cannot contain error issues")
         return self
 
 

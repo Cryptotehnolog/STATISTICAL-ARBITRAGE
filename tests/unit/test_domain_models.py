@@ -12,6 +12,9 @@ from stat_arb.domain import (
     ArtifactType,
     BacktestResult,
     CriticReview,
+    DataQualityIssue,
+    DataQualityReport,
+    DataQualitySeverity,
     Dataset,
     DatasetSource,
     Experiment,
@@ -20,6 +23,8 @@ from stat_arb.domain import (
     Hypothesis,
     HypothesisSource,
     HypothesisStatus,
+    OHLCVBar,
+    OHLCVBatch,
     ReportArtifact,
     ReviewStatus,
     StatisticalTestResult,
@@ -83,6 +88,174 @@ def test_dataset_validates_range_and_score() -> None:
             end_date=datetime(2024, 1, 1),
             bar_count=100,
             file_path="data/parquet/msft.parquet",
+        )
+
+
+def test_ohlcv_bar_normalizes_symbols_and_validates_candle_bounds() -> None:
+    """OHLCV bars should normalize metadata and reject impossible candles."""
+    bar = OHLCVBar(
+        symbol=" btc/usdt ",
+        source=DatasetSource.CCXT,
+        timeframe="5m",
+        timestamp=datetime(2024, 1, 1),
+        open=100.0,
+        high=105.0,
+        low=99.0,
+        close=101.0,
+        volume=10.5,
+        exchange="BINANCE",
+    )
+
+    assert bar.symbol == "BTC/USDT"
+    assert bar.exchange == "binance"
+    assert bar.timestamp.tzinfo == UTC
+
+    with pytest.raises(ValidationError, match="high must be"):
+        OHLCVBar(
+            symbol="BTC/USDT",
+            source=DatasetSource.CCXT,
+            timeframe="5m",
+            timestamp=datetime(2024, 1, 1),
+            open=100.0,
+            high=99.0,
+            low=98.0,
+            close=101.0,
+            volume=10.0,
+        )
+
+
+def test_ohlcv_batch_requires_consistent_contract_and_ordered_timestamps() -> None:
+    """OHLCV batches should contain one ordered symbol/source/timeframe series."""
+    first = OHLCVBar(
+        symbol="ETH/USDT",
+        source=DatasetSource.CCXT,
+        timeframe="15m",
+        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
+        open=2000.0,
+        high=2010.0,
+        low=1990.0,
+        close=2005.0,
+        volume=100.0,
+        exchange="kraken",
+    )
+    second = first.model_copy(update={"timestamp": datetime(2024, 1, 1, 0, 15, tzinfo=UTC)})
+
+    batch = OHLCVBatch(
+        symbol=" eth/usdt ",
+        source=DatasetSource.CCXT,
+        timeframe="15m",
+        bars=[first, second],
+        exchange="KRAKEN",
+    )
+
+    assert batch.symbol == "ETH/USDT"
+    assert batch.exchange == "kraken"
+
+    duplicate_timestamp = first.model_copy()
+    with pytest.raises(ValidationError, match="strictly increasing"):
+        OHLCVBatch(
+            symbol="ETH/USDT",
+            source=DatasetSource.CCXT,
+            timeframe="15m",
+            bars=[first, duplicate_timestamp],
+        )
+
+    wrong_symbol = second.model_copy(update={"symbol": "BTC/USDT"})
+    with pytest.raises(ValidationError, match="batch symbol"):
+        OHLCVBatch(
+            symbol="ETH/USDT",
+            source=DatasetSource.CCXT,
+            timeframe="15m",
+            bars=[first, wrong_symbol],
+        )
+
+
+def test_data_quality_report_requires_issues_for_failures() -> None:
+    """Failed data quality reports should explain the rejected dataset."""
+    dataset_id = uuid4()
+    issue = DataQualityIssue(
+        code="missing_bars",
+        severity=DataQualitySeverity.ERROR,
+        message="Missing bars exceed the configured threshold.",
+        count=12,
+        first_timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        last_timestamp=datetime(2024, 1, 2, tzinfo=UTC),
+    )
+
+    report = DataQualityReport(
+        dataset_id=dataset_id,
+        symbol="btc/usdt",
+        source=DatasetSource.CCXT,
+        timeframe="5m",
+        start_date=datetime(2024, 1, 1, tzinfo=UTC),
+        end_date=datetime(2024, 1, 2, tzinfo=UTC),
+        bar_count=276,
+        expected_bar_count=288,
+        missing_bars=12,
+        timezone_normalized=True,
+        quality_score=0.91,
+        passed=False,
+        issues=[issue],
+    )
+
+    restored = DataQualityReport.model_validate_json(report.model_dump_json())
+
+    assert restored == report
+    assert restored.symbol == "BTC/USDT"
+    assert restored.issues[0].code == "missing_bars"
+
+    with pytest.raises(ValidationError, match="failed data quality reports"):
+        DataQualityReport(
+            dataset_id=dataset_id,
+            symbol="BTC/USDT",
+            source=DatasetSource.CCXT,
+            timeframe="5m",
+            start_date=datetime(2024, 1, 1, tzinfo=UTC),
+            end_date=datetime(2024, 1, 2, tzinfo=UTC),
+            bar_count=276,
+            expected_bar_count=288,
+            missing_bars=12,
+            timezone_normalized=True,
+            passed=False,
+        )
+
+
+def test_data_quality_report_rejects_inconsistent_counts_and_passed_errors() -> None:
+    """Quality reports should guard impossible counts and successful error states."""
+    dataset_id = uuid4()
+    issue = DataQualityIssue(
+        code="impossible_candle",
+        severity=DataQualitySeverity.ERROR,
+        message="High is lower than close.",
+    )
+
+    with pytest.raises(ValidationError, match="bar_count cannot exceed"):
+        DataQualityReport(
+            dataset_id=dataset_id,
+            symbol="ETH/USDT",
+            source=DatasetSource.CCXT,
+            timeframe="15m",
+            start_date=datetime(2024, 1, 1, tzinfo=UTC),
+            end_date=datetime(2024, 1, 2, tzinfo=UTC),
+            bar_count=97,
+            expected_bar_count=96,
+            timezone_normalized=True,
+            passed=True,
+        )
+
+    with pytest.raises(ValidationError, match="cannot contain error issues"):
+        DataQualityReport(
+            dataset_id=dataset_id,
+            symbol="ETH/USDT",
+            source=DatasetSource.CCXT,
+            timeframe="15m",
+            start_date=datetime(2024, 1, 1, tzinfo=UTC),
+            end_date=datetime(2024, 1, 2, tzinfo=UTC),
+            bar_count=96,
+            expected_bar_count=96,
+            timezone_normalized=True,
+            passed=True,
+            issues=[issue],
         )
 
 
