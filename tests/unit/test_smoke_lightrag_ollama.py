@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
-from stat_arb.scripts.smoke_lightrag_ollama import GraphStats, count_graphml
+from stat_arb.scripts.lightrag_smoke_common import GraphStats, count_graphml
 
 
 def _test_dir(name: str) -> Path:

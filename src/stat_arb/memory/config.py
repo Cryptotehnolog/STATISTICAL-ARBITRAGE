@@ -47,9 +47,12 @@ class LightRAGConfig(BaseSettings):
     )
 
     # LLM provider for LightRAG entity and relationship extraction
-    llm_provider: Literal["noop", "ollama"] = Field(
+    llm_provider: Literal["noop", "ollama", "openai_compatible"] = Field(
         default="noop",
-        description="LLM provider for LightRAG extraction: 'noop' or 'ollama'",
+        description=(
+            "LLM provider for LightRAG extraction: "
+            "'noop', 'ollama', or 'openai_compatible'"
+        ),
     )
 
     ollama_model: str = Field(
@@ -67,6 +70,34 @@ class LightRAGConfig(BaseSettings):
         description="Timeout in seconds for Ollama generation requests",
         ge=1.0,
     )
+
+    openai_compatible_model: str = Field(
+        default="my-ai",
+        description="Model or combo name for an OpenAI-compatible LLM gateway",
+    )
+
+    openai_compatible_base_url: str = Field(
+        default="http://localhost:20128/v1",
+        description="Base URL for an OpenAI-compatible LLM gateway",
+    )
+
+    openai_compatible_api_key: str = Field(
+        default="",
+        description="API key for an OpenAI-compatible LLM gateway",
+    )
+
+    openai_compatible_timeout: float = Field(
+        default=180.0,
+        description="Timeout in seconds for OpenAI-compatible generation requests",
+        ge=1.0,
+    )
+
+    @property
+    def llm_timeout(self) -> float:
+        """Return the active LLM provider timeout."""
+        if self.llm_provider == "openai_compatible":
+            return self.openai_compatible_timeout
+        return self.ollama_timeout
 
     # Storage paths
     storage_path: Path = Field(

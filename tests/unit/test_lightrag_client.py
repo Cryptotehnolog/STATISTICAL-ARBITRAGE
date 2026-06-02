@@ -10,7 +10,11 @@ import numpy as np
 import pytest
 
 from stat_arb.memory.config import LightRAGConfig
-from stat_arb.memory.lightrag_client import LightRAGClient, ollama_llm_model_func
+from stat_arb.memory.lightrag_client import (
+    LightRAGClient,
+    ollama_llm_model_func,
+    openai_compatible_llm_model_func,
+)
 
 
 class TestLightRAGClient:
@@ -100,6 +104,8 @@ class TestLightRAGClient:
         assert callable(kwargs["llm_model_func"])
         assert kwargs["embedding_batch_num"] == temp_config.batch_size
         assert kwargs["embedding_func_max_async"] == temp_config.max_workers
+        assert kwargs["llm_model_max_async"] == temp_config.max_workers
+        assert kwargs["default_llm_timeout"] == int(temp_config.llm_timeout)
 
     def test_llm_model_func_uses_noop_by_default(self, temp_config: LightRAGConfig) -> None:
         """Test default LightRAG LLM provider is local no-op."""
@@ -142,6 +148,86 @@ class TestLightRAGClient:
             )
 
         assert result == "entity extraction result"
+
+    def test_openai_compatible_llm_model_func_calls_chat_completions(self) -> None:
+        """Test OpenAI-compatible provider calls chat completions endpoint."""
+        class FakeAsyncClient:
+            def __init__(self, **_kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def post(self, url, json, headers):
+                assert url == "http://localhost:20128/v1/chat/completions"
+                assert headers == {"Authorization": "Bearer test-key"}
+                assert json["model"] == "my-ai"
+                assert json["messages"][-1] == {
+                    "role": "user",
+                    "content": "Extract entities",
+                }
+                return httpx.Response(
+                    200,
+                    json={
+                        "choices": [
+                            {"message": {"content": "entity extraction result"}},
+                        ],
+                    },
+                    request=httpx.Request("POST", url),
+                )
+
+        with patch("stat_arb.memory.lightrag_client.httpx.AsyncClient", FakeAsyncClient):
+            result = asyncio.run(
+                openai_compatible_llm_model_func(
+                    "Extract entities",
+                    model="my-ai",
+                    base_url="http://localhost:20128/v1",
+                    api_key="test-key",
+                    timeout=1.0,
+                )
+            )
+
+        assert result == "entity extraction result"
+
+    def test_openai_compatible_llm_model_func_reads_sse_chunks(self) -> None:
+        """Test OpenAI-compatible provider reads SSE chat chunks."""
+        class FakeAsyncClient:
+            def __init__(self, **_kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def post(self, url, json, headers):
+                return httpx.Response(
+                    200,
+                    text=(
+                        'data: {"choices":[{"delta":{"content":"entity "}}]}\n\n'
+                        'data: {"choices":[{"delta":{"content":"result"}}]}\n\n'
+                        "data: [DONE]\n\n"
+                    ),
+                    headers={"content-type": "text/event-stream"},
+                    request=httpx.Request("POST", url),
+                )
+
+        with patch("stat_arb.memory.lightrag_client.httpx.AsyncClient", FakeAsyncClient):
+            result = asyncio.run(
+                openai_compatible_llm_model_func(
+                    "Extract entities",
+                    model="my-ai",
+                    base_url="http://localhost:20128/v1",
+                    api_key="",
+                    timeout=1.0,
+                )
+            )
+
+        assert result == "entity result"
 
     def test_health_check(self, temp_config: LightRAGConfig) -> None:
         """Test lightweight health check."""

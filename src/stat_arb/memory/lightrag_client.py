@@ -69,6 +69,89 @@ async def ollama_llm_model_func(
     return str(data.get("response", ""))
 
 
+def _join_chat_completion_content(data: dict[str, Any]) -> str:
+    """Extract text from a non-streaming OpenAI-compatible response."""
+    chunks: list[str] = []
+    for choice in data.get("choices", []):
+        message = choice.get("message") or {}
+        content = message.get("content")
+        if content:
+            chunks.append(str(content))
+            continue
+        text = choice.get("text")
+        if text:
+            chunks.append(str(text))
+    return "".join(chunks)
+
+
+def _join_sse_chat_completion_content(text: str) -> str:
+    """Extract text from an SSE OpenAI-compatible response."""
+    chunks: list[str] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("data:"):
+            continue
+        payload = line.removeprefix("data:").strip()
+        if not payload or payload == "[DONE]":
+            continue
+        data = json.loads(payload)
+        for choice in data.get("choices", []):
+            delta = choice.get("delta") or {}
+            content = delta.get("content")
+            if content:
+                chunks.append(str(content))
+                continue
+            message = choice.get("message") or {}
+            message_content = message.get("content")
+            if message_content:
+                chunks.append(str(message_content))
+    return "".join(chunks)
+
+
+async def openai_compatible_llm_model_func(
+    prompt: str,
+    *,
+    model: str,
+    base_url: str,
+    api_key: str,
+    timeout: float,
+    system_prompt: str | None = None,
+    history_messages: list[dict[str, Any]] | None = None,
+    **_kwargs: Any,
+) -> str:
+    """Call an OpenAI-compatible chat completions endpoint."""
+    messages: list[dict[str, str]] = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    for message in history_messages or []:
+        role = str(message.get("role", "user"))
+        content = str(message.get("content", ""))
+        if content:
+            messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": prompt})
+
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0,
+        "stream": False,
+    }
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(
+            f"{base_url.rstrip('/')}/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        response.raise_for_status()
+
+    content_type = response.headers.get("content-type", "")
+    if "text/event-stream" in content_type or response.text.lstrip().startswith("data:"):
+        return _join_sse_chat_completion_content(response.text)
+    return _join_chat_completion_content(response.json())
+
+
 class LightRAGClient:
     """Client for LightRAG with embedded vector store.
 
@@ -104,6 +187,15 @@ class LightRAGClient:
                 model=self.config.ollama_model,
                 base_url=self.config.ollama_base_url,
                 timeout=self.config.ollama_timeout,
+                **kwargs,
+            )
+        if self.config.llm_provider == "openai_compatible":
+            return await openai_compatible_llm_model_func(
+                prompt,
+                model=self.config.openai_compatible_model,
+                base_url=self.config.openai_compatible_base_url,
+                api_key=self.config.openai_compatible_api_key,
+                timeout=self.config.openai_compatible_timeout,
                 **kwargs,
             )
         return await local_noop_llm_model_func(prompt, **kwargs)
@@ -167,7 +259,7 @@ class LightRAGClient:
             embedding_batch_num=self.config.batch_size,
             embedding_func_max_async=self.config.max_workers,
             llm_model_max_async=self.config.max_workers,
-            default_llm_timeout=int(self.config.ollama_timeout),
+            default_llm_timeout=int(self.config.llm_timeout),
             chunk_token_size=self.config.chunk_size,
             chunk_overlap_token_size=self.config.chunk_overlap,
         )

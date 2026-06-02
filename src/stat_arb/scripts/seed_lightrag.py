@@ -160,6 +160,9 @@ def seed_lightrag(
     vector_store: str = "nano",
     llm_provider: str = "noop",
     ollama_model: str = "qwen2.5:3b",
+    openai_compatible_model: str = "my-ai",
+    openai_compatible_base_url: str = "http://localhost:20128/v1",
+    openai_compatible_api_key: str = "",
 ) -> int:
     """Seed changed project knowledge documents into LightRAG."""
     root = repo_root_from(repo_root)
@@ -168,6 +171,9 @@ def seed_lightrag(
         vector_store=vector_store,
         llm_provider=llm_provider,
         ollama_model=ollama_model,
+        openai_compatible_model=openai_compatible_model,
+        openai_compatible_base_url=openai_compatible_base_url,
+        openai_compatible_api_key=openai_compatible_api_key,
     )
     manifest_path = root / "data" / "lightrag_seed_manifest.json"
     documents = [load_document(path, root) for path in discover_source_paths(root)]
@@ -242,7 +248,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--llm-provider",
-        choices=("noop", "ollama"),
+        choices=("noop", "ollama", "openai_compatible"),
         default="noop",
         help="LLM provider for LightRAG extraction. Defaults to noop.",
     )
@@ -250,6 +256,21 @@ def main() -> None:
         "--ollama-model",
         default="qwen2.5:3b",
         help="Ollama model to use when --llm-provider ollama is selected.",
+    )
+    parser.add_argument(
+        "--openai-compatible-model",
+        default="my-ai",
+        help="Model or combo for --llm-provider openai_compatible.",
+    )
+    parser.add_argument(
+        "--openai-compatible-base-url",
+        default="http://localhost:20128/v1",
+        help="OpenAI-compatible base URL for --llm-provider openai_compatible.",
+    )
+    parser.add_argument(
+        "--openai-compatible-api-key",
+        default="",
+        help="API key for --llm-provider openai_compatible.",
     )
     args = parser.parse_args()
     sys.exit(
@@ -259,6 +280,9 @@ def main() -> None:
             vector_store=args.vector_store,
             llm_provider=args.llm_provider,
             ollama_model=args.ollama_model,
+            openai_compatible_model=args.openai_compatible_model,
+            openai_compatible_base_url=args.openai_compatible_base_url,
+            openai_compatible_api_key=args.openai_compatible_api_key,
         )
     )
 

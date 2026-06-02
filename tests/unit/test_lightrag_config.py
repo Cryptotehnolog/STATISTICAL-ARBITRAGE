@@ -28,11 +28,23 @@ class TestLightRAGConfig:
         assert config.llm_provider == "noop"
         assert config.ollama_model == "qwen2.5:3b"
         assert config.ollama_base_url == "http://localhost:11434"
+        assert config.openai_compatible_model == "my-ai"
+        assert config.openai_compatible_base_url == "http://localhost:20128/v1"
+        assert config.openai_compatible_api_key == ""
         assert config.chunk_size == 512
         assert config.chunk_overlap == 50
         assert config.embedding_dim == 384
         assert config.batch_size == 32
         assert config.max_workers == 4
+
+    def test_llm_timeout_uses_active_provider(self) -> None:
+        """Test active LLM provider timeout selection."""
+        assert LightRAGConfig(ollama_timeout=12).llm_timeout == 12
+        config = LightRAGConfig(
+            llm_provider="openai_compatible",
+            openai_compatible_timeout=34,
+        )
+        assert config.llm_timeout == 34
 
     def test_custom_config(self) -> None:
         """Test custom configuration values."""
