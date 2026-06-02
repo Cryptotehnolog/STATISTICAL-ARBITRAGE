@@ -114,6 +114,45 @@ class TestLightRAGClient:
 
         assert result == ""
 
+    def test_openai_compatible_client_adds_default_system_prompt(
+        self, temp_config: LightRAGConfig
+    ) -> None:
+        """Test OpenAI-compatible client asks the provider to answer in Russian."""
+        config = temp_config.model_copy(update={"llm_provider": "openai_compatible"})
+        client = LightRAGClient(config)
+
+        with patch(
+            "stat_arb.memory.lightrag_client.openai_compatible_llm_model_func",
+            return_value="ok",
+        ) as llm:
+            result = asyncio.run(client._llm_model_func("Extract entities"))
+
+        assert result == "ok"
+        _, kwargs = llm.call_args
+        assert "русском языке" in kwargs["system_prompt"]
+
+    def test_openai_compatible_client_preserves_lightrag_system_prompt(
+        self, temp_config: LightRAGConfig
+    ) -> None:
+        """Test LightRAG-provided system prompts are not overwritten."""
+        config = temp_config.model_copy(update={"llm_provider": "openai_compatible"})
+        client = LightRAGClient(config)
+
+        with patch(
+            "stat_arb.memory.lightrag_client.openai_compatible_llm_model_func",
+            return_value="ok",
+        ) as llm:
+            result = asyncio.run(
+                client._llm_model_func(
+                    "Extract entities",
+                    system_prompt="Use the exact LightRAG prompt",
+                )
+            )
+
+        assert result == "ok"
+        _, kwargs = llm.call_args
+        assert kwargs["system_prompt"] == "Use the exact LightRAG prompt"
+
     def test_openai_compatible_llm_model_func_calls_chat_completions(self) -> None:
         """Test OpenAI-compatible provider calls chat completions endpoint."""
         class FakeAsyncClient:

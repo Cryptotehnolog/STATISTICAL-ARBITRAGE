@@ -1,43 +1,43 @@
-# MVP Scope and Constraints
+# MVP scope и ограничения
 
-This shard summarizes durable scope rules from the Kiro architecture specs. It is intended
-for LightRAG seeding and should stay smaller than the source design documents.
+Этот shard кратко фиксирует долговечные scope rules из Kiro architecture specs. Он
+предназначен для LightRAG seeding и должен оставаться меньше исходных design documents.
 
-## V1 Scope
+## V1 scope
 
-The v1 system is a reproducible statistical arbitrage research platform, not a live trading
-system. It must support hypothesis generation, statistical validation, reproducible
-backtesting, cost attribution, critic review, reporting, structured experiment storage, and
-long-term memory.
+Система v1 является воспроизводимой research platform для statistical arbitrage, а не live
+trading system. Она должна поддерживать hypothesis generation, statistical validation,
+reproducible backtesting, cost attribution, critic review, reporting, structured experiment
+storage и long-term memory.
 
-V1 focuses on pairs trading only. The primary timeframe is 15-minute bars; 5-minute bars are
-secondary after the pipeline is validated. One-minute bars, demo trading, live trading,
-streaming infrastructure, enterprise monitoring, and multi-strategy portfolio allocation are
-out of scope for the first MVP.
+V1 фокусируется только на pairs trading. Основной timeframe — 15-minute bars; 5-minute bars
+являются secondary после валидации pipeline. One-minute bars, demo trading, live trading,
+streaming infrastructure, enterprise monitoring и multi-strategy portfolio allocation не
+входят в первый MVP.
 
-## Hardware Constraints
+## Hardware constraints
 
-The system must run on a local Intel i5-1335U PC with 32 GB RAM and no CUDA GPU. It should
-also remain compatible with Oracle Cloud Always Free ARM resources. Local development should
-prefer simple components that do not require heavy always-on infrastructure.
+Система должна работать на локальном Intel i5-1335U PC с 32 GB RAM и без CUDA GPU. Она также
+должна оставаться compatible с Oracle Cloud Always Free ARM resources. Local development
+должен предпочитать простые компоненты, которым не нужна тяжелая always-on infrastructure.
 
-## Infrastructure Rules
+## Infrastructure rules
 
-The local MVP must work with Python, uv, SQLite, Parquet, and embedded LightRAG/vector
-storage. Docker is allowed for optional supporting tools and production-like testing, but it
-must not block ordinary local development or pre-commit checks.
+Local MVP должен работать с Python, uv, SQLite, Parquet и embedded LightRAG/vector storage.
+Docker разрешен для optional supporting tools и production-like testing, но он не должен
+блокировать обычную local development или pre-commit checks.
 
-Use SQLite or another simple structured registry as the source of truth for numeric metrics,
-experiment IDs, dataset IDs, parameters, costs, and final decisions. Use LightRAG for
-summaries, rationale, relationships, lessons learned, and development memory.
+SQLite или другой простой structured registry должен быть source of truth для numeric
+metrics, experiment IDs, dataset IDs, parameters, costs и final decisions. LightRAG
+используется для summaries, rationale, relationships, lessons learned и development memory.
 
-## Implementation Bias
+## Implementation bias
 
-Prefer correctness, auditability, and reproducibility over speed. Start with Python reference
-implementations. Add Rust only where profiling proves a performance-critical bottleneck and
-the API boundary is stable.
+Предпочитать correctness, auditability и reproducibility, а не скорость. Начинать с Python
+reference implementations. Rust добавлять только там, где profiling доказывает
+performance-critical bottleneck, а API boundary уже стабилен.
 
-## Source References
+## Источники
 
 - `.kiro/specs/quant-research-architecture/requirements.md`
 - `.kiro/specs/quant-research-architecture/design.md`

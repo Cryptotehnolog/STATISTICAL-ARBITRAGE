@@ -1,142 +1,142 @@
-# Knowledge Decisions
+# Решения для базы знаний
 
-This file is a curated source for project decisions that should be seeded into LightRAG.
-Keep entries concise, factual, and durable. Runtime logs, raw prompts, secrets, and bulky
-metrics do not belong here.
+Этот файл является curated source для проектных решений, которые должны попадать в
+LightRAG. Записи должны быть краткими, фактическими и долговечными. Runtime logs, raw
+prompts, секреты и громоздкие метрики здесь не нужны.
 
-## DEC-0001: Use FAISS for the local MVP LightRAG backend
+## DEC-0001: Использовать FAISS как локальный MVP backend для LightRAG
 
 Status: accepted
 
-Decision: Use LightRAG with `FaissVectorDBStorage` as the default local vector backend.
-Keep `NanoVectorDBStorage` as a lightweight supported alternative.
+Decision: Использовать LightRAG с `FaissVectorDBStorage` как default local vector backend.
+`NanoVectorDBStorage` оставить как легкую поддерживаемую альтернативу.
 
-Rationale: The current installed LightRAG build imports FAISS storage successfully, while
-Chroma storage is not available in this environment. FAISS keeps the MVP local-first and
-avoids Docker or a separate vector service.
+Rationale: Текущая установленная сборка LightRAG успешно импортирует FAISS storage, а
+Chroma storage в этом окружении недоступен. FAISS сохраняет MVP local-first и не требует
+Docker или отдельного vector service.
 
 Alternatives considered: Chroma, NanoVectorDB.
 
-Risks: Chroma may still be useful later, but it needs a separate compatibility spike before
-being advertised as an active runtime backend.
+Risks: Chroma может быть полезен позже, но перед объявлением его активным runtime backend
+нужен отдельный compatibility spike.
 
-## DEC-0002: Keep runtime data outside the Python package
+## DEC-0002: Держать runtime data вне Python package
 
 Status: accepted
 
-Decision: Runtime storage, SQLite databases, LightRAG data, vector indexes, reports, logs,
-and scratch data must live under top-level ignored directories such as `data/`, not under
+Decision: Runtime storage, SQLite databases, LightRAG data, vector indexes, reports, logs и
+scratch data должны жить в top-level ignored директориях, например `data/`, а не внутри
 `src/stat_arb/`.
 
-Rationale: Package code should stay importable, reviewable, and reproducible without local
-runtime artifacts mixed into source directories.
+Rationale: Package code должен оставаться importable, reviewable и reproducible без
+локальных runtime artifacts, смешанных с source directories.
 
-Risks: Scripts must consistently resolve paths from the repository root.
+Risks: Scripts должны consistently resolve paths от repository root.
 
-## DEC-0003: Keep knowledge seeding explicit but automatic
-
-Status: accepted
-
-Decision: Knowledge seeding should be a dedicated command that automatically gathers curated
-project sources and writes changed documents to LightRAG. It should not run as part of the
-fast unit check.
-
-Rationale: Seeding loads the embedding model and writes runtime state, so coupling it to
-`scripts/check.ps1` would make every commit check slower and stateful.
-
-Risks: Developers must run the seed command when they want local LightRAG memory updated.
-This can later be automated through a post-commit or scheduled local workflow if needed.
-
-## DEC-0004: Use no-op LLM fallback until an optional LLM provider is enabled
+## DEC-0003: Делать knowledge seeding явным, но автоматизированным
 
 Status: accepted
 
-Decision: Provide a local no-op `llm_model_func` by default so LightRAG can initialize and
-store vector chunks without requiring API keys, network access, or a local LLM service.
-Enable an OpenAI-compatible provider explicitly when graph extraction is needed.
+Decision: Knowledge seeding должен быть отдельной командой, которая автоматически собирает
+curated project sources и записывает измененные документы в LightRAG. Он не должен входить
+в быстрый unit check.
 
-Rationale: The current LightRAG build requires `llm_model_func` to be callable during
-initialization even though the signature allows `None`. A no-op fallback keeps local
-knowledge seeding available while the project has no configured LLM provider.
+Rationale: Seeding загружает embedding model и пишет runtime state. Если привязать его к
+`scripts/check.ps1`, каждый commit check станет медленнее и stateful.
 
-Alternatives considered: Block all LightRAG writes until an LLM provider exists; wire a
-cloud LLM immediately.
+Risks: Разработчики должны запускать seed command, когда хотят обновить локальную LightRAG
+memory. Позже это можно автоматизировать через post-commit или scheduled local workflow.
 
-Risks: Entity and relationship extraction remains empty with the no-op fallback, so this is
-vector memory only until a real OpenAI-compatible LLM provider is enabled.
-
-## DEC-0005: Use NanoVectorDB for automated knowledge seeding on Windows
+## DEC-0004: Использовать no-op LLM fallback до включения optional LLM provider
 
 Status: accepted
 
-Decision: Default the knowledge seed command to `NanoVectorDBStorage`, while keeping FAISS
-available through an explicit `--vector-store faiss` flag.
+Decision: По умолчанию предоставлять локальный no-op `llm_model_func`, чтобы LightRAG мог
+инициализироваться и хранить vector chunks без API keys, network access или локального LLM
+service. OpenAI-compatible provider включать явно, когда нужна graph extraction.
 
-Rationale: FAISS storage works for initialization, but on this Windows workspace it logs
-permission errors while replacing metadata files during repeated seed writes. NanoVectorDB
-completes the same seed workflow without those file replacement errors.
+Rationale: Текущая сборка LightRAG требует, чтобы `llm_model_func` был callable при
+инициализации, хотя signature допускает `None`. No-op fallback сохраняет local knowledge
+seeding доступным, пока в проекте не настроен LLM provider.
 
-Alternatives considered: Keep FAISS default for seed; require elevated seed runs.
+Alternatives considered: Блокировать все LightRAG writes до появления LLM provider;
+подключить cloud LLM сразу.
 
-Risks: Runtime experiment memory may still use FAISS by default. The backend choice should
-be revisited once the memory agent and query workflows are implemented.
+Risks: Entity и relationship extraction остаются пустыми с no-op fallback, поэтому это
+только vector memory до включения реального OpenAI-compatible LLM provider.
 
-## DEC-0007: Use OmniRoute as the active LightRAG LLM gateway
+## DEC-0005: Использовать NanoVectorDB для automated knowledge seeding на Windows
 
 Status: accepted
 
-Decision: Use OmniRoute in Docker as the active OpenAI-compatible gateway for LightRAG
-entity/relation extraction. Keep the project integration generic through the
-`openai_compatible` provider and the `my-ai` combo instead of hard-coding one upstream
-model.
+Decision: Для knowledge seed command по умолчанию использовать `NanoVectorDBStorage`, а
+FAISS оставить доступным через явный flag `--vector-store faiss`.
 
-Rationale: The earlier local CPU extractor was too slow for routine development.
-OmniRoute through `my-ai` is faster on the same tiny LightRAG smoke document and provides
+Rationale: FAISS storage работает для инициализации, но в этом Windows workspace логирует
+permission errors при замене metadata files во время повторных seed writes. NanoVectorDB
+проходит тот же seed workflow без этих file replacement errors.
+
+Alternatives considered: Оставить FAISS default для seed; требовать elevated seed runs.
+
+Risks: Runtime experiment memory все еще может использовать FAISS by default. Backend choice
+нужно пересмотреть после реализации Memory Agent и query workflows.
+
+## DEC-0007: Использовать OmniRoute как активный LightRAG LLM gateway
+
+Status: accepted
+
+Decision: Использовать OmniRoute в Docker как активный OpenAI-compatible gateway для
+LightRAG entity/relation extraction. Интеграцию проекта держать generic через provider
+`openai_compatible` и combo `my-ai`, а не hard-code конкретной upstream model.
+
+Rationale: Предыдущий локальный CPU extractor был слишком медленным для регулярной
+разработки. OmniRoute через `my-ai` быстрее на том же tiny LightRAG smoke document и дает
 model fallback.
 
-Alternatives considered: Keep a local CPU extractor as the primary path; use kiro-gateway
-directly; wire each model as a separate container.
+Alternatives considered: Оставить локальный CPU extractor primary path; использовать
+kiro-gateway напрямую; подключать каждую model как отдельный container.
 
-Risks: OmniRoute depends on external provider availability and account/session health.
-Keep the no-op provider as the safe default and make provider smoke tests explicit.
+Risks: OmniRoute зависит от external provider availability и account/session health.
+No-op provider остается safe default, а provider smoke tests должны запускаться явно.
 
-Benchmark result: On the same tiny LightRAG extraction document, the measured model order
-was `kiro/deepseek-3.2` (14 nodes / 15 edges), `kiro/glm-5` (13 nodes / 13 edges),
+Benchmark result: На одном tiny LightRAG extraction document измеренный порядок models:
+`kiro/deepseek-3.2` (14 nodes / 15 edges), `kiro/glm-5` (13 nodes / 13 edges),
 `kiro/claude-sonnet-4.5` (9 nodes / 13 edges), `kiro/minimax-m2.5` (10 nodes / 12 edges),
-then `kiro/qwen3-coder-next` (14 nodes / 9 edges). Prefer this order for `my-ai` until a
-new benchmark says otherwise.
+затем `kiro/qwen3-coder-next` (14 nodes / 9 edges). Этот порядок стоит использовать для
+`my-ai`, пока новый benchmark не покажет другое.
 
-## DEC-0008: Keep OmniRoute knowledge seeding opt-in and size-limited
-
-Status: accepted
-
-Decision: Use a dedicated OmniRoute seed wrapper that defaults to dry-run and applies
-per-document and total character limits. Require an explicit apply flag before writing to
-LightRAG through the LLM-backed provider.
-
-Rationale: Curated project sources include large Kiro design documents. Sending those
-documents through the LLM extraction path accidentally would make seed runs slow, expensive,
-and hard to review.
-
-Alternatives considered: Make the base seed command dry-run by default; seed every changed
-document through OmniRoute automatically.
-
-Risks: Large but useful sources may be skipped until they are split into smaller curated
-documents.
-
-## DEC-0009: Use curated knowledge shards instead of seeding large Kiro specs directly
+## DEC-0008: Держать OmniRoute knowledge seeding opt-in и size-limited
 
 Status: accepted
 
-Decision: Keep `.kiro` specs as planning source documents and create smaller curated
-markdown shards under `docs/knowledge/` for LightRAG seeding.
+Decision: Использовать отдельный OmniRoute seed wrapper, который по умолчанию делает dry-run
+и применяет per-document и total character limits. Для записи в LightRAG через LLM-backed
+provider требуется явный apply flag.
 
-Rationale: Large design and requirements files contain useful context but are too bulky for
-routine LLM-backed graph extraction. Curated shards produce cleaner entities and
-relationships while preserving source references back to the original specs.
+Rationale: Curated project sources включают большие Kiro design documents. Случайная
+отправка таких документов через LLM extraction path сделает seed runs медленными,
+дорогими и сложными для review.
 
-Alternatives considered: Split the `.kiro` specs themselves; seed the full design and
-requirements files directly; rely only on README and decisions.
+Alternatives considered: Сделать base seed command dry-run by default; автоматически seed
+каждый changed document через OmniRoute.
 
-Risks: Curated shards can drift from source specs if not reviewed after major planning
-changes. Use the shard suggestion script to find large sections that deserve extraction.
+Risks: Большие, но полезные sources могут быть пропущены, пока их не разобьют на smaller
+curated documents.
+
+## DEC-0009: Использовать curated knowledge shards вместо прямого seeding больших Kiro specs
+
+Status: accepted
+
+Decision: `.kiro` specs остаются planning source documents, а для LightRAG seeding создаются
+меньшие curated markdown shards в `docs/knowledge/`.
+
+Rationale: Большие design и requirements files содержат полезный контекст, но слишком
+громоздки для регулярной LLM-backed graph extraction. Curated shards дают более чистые
+entities и relationships, сохраняя source references на исходные specs.
+
+Alternatives considered: Разделить сами `.kiro` specs; seed full design и requirements
+files напрямую; полагаться только на README и decisions.
+
+Risks: Curated shards могут drift от source specs, если их не review после крупных planning
+changes. Shard suggestion script должен помогать находить большие sections, которые нужно
+вынести.

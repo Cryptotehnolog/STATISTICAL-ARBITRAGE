@@ -1,49 +1,65 @@
-# Future Ideas
+# Будущие идеи
 
-This file collects ideas discovered during development that should be considered later but
-should not distract from the current task. Codex should append durable ideas here when they
-come up during implementation or review, then the LightRAG seed command will ingest them.
+Этот файл собирает идеи, найденные во время разработки. Их стоит рассмотреть позже, но они
+не должны отвлекать от текущей задачи. Codex должен добавлять сюда долговечные идеи,
+которые возникают при implementation или review, а LightRAG seed command затем будет их
+загружать.
 
 ## IDEA-0001: Chroma compatibility spike
 
 Status: proposed
 
-Idea: Verify whether a newer or differently installed LightRAG build supports
-`ChromaVectorDBStorage`, what dependencies are required, and whether it can run embedded
-without Docker for the local MVP.
+Idea: Проверить, поддерживает ли более новая или иначе установленная сборка LightRAG
+`ChromaVectorDBStorage`, какие dependencies нужны и можно ли запускать Chroma embedded без
+Docker для local MVP.
 
-Why later: FAISS currently works and keeps the MVP small. Chroma should be adopted only if
-it provides a clear operational or retrieval benefit.
+Why later: FAISS сейчас работает и держит MVP маленьким. Chroma стоит принимать только если
+он дает явную operational или retrieval benefit.
 
-## IDEA-0002: Automate knowledge seed after successful task commits
+## IDEA-0002: Автоматизировать knowledge seed после успешных task commits
 
 Status: proposed
 
-Idea: Add an optional local workflow that runs the knowledge seed command after commits that
-touch `README.md`, `.kiro/specs/`, `docs/`, or architecture-relevant source files.
+Idea: Добавить optional local workflow, который запускает knowledge seed command после
+commits, затрагивающих `README.md`, `.kiro/specs/`, `docs/` или architecture-relevant source
+files.
 
-Why later: The seed command writes local runtime state and may load embeddings, so it should
-remain opt-in until the workflow is proven stable and fast enough.
+Why later: Seed command пишет local runtime state и может загружать embeddings, поэтому он
+должен оставаться opt-in, пока workflow не станет доказанно стабильным и достаточно
+быстрым.
 
 ## IDEA-0003: Benchmark LightRAG graph extraction providers
 
 Status: proposed
 
-Idea: Add a benchmark command that runs the same tiny LightRAG graph extraction document
-through each configured OpenAI-compatible model or combo and records latency, extracted
-nodes, extracted edges, and status.
+Idea: Добавить benchmark command, который прогоняет один tiny LightRAG graph extraction
+document через каждую настроенную OpenAI-compatible model или combo и записывает latency,
+extracted nodes, extracted edges и status.
 
-Why later: The OmniRoute smoke test validates the current active combo, but model ordering
-inside `my-ai` should be based on extraction quality and latency measured on the real
-LightRAG prompt, not only dashboard ping tests.
+Why later: OmniRoute smoke test валидирует текущий active combo, но порядок models внутри
+`my-ai` должен основываться на extraction quality и latency, измеренных на реальном
+LightRAG prompt, а не только на dashboard ping tests.
 
-## IDEA-0004: Split large Kiro design knowledge into curated memory shards
+## IDEA-0004: Разбить большие Kiro design knowledge на curated memory shards
 
 Status: implemented
 
-Idea: Extract durable architecture decisions, interface contracts, and implementation notes
-from large Kiro design files into smaller markdown shards under `docs/knowledge/`.
+Idea: Вынести долговечные architecture decisions, interface contracts и implementation
+notes из больших Kiro design files в меньшие markdown shards внутри `docs/knowledge/`.
 
-Outcome: Added curated shards for MVP scope, agent memory contracts, research workflow
-contracts, and safety/testing acceptance. Added a suggestion script to identify future
-large markdown candidates.
+Outcome: Добавлены curated shards для MVP scope, agent memory contracts, research workflow
+contracts и safety/testing acceptance. Добавлен suggestion script, который помогает находить
+будущие большие markdown candidates.
+
+## IDEA-0005: Controlled rebuild LightRAG storage для русифицированного graph
+
+Status: proposed
+
+Idea: Добавить безопасную команду rebuild, которая делает backup текущего `data/lightrag`,
+создает чистое runtime storage и заново seed только `docs/knowledge/*.md` через
+OpenAI-compatible provider с русским system prompt.
+
+Why later: Перевод curated shards и повторный `-Force` обновляют retrieval/query, но старые
+англоязычные entities, relationships и LLM cache могут оставаться в persistent graph.
+Для русифицированной визуализации нужен controlled rebuild, а не ручная правка generated
+`graph.json`.
