@@ -231,6 +231,18 @@ Smoke-query persistent curated LightRAG memory:
 .\scripts\pre_commit_check.ps1
 ```
 
+Проверить, что secrets не попали в tracked files, а локальные runtime `.env` остаются ignored:
+
+```bash
+.\scripts\check_secret_leaks.ps1
+```
+
+Более тяжелая проверка Git history:
+
+```bash
+.\scripts\check_secret_leaks.ps1 -IncludeGitHistory
+```
+
 Проверить, что user-facing labels и messages остаются русифицированными:
 
 ```bash
