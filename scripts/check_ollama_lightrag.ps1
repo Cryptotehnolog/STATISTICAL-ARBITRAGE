@@ -20,8 +20,9 @@ Write-Output "Expected model: $Model"
 
 $models = & $OllamaExe list
 Write-Output $models
+$modelsText = $models -join "`n"
 
-if ($models -notmatch [regex]::Escape($Model)) {
+if ($modelsText -notmatch [regex]::Escape($Model)) {
     Write-Error "Model $Model is not installed. Run: & `"$OllamaExe`" pull $Model"
 }
 
