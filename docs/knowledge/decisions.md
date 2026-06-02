@@ -140,3 +140,22 @@ requirements files directly; rely only on README and decisions.
 
 Risks: Curated shards can drift from source specs if not reviewed after major planning
 changes. Use the shard suggestion script to find large sections that deserve extraction.
+
+## DEC-0010: Self-host Infisical through an isolated Docker Compose stack
+
+Status: accepted
+
+Decision: Run Infisical locally through a dedicated Docker Compose stack containing the
+Infisical backend, PostgreSQL, and Redis. Expose only the backend on localhost. Integrate
+Python code through the Infisical REST API and Universal Auth instead of the Python SDK.
+
+Rationale: Official self-host deployment expects backend, PostgreSQL, and Redis. The Python
+SDK is not compatible with the project's Pydantic v2 baseline, while the REST API keeps the
+integration small and testable.
+
+Alternatives considered: Infisical Cloud only; a single standalone backend container; the
+Python SDK.
+
+Risks: The local `.env` encryption key and PostgreSQL volume are coupled. Losing the key
+can make stored secrets unrecoverable, so local backup discipline is required before any
+volume cleanup.

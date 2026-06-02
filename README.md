@@ -95,13 +95,20 @@ CRITIC_REVIEW -> REPORTING -> FINAL_DECISION
    # Отредактируйте .env под локальную конфигурацию
    ```
 
-4. Настроить Infisical для secrets management:
+4. Поднять локальный Infisical для secrets management:
 
-   - Создать account в [Infisical](https://app.infisical.com).
-   - Создать project и получить credentials.
-   - Добавить credentials в `.env`:
+   ```powershell
+   .\scripts\init_infisical_env.ps1
+   .\scripts\start_infisical.ps1
+   .\scripts\check_infisical.ps1
+   ```
+
+   UI будет доступен на `http://localhost:8080`. Первый зарегистрированный пользователь
+   становится administrator локального instance. После создания project и machine identity
+   добавьте runtime credentials в `.env`:
 
      ```text
+     INFISICAL_API_URL=http://localhost:8080
      INFISICAL_CLIENT_ID=your_client_id
      INFISICAL_CLIENT_SECRET=your_client_secret
      INFISICAL_PROJECT_ID=your_project_id
@@ -363,9 +370,22 @@ uv run pytest && uv run ruff check . && uv run mypy src/stat_arb
 - LLM API keys.
 - Webhook tokens и Telegram bot tokens.
 
+Локальный self-host Infisical запускается отдельным Docker stack:
+
+```powershell
+.\scripts\init_infisical_env.ps1
+.\scripts\start_infisical.ps1
+.\scripts\check_infisical.ps1
+```
+
+Сервис открывается только на `127.0.0.1:8080`; PostgreSQL и Redis не публикуются наружу.
+Файл `infra/infisical/.env` содержит bootstrap keys для шифрования Infisical. Не удаляйте
+его без backup, иначе восстановить secrets из Docker volume будет нельзя.
+
 Нельзя коммитить secrets в Git:
 
 - `.env` находится в `.gitignore`.
+- `infra/infisical/.env` находится в `.gitignore`.
 - `.env.example` используется только как документация.
 - Secrets загружаются из Infisical во время runtime.
 

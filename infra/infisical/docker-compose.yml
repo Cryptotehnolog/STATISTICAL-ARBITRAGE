@@ -1,0 +1,66 @@
+services:
+  backend:
+    container_name: stat-arb-infisical-backend
+    image: infisical/infisical:${INFISICAL_IMAGE_TAG:-latest}
+    pull_policy: missing
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - DB_CONNECTION_URI=postgres://${INFISICAL_POSTGRES_USER}:${INFISICAL_POSTGRES_PASSWORD}@db:5432/${INFISICAL_POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379
+      - SITE_URL=http://localhost:${INFISICAL_HOST_PORT:-8080}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - OTEL_TELEMETRY_COLLECTION_ENABLED=${OTEL_TELEMETRY_COLLECTION_ENABLED:-false}
+      - OTEL_EXPORT_TYPE=${OTEL_EXPORT_TYPE:-prometheus}
+    ports:
+      - "127.0.0.1:${INFISICAL_HOST_PORT:-8080}:8080"
+    networks:
+      - infisical
+
+  redis:
+    container_name: stat-arb-infisical-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - infisical
+
+  db:
+    container_name: stat-arb-infisical-db
+    image: postgres:14-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${INFISICAL_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${INFISICAL_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${INFISICAL_POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready --username=$${POSTGRES_USER} && psql --username=$${POSTGRES_USER} --list"
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - infisical
+
+volumes:
+  pg_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  infisical:

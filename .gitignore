@@ -55,6 +55,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 .pytest-tmp/
+pytest-cache-files-*/
 htmlcov/
 
 # Type checking
@@ -103,7 +104,7 @@ docs/knowledge_graph/
 .env
 .env.local
 .env.*.local
-secrets/
+/secrets/
 *.key
 *.pem
 *.crt
