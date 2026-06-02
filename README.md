@@ -183,6 +183,10 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\export_lightrag_graph.ps1
    ```
+   To serve the generated LightRAG graph viewer locally:
+   ```bash
+   .\scripts\serve_lightrag_graph.ps1
+   ```
    To run the local pre-commit checklist without LLM dependencies:
    ```bash
    .\scripts\pre_commit_check.ps1
