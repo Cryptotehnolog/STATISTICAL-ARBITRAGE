@@ -35,7 +35,9 @@ try {
         "--max-total-chars",
         $MaxTotalChars,
         "--max-workers",
-        $MaxWorkers
+        $MaxWorkers,
+        "--source-pattern",
+        "docs/knowledge/*.md"
     )
     if ($ApiKey) {
         $argsList += @("--openai-compatible-api-key", $ApiKey)
@@ -48,7 +50,7 @@ try {
     }
     if (-not $Apply) {
         $argsList += "--dry-run"
-        Write-Output "Dry-run mode. Pass -Apply to write to LightRAG."
+        Write-Output "Dry-run mode. Pass -Apply to write curated docs/knowledge shards to LightRAG."
     }
     & $python @argsList
     exit $LASTEXITCODE

@@ -46,6 +46,7 @@ This repository uses a local-first Python package layout for the Statistical Arb
 - `scripts/pre_commit_check.ps1` runs the local pre-commit checklist without LLM dependencies.
 - `scripts/seed_lightrag.ps1` seeds changed curated project knowledge into local LightRAG storage.
 - `scripts/seed_lightrag_omniroute.ps1` previews or applies a limited OmniRoute-backed knowledge seed.
+- `scripts/seed_lightrag_curated.ps1` previews or applies only `docs/knowledge/*.md` shards.
 - `scripts/suggest_knowledge_shards.ps1` reports large markdown files and candidate sections for curated memory shards.
 - `scripts/check_omniroute.ps1` verifies OmniRoute container health, API models, chat, and LightRAG smoke.
 - `scripts/smoke_lightrag_omniroute.ps1` runs a small isolated LightRAG + OmniRoute graph extraction smoke test.

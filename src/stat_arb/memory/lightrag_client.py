@@ -16,6 +16,8 @@ from stat_arb.memory.config import LightRAGConfig
 
 logger = logging.getLogger(__name__)
 
+OPENAI_COMPATIBLE_RETRY_STATUSES = {429, 500, 502, 503, 504}
+
 
 def _run_sync(awaitable: Any) -> None:
     """Run an awaitable from synchronous entrypoints."""
@@ -111,12 +113,38 @@ async def openai_compatible_llm_model_func(
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
 
     async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(
-            f"{base_url.rstrip('/')}/chat/completions",
-            json=payload,
-            headers=headers,
-        )
-        response.raise_for_status()
+        response: httpx.Response | None = None
+        max_attempts = 4
+        for attempt in range(1, max_attempts + 1):
+            response = await client.post(
+                f"{base_url.rstrip('/')}/chat/completions",
+                json=payload,
+                headers=headers,
+            )
+            if response.status_code not in OPENAI_COMPATIBLE_RETRY_STATUSES:
+                response.raise_for_status()
+                break
+            if attempt == max_attempts:
+                response.raise_for_status()
+
+            retry_after = response.headers.get("retry-after")
+            if retry_after:
+                try:
+                    sleep_seconds = float(retry_after)
+                except ValueError:
+                    sleep_seconds = 2.0
+            else:
+                sleep_seconds = min(2 ** (attempt - 1), 8)
+            logger.warning(
+                "OpenAI-compatible request returned HTTP %s; retrying in %.1fs",
+                response.status_code,
+                sleep_seconds,
+            )
+            await asyncio.sleep(sleep_seconds)
+
+    if response is None:
+        msg = "OpenAI-compatible request did not produce a response"
+        raise RuntimeError(msg)
 
     content_type = response.headers.get("content-type", "")
     if "text/event-stream" in content_type or response.text.lstrip().startswith("data:"):

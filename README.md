@@ -158,6 +158,11 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\seed_lightrag_omniroute.ps1 -Apply
    ```
+   To preview or apply only curated knowledge shards from `docs/knowledge`:
+   ```bash
+   .\scripts\seed_lightrag_curated.ps1
+   .\scripts\seed_lightrag_curated.ps1 -Apply
+   ```
    To run the same graph extraction smoke test through OmniRoute:
    ```bash
    .\scripts\smoke_lightrag_omniroute.ps1

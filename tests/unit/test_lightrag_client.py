@@ -194,6 +194,53 @@ class TestLightRAGClient:
 
         assert result == "entity result"
 
+    def test_openai_compatible_llm_model_func_retries_transient_errors(self) -> None:
+        """Test OpenAI-compatible provider retries rate-limit responses."""
+        calls = {"count": 0}
+
+        class FakeAsyncClient:
+            def __init__(self, **_kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def post(self, url, json, headers):
+                calls["count"] += 1
+                if calls["count"] == 1:
+                    return httpx.Response(
+                        429,
+                        text="rate limited",
+                        headers={"retry-after": "0"},
+                        request=httpx.Request("POST", url),
+                    )
+                return httpx.Response(
+                    200,
+                    json={"choices": [{"message": {"content": "ok"}}]},
+                    request=httpx.Request("POST", url),
+                )
+
+        with (
+            patch("stat_arb.memory.lightrag_client.httpx.AsyncClient", FakeAsyncClient),
+            patch("stat_arb.memory.lightrag_client.asyncio.sleep") as sleep,
+        ):
+            result = asyncio.run(
+                openai_compatible_llm_model_func(
+                    "Extract entities",
+                    model="my-ai",
+                    base_url="http://localhost:20128/v1",
+                    api_key="",
+                    timeout=1.0,
+                )
+            )
+
+        assert result == "ok"
+        assert calls["count"] == 2
+        sleep.assert_called_once_with(0.0)
+
     def test_health_check(self, temp_config: LightRAGConfig) -> None:
         """Test lightweight health check."""
         client = LightRAGClient(temp_config)

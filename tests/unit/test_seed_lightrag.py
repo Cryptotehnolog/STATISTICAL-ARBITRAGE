@@ -42,6 +42,30 @@ def test_discover_source_paths_includes_curated_markdown() -> None:
     }
 
 
+def test_discover_source_paths_accepts_custom_patterns() -> None:
+    """Discovery should support curated-only source patterns."""
+    test_dir = _test_dir("seed-custom-pattern")
+    (test_dir / "docs" / "knowledge").mkdir(parents=True)
+    (test_dir / ".kiro" / "specs" / "quant").mkdir(parents=True)
+    (test_dir / "README.md").write_text("# Readme\n", encoding="utf-8")
+    (test_dir / "docs" / "knowledge" / "future_ideas.md").write_text(
+        "# Future Ideas\n",
+        encoding="utf-8",
+    )
+    (test_dir / ".kiro" / "specs" / "quant" / "tasks.md").write_text(
+        "# Tasks\n",
+        encoding="utf-8",
+    )
+
+    paths = seed_lightrag_module.discover_source_paths(
+        test_dir,
+        patterns=("docs/knowledge/*.md",),
+    )
+    relative_paths = {path.relative_to(test_dir).as_posix() for path in paths}
+
+    assert relative_paths == {"docs/knowledge/future_ideas.md"}
+
+
 def test_changed_documents_uses_manifest_hash() -> None:
     """Only documents with new content hashes should be selected."""
     test_dir = _test_dir("seed-manifest")
@@ -138,6 +162,62 @@ def test_seed_lightrag_inserts_changed_documents_and_updates_manifest() -> None:
     manifest_path = test_dir / "data" / "lightrag_seed_manifest.json"
     manifest = seed_lightrag_module.load_manifest(manifest_path)
     assert set(manifest["documents"]) == {"README.md", "docs/notes.md"}
+
+
+def test_seed_lightrag_force_inserts_unchanged_documents() -> None:
+    """Force mode should seed matching documents even when hashes are unchanged."""
+    test_dir = _test_dir("seed-force")
+    (test_dir / "pyproject.toml").write_text("[project]\nname='x'\n", encoding="utf-8")
+    (test_dir / "docs" / "knowledge").mkdir(parents=True)
+    source = test_dir / "docs" / "knowledge" / "future_ideas.md"
+    source.write_text("# Future Ideas\nAutomate memory upkeep.\n", encoding="utf-8")
+    document = seed_lightrag_module.load_document(source, test_dir)
+    manifest_path = test_dir / "data" / "lightrag_seed_manifest.json"
+    seed_lightrag_module.save_manifest(
+        manifest_path,
+        {
+            "version": 1,
+            "documents": {
+                document.source_id: {
+                    "hash": document.content_hash,
+                    "title": document.title,
+                }
+            },
+        },
+    )
+    client = MagicMock()
+    client.health_check.return_value = {"status": "healthy"}
+
+    with patch.object(seed_lightrag_module, "LightRAGClient", return_value=client):
+        result = seed_lightrag_module.seed_lightrag(
+            repo_root=test_dir,
+            source_patterns=("docs/knowledge/*.md",),
+            force=True,
+        )
+
+    assert result == 0
+    client.insert.assert_called_once()
+
+
+def test_seed_lightrag_passes_max_workers_to_config() -> None:
+    """Seeding should allow callers to reduce LightRAG concurrency."""
+    test_dir = _test_dir("seed-max-workers")
+    (test_dir / "pyproject.toml").write_text("[project]\nname='x'\n", encoding="utf-8")
+    (test_dir / "README.md").write_text("# Project\n", encoding="utf-8")
+    client = MagicMock()
+    client.health_check.return_value = {"status": "healthy"}
+
+    with (
+        patch.object(seed_lightrag_module, "LightRAGClient", return_value=client),
+        patch.object(seed_lightrag_module, "LightRAGConfig") as config_cls,
+    ):
+        result = seed_lightrag_module.seed_lightrag(
+            repo_root=test_dir,
+            max_workers=1,
+        )
+
+    assert result == 0
+    assert config_cls.call_args.kwargs["max_workers"] == 1
 
 
 def test_seed_lightrag_fails_before_insert_when_embedding_check_fails() -> None:

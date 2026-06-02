@@ -208,6 +208,9 @@ def seed_lightrag(
     openai_compatible_api_key: str = "",
     max_document_chars: int | None = None,
     max_total_chars: int | None = None,
+    max_workers: int = 4,
+    source_patterns: tuple[str, ...] = DEFAULT_SOURCE_PATTERNS,
+    force: bool = False,
 ) -> int:
     """Seed changed project knowledge documents into LightRAG."""
     root = repo_root_from(repo_root)
@@ -218,11 +221,15 @@ def seed_lightrag(
         openai_compatible_model=openai_compatible_model,
         openai_compatible_base_url=openai_compatible_base_url,
         openai_compatible_api_key=openai_compatible_api_key,
+        max_workers=max_workers,
     )
     manifest_path = root / "data" / "lightrag_seed_manifest.json"
-    documents = [load_document(path, root) for path in discover_source_paths(root)]
+    documents = [
+        load_document(path, root)
+        for path in discover_source_paths(root, patterns=source_patterns)
+    ]
     manifest = load_manifest(manifest_path)
-    changed = changed_documents(documents, manifest)
+    changed = documents if force else changed_documents(documents, manifest)
     to_seed, skipped = limit_documents(
         changed,
         max_document_chars=max_document_chars,
@@ -341,6 +348,26 @@ def main() -> None:
         default=None,
         help="Stop adding changed documents once this total character count would be exceeded.",
     )
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=4,
+        help="Maximum concurrent LightRAG embedding/LLM calls.",
+    )
+    parser.add_argument(
+        "--source-pattern",
+        action="append",
+        dest="source_patterns",
+        help=(
+            "Markdown glob to seed. Can be passed multiple times. "
+            "Defaults to README.md, docs/**/*.md, and .kiro/specs/**/*.md."
+        ),
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Seed matching sources even when their manifest hashes are unchanged.",
+    )
     args = parser.parse_args()
     sys.exit(
         seed_lightrag(
@@ -353,6 +380,9 @@ def main() -> None:
             openai_compatible_api_key=args.openai_compatible_api_key,
             max_document_chars=args.max_document_chars,
             max_total_chars=args.max_total_chars,
+            max_workers=args.max_workers,
+            source_patterns=tuple(args.source_patterns or DEFAULT_SOURCE_PATTERNS),
+            force=args.force,
         )
     )
 
