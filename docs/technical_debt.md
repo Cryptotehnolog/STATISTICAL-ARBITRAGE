@@ -97,12 +97,14 @@ Related tasks: 2.3, 20.1.
 Status: open
 
 Why deferred: Knowledge seeding is stateful and can call external LLM providers, so it is
-kept outside the fast commit check.
+kept outside the fast commit check. A freshness guard exists, but automatic post-commit
+seeding is still not enabled.
 
 Follow-up:
 - Keep manual/assistant-run seed scripts as the default.
 - Consider a local scheduled workflow or post-commit helper only after seed runs are stable
   and bounded.
+- Use `scripts/check_lightrag_memory_fresh.ps1` before agent-facing memory work.
 
 Related tasks: 11.1, 11.2.
 
@@ -235,3 +237,12 @@ Resolution: Backed up the previous persistent `data/lightrag` and
 0 failed docs, 0 duplicate failed docs, valid graph export, and successful control queries.
 
 Closed by: local runtime rebuild on 2026-06-03.
+
+### TD-CLOSED-0003: Add LightRAG memory freshness guard
+
+Status: closed
+
+Resolution: Added `scripts/check_lightrag_memory_fresh.ps1` to verify curated seed
+freshness, OmniRoute/doc_status, graph export, and a control query in one command.
+
+Closed by: `scripts/check_lightrag_memory_fresh.ps1`.

@@ -24,7 +24,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   are implemented.
 - Chroma: run a compatibility spike before advertising Chroma as an active LightRAG backend.
 - Knowledge seeding automation: consider post-commit or scheduled local seeding only after
-  seed runs are stable and bounded.
+  seed runs are stable and bounded. Use `scripts/check_lightrag_memory_fresh.ps1` before
+  agent-facing memory work.
 - Curated shards: keep `docs/knowledge/*.md` synchronized with material Kiro planning
   changes and reseed LightRAG after updates.
 - Infisical recovery: define backup and restore discipline before deleting Docker volumes
@@ -45,3 +46,5 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Persistent LightRAG was rebuilt from curated `docs/knowledge/*.md` shards after backing
   up the previous runtime storage. Post-rebuild status had 7 processed docs, 0 failed docs,
   0 duplicate failed docs, valid graph export, and successful control queries.
+- LightRAG memory freshness guard now checks curated seed freshness, OmniRoute/doc_status,
+  graph export, and a control query in one command.
