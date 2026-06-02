@@ -54,5 +54,5 @@ This repository uses a local-first Python package layout for the Statistical Arb
 - `scripts/query_lightrag_curated.ps1` verifies that persistent curated LightRAG memory answers project questions.
 - `scripts/export_lightrag_graph.ps1` exports persistent LightRAG GraphML to `docs/knowledge_graph/`.
 - `scripts/check_lightrag_graph_export.ps1` verifies that the LightRAG GraphML export produces valid non-empty viewer files.
-- `scripts/serve_lightrag_graph.ps1` exports and serves the local LightRAG graph viewer over `127.0.0.1`.
+- `scripts/serve_lightrag_graph.ps1` exports and starts/stops the local LightRAG graph viewer server over `127.0.0.1`.
 - `scripts/benchmark_lightrag_omniroute.ps1` compares OmniRoute models on the same LightRAG extraction document.

@@ -191,6 +191,10 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\serve_lightrag_graph.ps1
    ```
+   To stop the local LightRAG graph viewer server:
+   ```bash
+   .\scripts\serve_lightrag_graph.ps1 -Stop
+   ```
    To run the local pre-commit checklist without LLM dependencies:
    ```bash
    .\scripts\pre_commit_check.ps1
