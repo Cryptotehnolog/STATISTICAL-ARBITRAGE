@@ -158,6 +158,10 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\benchmark_lightrag_omniroute.ps1
    ```
+   To check the local OmniRoute container, API, chat route, and LightRAG smoke:
+   ```bash
+   .\scripts\check_omniroute.ps1
+   ```
 
 ### Running the System
 

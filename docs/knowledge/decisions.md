@@ -81,22 +81,6 @@ Alternatives considered: Keep FAISS default for seed; require elevated seed runs
 Risks: Runtime experiment memory may still use FAISS by default. The backend choice should
 be revisited once the memory agent and query workflows are implemented.
 
-## DEC-0006: Use local Ollama qwen2.5:3b for optional LightRAG graph extraction
-
-Status: superseded by DEC-0007
-
-Decision: Use Ollama with `qwen2.5:3b` as the first optional local LLM for LightRAG
-entity/relation extraction. Store Ollama models on `E:\AI_Models\Ollama`, not on the
-system drive.
-
-Rationale: `qwen2.5:3b` is still small enough for local CPU use but should extract
-technical entities and relationships more reliably than sub-1B models.
-
-Alternatives considered: `qwen2.5:1.5b`, `qwen2.5:0.5b`, Dockerized Ollama.
-
-Risks: Even 3B may be slow on CPU for large seed runs. If it blocks development, fall back
-to `qwen2.5:1.5b` or keep `noop` for routine seed updates.
-
 ## DEC-0007: Use OmniRoute as the active LightRAG LLM gateway
 
 Status: accepted
@@ -106,11 +90,11 @@ entity/relation extraction. Keep the project integration generic through the
 `openai_compatible` provider and the `my-ai` combo instead of hard-coding one upstream
 model.
 
-Rationale: On the same tiny LightRAG smoke document, local Ollama `qwen2.5:3b` took about
-113 seconds and extracted 7 nodes / 1 edge. OmniRoute through `my-ai` took about 57 seconds
-and extracted 12 nodes / 12 edges. The gateway is faster and provides model fallback.
+Rationale: The earlier local CPU extractor was too slow for routine development.
+OmniRoute through `my-ai` is faster on the same tiny LightRAG smoke document and provides
+model fallback.
 
-Alternatives considered: Keep local Ollama as the primary extractor; use kiro-gateway
+Alternatives considered: Keep a local CPU extractor as the primary path; use kiro-gateway
 directly; wire each model as a separate container.
 
 Risks: OmniRoute depends on external provider availability and account/session health.
