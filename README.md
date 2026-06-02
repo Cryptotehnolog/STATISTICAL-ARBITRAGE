@@ -218,7 +218,13 @@ Smoke-query persistent curated LightRAG memory:
 .\scripts\pre_commit_check.ps1
 ```
 
-Найти большие markdown-файлы и candidate sections для curated memory shards:
+Проверить, что user-facing labels и messages остаются русифицированными:
+
+```bash
+.\scripts\check_user_facing_russian.ps1
+```
+
+Найти большие markdown-файлы и секции-кандидаты для curated memory shards:
 
 ```bash
 .\scripts\suggest_knowledge_shards.ps1

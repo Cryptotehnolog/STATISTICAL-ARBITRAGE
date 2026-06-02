@@ -1,56 +1,55 @@
-# Контракты research workflow
+# Research Workflow Contracts
 
-Этот shard кратко фиксирует core research workflow contracts, которые должны направлять
-implementation.
+This shard summarizes the core research workflow contracts that should guide implementation.
 
-## Data quality до research
+## Data Quality Before Research
 
-Ни один statistical test или backtest не должен запускаться до появления data quality
-report. Data pipeline обязан нормализовать timestamps в UTC, отклонять duplicate
-timestamps, находить missing bars, помечать impossible candles и abnormal volume spikes,
-выравнивать pair timestamps и хранить provenance.
+No statistical test or backtest should run before a data quality report exists. The data
+pipeline must normalize timestamps to UTC, reject duplicate timestamps, detect missing bars,
+flag impossible candles and abnormal volume spikes, align pair timestamps, and store
+provenance.
 
-Raw market data хранится в Parquet. Dataset metadata и ссылки на quality reports хранятся в
-structured registry. В LightRAG попадают только validation failures, quarantine decisions и
-краткие lessons.
+Raw market data belongs in Parquet. Dataset metadata and quality report references belong in
+the structured registry. Only validation failures, quarantine decisions, and concise lessons
+belong in LightRAG.
 
-## Hypothesis flow
+## Hypothesis Flow
 
-Hypothesis содержит ID, asset pair, rationale, source, ссылки на похожие hypotheses, novelty
-score и timestamp. Hypothesis Agent должен проверять LightRAG на похожие прошлые hypotheses
-и registry на invalidated pairs до создания нового candidate.
+A hypothesis contains an ID, asset pair, rationale, source, similar hypothesis references,
+novelty score, and timestamp. The Hypothesis Agent should check LightRAG for similar prior
+hypotheses and the registry for invalidated pairs before creating a new candidate.
 
-Retests отклоненных hypotheses требуют явного justification. Similar hypotheses должны быть
-связаны в LightRAG.
+Retests of rejected hypotheses require explicit justification. Similar hypotheses should be
+linked in LightRAG.
 
-## Statistical testing flow
+## Statistical Testing Flow
 
-Statistical Testing Agent выполняет Engle-Granger cointegration tests, ADF residual
+The Statistical Testing Agent performs Engle-Granger cointegration tests, ADF residual
 stationarity checks, hedge ratio estimation, half-life estimation, z-score construction,
-multiple-testing correction, regime-change checks и walk-forward validation.
+multiple-testing correction, regime-change checks, and walk-forward validation.
 
-Structured values хранятся в registry. LightRAG получает summary lesson, объясняющий,
-почему hypothesis прошла, провалилась или требует retesting.
+Structured values belong in the registry. LightRAG receives a summary lesson explaining why
+the hypothesis passed, failed, or needs retesting.
 
-## Backtest flow
+## Backtest Flow
 
-Backtest Agent использует validated data и tested hypotheses. Он отслеживает signals,
-positions, gross PnL, net PnL, commissions, spread cost, slippage, funding cost, borrow cost,
-turnover, equity curve, drawdown и report artifacts.
+The Backtest Agent uses validated data and tested hypotheses. It tracks signals, positions,
+gross PnL, net PnL, commissions, spread cost, slippage, funding cost, borrow cost, turnover,
+equity curve, drawdown, and report artifacts.
 
-Registry хранит числа и artifact references. LightRAG хранит conclusions, lessons learned и
-важные regime/cost observations.
+The registry stores the numbers and artifact references. LightRAG stores conclusions,
+lessons learned, and notable regime/cost observations.
 
-## Critic flow
+## Critic Flow
 
-Critic Agent обязан проверять lookahead bias, future information in signals, overlapping
-walk-forward windows, overfitting, weak assumptions, insufficient test coverage, negative net
-PnL after costs, excessive turnover и unrealistic slippage.
+The Critic Agent must check for lookahead bias, future information in signals, overlapping
+walk-forward windows, overfitting, weak assumptions, insufficient test coverage, negative
+net PnL after costs, excessive turnover, and unrealistic slippage.
 
-Critical issues приводят к rejection. Moderate issues могут отправить experiment в
-quarantine. Даже approved results требуют human review перед любым demo-trading step.
+Critical issues cause rejection. Moderate issues may quarantine the experiment. Approved
+results still require human review before any demo-trading step.
 
-## Источники
+## Source References
 
 - `.kiro/specs/quant-research-architecture/requirements.md`
 - `.kiro/specs/quant-research-architecture/design.md`

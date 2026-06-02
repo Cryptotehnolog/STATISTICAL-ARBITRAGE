@@ -140,8 +140,8 @@ def render_results(results: list[BenchmarkResult]) -> None:
     table.add_column("Model", style="green")
     table.add_column("Status")
     table.add_column("Seconds", justify="right")
-    table.add_column("Nodes", justify="right")
-    table.add_column("Edges", justify="right")
+    table.add_column("Узлы", justify="right")
+    table.add_column("Связи", justify="right")
     table.add_column("Error", overflow="fold")
 
     ranked = rank_results(results)

@@ -22,21 +22,21 @@ function New-OmniRouteHeaders {
     return @{}
 }
 
-Write-Output "Checking Docker container: $ContainerName"
+Write-Output "Проверка Docker container: $ContainerName"
 $containerId = docker ps --filter "name=^/$ContainerName$" --format "{{.ID}}"
 if (-not $containerId) {
-    Write-Error "Docker container '$ContainerName' is not running."
+    Write-Error "Docker container '$ContainerName' не запущен."
 }
 
 $health = docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}" $ContainerName
 if ($health -ne "healthy" -and $health -ne "none") {
-    Write-Error "Docker container '$ContainerName' health is '$health'."
+    Write-Error "Docker container '$ContainerName' имеет health='$health'."
 }
 Write-Output "Docker container OK: $ContainerName ($health)"
 
 $headers = New-OmniRouteHeaders
 
-Write-Output "Checking OmniRoute models endpoint: $BaseUrl/models"
+Write-Output "Проверка OmniRoute models endpoint: $BaseUrl/models"
 $modelsResponse = Invoke-RestMethod `
     -Uri "$BaseUrl/models" `
     -Method Get `
@@ -44,11 +44,11 @@ $modelsResponse = Invoke-RestMethod `
     -TimeoutSec $TimeoutSeconds
 
 if (-not $modelsResponse.data -or $modelsResponse.data.Count -lt 1) {
-    Write-Error "No models returned from $BaseUrl/models."
+    Write-Error "Endpoint $BaseUrl/models не вернул models."
 }
 Write-Output "Models endpoint OK: $($modelsResponse.data.Count) model(s)"
 
-Write-Output "Checking OmniRoute chat endpoint with model: $Model"
+Write-Output "Проверка OmniRoute chat endpoint с model: $Model"
 $body = @{
     model = $Model
     messages = @(
@@ -72,15 +72,15 @@ $chatResponse = Invoke-WebRequest `
     -TimeoutSec $TimeoutSeconds
 
 if ($chatResponse.StatusCode -lt 200 -or $chatResponse.StatusCode -ge 300) {
-    Write-Error "Chat endpoint returned HTTP $($chatResponse.StatusCode)."
+    Write-Error "Chat endpoint вернул HTTP $($chatResponse.StatusCode)."
 }
 if ($chatResponse.Content -notmatch "OK") {
-    Write-Error "Chat endpoint did not return expected OK response."
+    Write-Error "Chat endpoint не вернул ожидаемый OK response."
 }
 Write-Output "Chat endpoint OK"
 
 if (-not $SkipDocStatus) {
-    Write-Output "Checking persistent LightRAG doc_status..."
+    Write-Output "Проверка persistent LightRAG doc_status..."
     Push-Location $repoRoot
     try {
         & $python -m stat_arb.scripts.check_lightrag_doc_status
@@ -94,7 +94,7 @@ if (-not $SkipDocStatus) {
 }
 
 if (-not $SkipSmoke) {
-    Write-Output "Running LightRAG OmniRoute smoke..."
+    Write-Output "Запуск LightRAG OmniRoute smoke..."
     Push-Location $repoRoot
     try {
         if ($ApiKey) {
@@ -119,4 +119,4 @@ if (-not $SkipSmoke) {
     }
 }
 
-Write-Output "OmniRoute check passed."
+Write-Output "Проверка OmniRoute прошла."

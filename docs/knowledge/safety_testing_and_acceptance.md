@@ -1,53 +1,52 @@
-# Контракты safety, testing и acceptance
+# Safety, Testing, and Acceptance Contracts
 
-Этот shard кратко фиксирует quality gates, error handling и MVP acceptance criteria из Kiro
-specs.
+This shard summarizes quality gates, error handling, and MVP acceptance criteria from the
+Kiro specs.
 
-## Error handling
+## Error Handling
 
 Data outages, data quality failures, stale data, failed statistical tests, regime changes,
 runtime errors, negative net PnL, excessive turnover, LLM timeouts, invalid LLM outputs,
-tool permission violations, database failures, RAG failures и secrets failures должны
-обрабатываться явно.
+tool permission violations, database failures, RAG failures, and secrets failures must be
+handled explicitly.
 
-API и LLM failures нужно retry с bounded exponential backoff. Если retries exhausted, где
-возможно используется deterministic fallback. Unauthorized tool use должен отклоняться и
-логироваться как security event.
+Retry API and LLM failures with bounded exponential backoff. If retries are exhausted,
+fallback to deterministic logic where possible. Unauthorized tool use should be rejected
+and logged as a security event.
 
-## Hard stops
+## Hard Stops
 
-Demo/live hard stops относятся к future scope, но research code уже должен моделировать
-safety thinking. Примеры hard stops: max drawdown breach, repeated execution errors, stale
-data, unexpected exposure и runaway order generation.
+Demo/live hard stops are future-scope, but research code should already model safety
+thinking. Hard stop examples include max drawdown breach, repeated execution errors, stale
+data, unexpected exposure, and runaway order generation.
 
-Research workflows должны отправлять affected experiments в quarantine и требовать human
-review после critical failures.
+Research workflows should quarantine affected experiments and require human review after
+critical failures.
 
-## Testing strategy
+## Testing Strategy
 
-Codebase должен сохранять быстрый unit baseline для обычных commits. Property tests
-рекомендуются для statistical и data-quality invariants: timestamp normalization, missing
-bar detection, duplicate detection, outlier sensitivity, resampling idempotence, timestamp
-alignment, cointegration accuracy, ADF detection, half-life estimation, z-score properties,
-PnL conservation, turnover consistency, risk compliance и reproducibility.
+The codebase should keep a fast unit baseline for ordinary commits. Property tests are
+recommended for statistical and data-quality invariants, including timestamp normalization,
+missing bar detection, duplicate detection, outlier sensitivity, resampling idempotence,
+timestamp alignment, cointegration accuracy, ADF detection, half-life estimation, z-score
+properties, PnL conservation, turnover consistency, risk compliance, and reproducibility.
 
-LLM и OmniRoute checks должны оставаться отдельно от обычного pre-commit check, потому что
-они зависят от external service state.
+LLM and OmniRoute checks should remain separate from the ordinary pre-commit check because
+they depend on external service state.
 
-## MVP acceptance
+## MVP Acceptance
 
-MVP завершен, когда проект умеет initialize repository и local infrastructure, ingest и
-validate хотя бы один data source, запускать хотя бы один scripted pair-screening workflow,
-выполнять statistical testing и backtesting workflows, писать structured records в
-registry, писать concise summaries в LightRAG, показывать experiments через dashboard или
-report view и проходить CI.
+The MVP is complete when the project can initialize the repository and local infrastructure,
+ingest and validate at least one data source, run at least one scripted pair-screening
+workflow, run statistical testing and backtesting workflows, write structured records to the
+registry, write concise summaries to LightRAG, show experiments through a dashboard or
+report view, and pass CI.
 
-Non-functional acceptance включает поддержку local PC, Oracle Cloud Always Free
-compatibility, reasonable memory and disk usage, отсутствие paid data dependency в v1,
-Infisical-managed secrets и full experiment runtime target, пригодный для iterative
-research.
+Non-functional acceptance includes local PC support, Oracle Cloud Always Free compatibility,
+reasonable memory and disk usage, no paid data dependency in v1, Infisical-managed secrets,
+and a full experiment runtime target suitable for iterative research.
 
-## Источники
+## Source References
 
 - `.kiro/specs/quant-research-architecture/requirements.md`
 - `.kiro/specs/quant-research-architecture/design.md`

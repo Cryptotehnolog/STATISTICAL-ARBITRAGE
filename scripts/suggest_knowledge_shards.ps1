@@ -99,9 +99,9 @@ $largeFiles = @(
         Sort-Object Chars -Descending
 )
 
-Write-Output "Large markdown files (>= $MinFileChars chars):"
+Write-Output "Большие markdown files (>= $MinFileChars chars):"
 if ($largeFiles.Count -eq 0) {
-    Write-Output "  None"
+    Write-Output "  Нет"
 }
 else {
     $largeFiles | Format-Table -AutoSize
@@ -114,9 +114,9 @@ $sections = @(
 )
 
 Write-Output ""
-Write-Output "Candidate sections for docs/knowledge shards (>= $MinSectionChars chars):"
+Write-Output "Секции-кандидаты для docs/knowledge shards (>= $MinSectionChars chars):"
 if ($sections.Count -eq 0) {
-    Write-Output "  None"
+    Write-Output "  Нет"
 }
 else {
     $sections |
@@ -126,7 +126,7 @@ else {
 }
 
 Write-Output ""
-Write-Output "Suggested action:"
-Write-Output "- Do not edit .kiro source specs for memory cleanup."
-Write-Output "- Create concise shards under docs/knowledge/ with source references."
-Write-Output "- Prefer decisions, contracts, workflows, and safety rules over raw copied sections."
+Write-Output "Рекомендуемое действие:"
+Write-Output "- Не редактировать .kiro source specs ради cleanup памяти."
+Write-Output "- Создавать краткие shards в docs/knowledge/ со ссылками на источники."
+Write-Output "- Предпочитать decisions, contracts, workflows и safety rules вместо raw copied sections."

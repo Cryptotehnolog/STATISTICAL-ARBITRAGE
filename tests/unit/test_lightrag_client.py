@@ -114,27 +114,10 @@ class TestLightRAGClient:
 
         assert result == ""
 
-    def test_openai_compatible_client_adds_default_system_prompt(
+    def test_openai_compatible_client_passes_lightrag_system_prompt(
         self, temp_config: LightRAGConfig
     ) -> None:
-        """Test OpenAI-compatible client asks the provider to answer in Russian."""
-        config = temp_config.model_copy(update={"llm_provider": "openai_compatible"})
-        client = LightRAGClient(config)
-
-        with patch(
-            "stat_arb.memory.lightrag_client.openai_compatible_llm_model_func",
-            return_value="ok",
-        ) as llm:
-            result = asyncio.run(client._llm_model_func("Extract entities"))
-
-        assert result == "ok"
-        _, kwargs = llm.call_args
-        assert "русском языке" in kwargs["system_prompt"]
-
-    def test_openai_compatible_client_preserves_lightrag_system_prompt(
-        self, temp_config: LightRAGConfig
-    ) -> None:
-        """Test LightRAG-provided system prompts are not overwritten."""
+        """Test LightRAG-provided system prompts are passed through."""
         config = temp_config.model_copy(update={"llm_provider": "openai_compatible"})
         client = LightRAGClient(config)
 

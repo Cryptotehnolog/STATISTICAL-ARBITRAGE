@@ -40,10 +40,10 @@ $nodeCount = [int]$graph.meta.node_count
 $edgeCount = [int]$graph.meta.edge_count
 
 if ($nodeCount -lt $MinNodes) {
-    Write-Error "Ожидалось минимум $MinNodes node(s), получено $nodeCount."
+    Write-Error "Ожидалось минимум $MinNodes узлов, получено $nodeCount."
 }
 if ($edgeCount -lt $MinEdges) {
-    Write-Error "Ожидалось минимум $MinEdges edge(s), получено $edgeCount."
+    Write-Error "Ожидалось минимум $MinEdges связей, получено $edgeCount."
 }
 if (-not $graph.nodes -or $graph.nodes.Count -ne $nodeCount) {
     Write-Error "Массив nodes в graph.json не совпадает с meta.node_count."
@@ -52,4 +52,4 @@ if (-not $graph.edges -or $graph.edges.Count -ne $edgeCount) {
     Write-Error "Массив edges в graph.json не совпадает с meta.edge_count."
 }
 
-Write-Output "Проверка экспорта графа LightRAG прошла: $nodeCount node(s), $edgeCount edge(s)."
+Write-Output "Проверка экспорта графа LightRAG прошла: узлы $nodeCount, связи $edgeCount."

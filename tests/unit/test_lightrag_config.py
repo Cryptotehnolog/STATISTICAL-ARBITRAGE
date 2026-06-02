@@ -29,7 +29,6 @@ class TestLightRAGConfig:
         assert config.openai_compatible_model == "my-ai"
         assert config.openai_compatible_base_url == "http://localhost:20128/v1"
         assert config.openai_compatible_api_key == ""
-        assert "русском языке" in config.openai_compatible_system_prompt
         assert config.chunk_size == 512
         assert config.chunk_overlap == 50
         assert config.embedding_dim == 384

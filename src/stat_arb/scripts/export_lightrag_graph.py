@@ -336,12 +336,12 @@ def _html_template(graph_json: str) -> str:
     <aside>
       <h1>Граф знаний LightRAG</h1>
       <div class="stats">
-        <div class="stat"><strong id="nodeCount">0</strong><span>nodes</span></div>
-        <div class="stat"><strong id="edgeCount">0</strong><span>edges</span></div>
+        <div class="stat"><strong id="nodeCount">0</strong><span>узлов</span></div>
+        <div class="stat"><strong id="edgeCount">0</strong><span>связей</span></div>
       </div>
       <label for="search">Поиск</label>
-      <input id="search" type="search" placeholder="Entity, relation, keyword">
-      <label>Быстрые presets</label>
+      <input id="search" type="search" placeholder="Сущность, связь, keyword">
+      <label>Быстрые пресеты</label>
       <div class="preset-row" id="presetRow">
         <button type="button" data-preset="all" class="active">Все</button>
         <button type="button" data-preset="important">Важные</button>
@@ -349,20 +349,20 @@ def _html_template(graph_json: str) -> str:
         <button type="button" data-preset="risks">Risks</button>
         <button type="button" data-preset="decisions">Decisions</button>
       </div>
-      <label for="typeFilter">Тип entity</label>
+      <label for="typeFilter">Тип сущности</label>
       <select id="typeFilter"></select>
       <label class="check-row" for="importantOnly">
         <input id="importantOnly" type="checkbox">
         Только важные узлы
       </label>
-      <label for="minDegree">Минимальный degree: <span id="minDegreeValue">0</span></label>
+      <label for="minDegree">Минимальная степень связности: <span id="minDegreeValue">0</span></label>
       <input id="minDegree" type="range" min="0" max="20" value="0">
-      <label for="maxNodes">Максимум видимых nodes</label>
+      <label for="maxNodes">Максимум видимых узлов</label>
       <input id="maxNodes" type="number" min="20" max="600" value="120">
       <button id="resetView" type="button">Сбросить вид</button>
       <h2>Выбор</h2>
-      <div id="detail" class="detail">Выберите node или edge.</div>
-      <h2>Главные nodes</h2>
+      <div id="detail" class="detail">Выберите узел или связь.</div>
+      <h2>Главные узлы</h2>
       <div id="topNodes" class="list"></div>
     </aside>
     <main>
@@ -455,7 +455,7 @@ def _html_template(graph_json: str) -> str:
       nodes = filtered.nodes.map(node => Object.assign({{}}, node));
       edges = filtered.edges;
       controls.minDegreeValue.textContent = controls.minDegree.value;
-      controls.visibleStats.textContent = `${{nodes.length}} видимых nodes, ${{edges.length}} видимых edges`;
+      controls.visibleStats.textContent = `${{nodes.length}} видимых узлов, ${{edges.length}} видимых связей`;
       renderTopNodes();
       resetPositions();
       simulationTicks = 80;
@@ -608,18 +608,18 @@ def _html_template(graph_json: str) -> str:
       return null;
     }}
     function describe(item) {{
-      if (!item) return "Выберите node или edge.";
+      if (!item) return "Выберите узел или связь.";
       if (item.source && item.target) {{
-        return `Relation: ${{item.source}} -> ${{item.target}}\\nВес: ${{item.weight}}\\nKeywords: ${{item.keywords || "нет"}}\\n\\n${{item.description || "Нет описания."}}`;
+        return `Связь: ${{item.source}} -> ${{item.target}}\\nВес: ${{item.weight}}\\nKeywords: ${{item.keywords || "нет"}}\\n\\n${{item.description || "Нет описания."}}`;
       }}
-      return `Entity: ${{item.label}}\\nТип: ${{item.type}}\\nDegree: ${{item.degree}}\\nФрагменты источника: ${{item.source_count}}\\n\\n${{item.description || "Нет описания."}}`;
+      return `Сущность: ${{item.label}}\\nТип: ${{item.type}}\\nСтепень связности: ${{item.degree}}\\nФрагменты источника: ${{item.source_count}}\\n\\n${{item.description || "Нет описания."}}`;
     }}
     function renderTopNodes() {{
       controls.topNodes.innerHTML = "";
       nodes.slice().sort((a, b) => b.degree - a.degree).slice(0, 12).forEach(node => {{
         const div = document.createElement("div");
         div.className = "item";
-        div.innerHTML = `<strong>${{node.label}}</strong><span>${{node.type}} · degree ${{node.degree}}</span>`;
+        div.innerHTML = `<strong>${{node.label}}</strong><span>${{node.type}} · связность ${{node.degree}}</span>`;
         div.addEventListener("click", () => {{
           selected = node;
           controls.detail.textContent = describe(node);
@@ -729,8 +729,8 @@ def main() -> None:
     table = Table(title="Экспорт графа LightRAG")
     table.add_column("Метрика", style="cyan")
     table.add_column("Значение", style="green")
-    table.add_row("Nodes", str(export.payload["meta"]["node_count"]))
-    table.add_row("Edges", str(export.payload["meta"]["edge_count"]))
+    table.add_row("Узлы", str(export.payload["meta"]["node_count"]))
+    table.add_row("Связи", str(export.payload["meta"]["edge_count"]))
     table.add_row("JSON", str(export.json_path))
     table.add_row("HTML", str(export.html_path))
     console.print(table)

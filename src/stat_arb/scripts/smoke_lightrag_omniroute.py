@@ -75,8 +75,8 @@ def smoke_lightrag_omniroute(
     table.add_row("Base URL", base_url)
     table.add_row("Elapsed Seconds", f"{elapsed_seconds:.2f}")
     table.add_row("Graph Path", str(graph_path))
-    table.add_row("Nodes", str(stats.nodes))
-    table.add_row("Edges", str(stats.edges))
+    table.add_row("Узлы", str(stats.nodes))
+    table.add_row("Связи", str(stats.edges))
     table.add_row("Smoke Data", str(smoke_root))
     console.print(table)
 

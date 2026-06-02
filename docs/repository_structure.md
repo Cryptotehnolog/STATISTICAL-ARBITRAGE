@@ -1,58 +1,84 @@
-# Repository Structure
+# Структура репозитория
 
-This repository uses a local-first Python package layout for the Statistical Arbitrage research platform.
+Проект использует local-first layout Python-пакета для research platform Statistical
+Arbitrage. Пользовательская документация хранится в `docs/` и `README.md`; internal memory
+для агентов хранится отдельно в `docs/knowledge/`.
 
-## Top-Level Directories
+## Верхний уровень
 
-- `.kiro/specs/` contains planning specifications and task breakdowns. These are project source artifacts.
-- `.kiro/skills/` is a local Kiro tool/cache directory and is intentionally ignored.
-- `data/` contains runtime data, local databases, LightRAG stores, vector indexes, and test scratch data. It is intentionally ignored.
-- `docs/` contains project documentation that should be committed.
-- `docs/knowledge/` contains curated decisions and future ideas that are seeded into LightRAG.
-- `docs/knowledge_graph/` содержит generated HTML viewer и JSON export для LightRAG.
-- `scripts/` contains developer and operator scripts, mostly PowerShell wrappers for local checks and workflows.
-- `src/stat_arb/` contains importable Python package code.
-- `tests/` contains automated tests split by test type.
+- `.kiro/specs/` содержит planning specifications и breakdown задач. Это исходные
+  проектные артефакты.
+- `.kiro/skills/` содержит локальные Kiro skills/cache. Сейчас это не runtime-часть проекта
+  и не источник для MVP.
+- `data/` содержит runtime data, локальные databases, LightRAG stores, vector indexes и
+  временные test artifacts. Директория намеренно ignored.
+- `docs/` содержит пользовательскую и проектную документацию, которую нужно коммитить.
+- `docs/knowledge/` содержит internal curated memory shards для агентов и LightRAG. Эти
+  файлы могут оставаться на английском, потому что это машинно-ориентированный слой.
+- `docs/knowledge_graph/` содержит generated HTML viewer и JSON export для LightRAG. Эта
+  директория ignored.
+- `scripts/` содержит developer/operator scripts, в основном PowerShell wrappers для
+  локальных проверок и рабочих процессов.
+- `src/stat_arb/` содержит importable Python package code.
+- `tests/` содержит automated tests, разделенные по типам.
 
-## Python Package Layout
+## Python package layout
 
-- `src/stat_arb/agents/` will contain agent implementations.
-- `src/stat_arb/backtest/` will contain backtesting engines and cost attribution logic.
-- `src/stat_arb/cli/` will contain CLI command wiring.
-- `src/stat_arb/dashboard/` will contain dashboard code.
-- `src/stat_arb/memory/` contains LightRAG configuration and client code.
-- `src/stat_arb/models/` is reserved for future shared package models if needed.
-- `src/stat_arb/scripts/` contains Python module entrypoints that can be run with `python -m`.
-- `src/stat_arb/statistical/` will contain statistical testing logic.
-- `src/stat_arb/storage/` contains the Structured Registry database layer. `storage/models.py` is SQLAlchemy ORM, not domain/Pydantic models.
-- `src/stat_arb/utils/` contains shared utilities.
+- `src/stat_arb/agents/` будет содержать implementations агентов.
+- `src/stat_arb/backtest/` будет содержать backtesting engines и cost attribution logic.
+- `src/stat_arb/cli/` будет содержать CLI command wiring.
+- `src/stat_arb/dashboard/` будет содержать dashboard code.
+- `src/stat_arb/memory/` содержит LightRAG configuration и client code.
+- `src/stat_arb/models/` зарезервирован для future shared package models, если они
+  понадобятся.
+- `src/stat_arb/scripts/` содержит Python module entrypoints, которые можно запускать через
+  `python -m`.
+- `src/stat_arb/statistical/` будет содержать statistical testing logic.
+- `src/stat_arb/storage/` содержит Structured Registry database layer. `storage/models.py`
+  — SQLAlchemy ORM, а не domain/Pydantic models.
+- `src/stat_arb/utils/` содержит shared utilities.
 
-## Model Boundaries
+## Границы моделей
 
-- SQLAlchemy persistence models live in `src/stat_arb/storage/models.py`.
-- Future Pydantic/domain models should live in `src/stat_arb/domain/` when task `3.1` starts.
-- Runtime data must not live under `src/`; package code should stay importable and reproducible without local caches.
+- SQLAlchemy persistence models живут в `src/stat_arb/storage/models.py`.
+- Future Pydantic/domain models должны жить в `src/stat_arb/domain/`, когда начнется task
+  `3.1`.
+- Runtime data не должна жить внутри `src/`; package code должен оставаться importable и
+  reproducible без локальных caches.
 
-## Test Layout
+## Тесты
 
-- `tests/unit/` contains fast isolated unit tests.
-- `tests/integration/` contains integration tests that may touch local services or heavier dependencies.
-- `tests/property/` contains property-based tests.
-- Tests marked `slow` are excluded from the default unit baseline.
+- `tests/unit/` содержит быстрые isolated unit tests.
+- `tests/integration/` содержит integration tests, которые могут обращаться к локальным
+  services или более тяжелым dependencies.
+- `tests/property/` содержит property-based tests.
+- Tests с marker `slow` исключены из default unit baseline.
 
-## Local Checks
+## Локальные проверки
 
-- `scripts/check_unit.ps1` runs the fast unit baseline.
-- `scripts/check.ps1` runs Ruff plus the fast unit baseline and should be used before commits.
-- `scripts/pre_commit_check.ps1` runs the local pre-commit checklist without LLM dependencies.
-- `scripts/seed_lightrag.ps1` seeds changed curated project knowledge into local LightRAG storage.
-- `scripts/seed_lightrag_omniroute.ps1` previews or applies a limited OmniRoute-backed knowledge seed.
-- `scripts/seed_lightrag_curated.ps1` previews or applies only `docs/knowledge/*.md` shards.
-- `scripts/suggest_knowledge_shards.ps1` reports large markdown files and candidate sections for curated memory shards.
-- `scripts/check_omniroute.ps1` verifies OmniRoute container health, API models, chat, and LightRAG smoke.
-- `scripts/smoke_lightrag_omniroute.ps1` runs a small isolated LightRAG + OmniRoute graph extraction smoke test.
-- `scripts/query_lightrag_curated.ps1` verifies that persistent curated LightRAG memory answers project questions.
-- `scripts/export_lightrag_graph.ps1` экспортирует persistent LightRAG GraphML в `docs/knowledge_graph/`.
-- `scripts/check_lightrag_graph_export.ps1` проверяет, что экспорт LightRAG GraphML создает валидные непустые viewer-файлы.
-- `scripts/serve_lightrag_graph.ps1` экспортирует и запускает/останавливает локальный server viewer-а LightRAG graph на `127.0.0.1`.
-- `scripts/benchmark_lightrag_omniroute.ps1` compares OmniRoute models on the same LightRAG extraction document.
+- `scripts/check_unit.ps1` запускает быстрый unit baseline.
+- `scripts/check.ps1` запускает Ruff и быстрый unit baseline; эту команду нужно выполнять
+  перед commit.
+- `scripts/pre_commit_check.ps1` запускает local pre-commit checklist без LLM dependencies.
+- `scripts/seed_lightrag.ps1` загружает измененные curated project sources в local LightRAG
+  storage.
+- `scripts/seed_lightrag_omniroute.ps1` делает preview/apply ограниченного OmniRoute-backed
+  knowledge seed.
+- `scripts/seed_lightrag_curated.ps1` делает preview/apply только для
+  `docs/knowledge/*.md` shards.
+- `scripts/suggest_knowledge_shards.ps1` показывает большие markdown files и candidate
+  sections для curated memory shards.
+- `scripts/check_omniroute.ps1` проверяет OmniRoute container health, API models, chat и
+  LightRAG smoke.
+- `scripts/smoke_lightrag_omniroute.ps1` запускает маленький isolated LightRAG + OmniRoute
+  graph extraction smoke test.
+- `scripts/query_lightrag_curated.ps1` проверяет, что persistent curated LightRAG memory
+  отвечает на проектные вопросы.
+- `scripts/export_lightrag_graph.ps1` экспортирует persistent LightRAG GraphML в
+  `docs/knowledge_graph/`.
+- `scripts/check_lightrag_graph_export.ps1` проверяет, что экспорт LightRAG GraphML создает
+  валидные непустые viewer files.
+- `scripts/serve_lightrag_graph.ps1` экспортирует и запускает/останавливает локальный
+  server viewer-а LightRAG graph на `127.0.0.1`.
+- `scripts/benchmark_lightrag_omniroute.ps1` сравнивает OmniRoute models на одном LightRAG
+  extraction document.

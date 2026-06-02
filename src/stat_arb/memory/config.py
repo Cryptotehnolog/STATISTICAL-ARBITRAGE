@@ -75,15 +75,6 @@ class LightRAGConfig(BaseSettings):
         ge=1.0,
     )
 
-    openai_compatible_system_prompt: str = Field(
-        default=(
-            "Отвечай на русском языке. Сохраняй профессиональные термины, "
-            "имена классов, названия моделей, тикеры, команды и пути к файлам "
-            "на языке оригинала."
-        ),
-        description="System prompt for OpenAI-compatible LightRAG LLM calls",
-    )
-
     @property
     def llm_timeout(self) -> float:
         """Return the active LLM provider timeout."""

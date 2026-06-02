@@ -182,18 +182,13 @@ class LightRAGClient:
     async def _llm_model_func(self, prompt: str, **kwargs: Any) -> str:
         """Dispatch LightRAG LLM calls to the configured provider."""
         if self.config.llm_provider == "openai_compatible":
-            request_kwargs = dict(kwargs)
-            request_kwargs.setdefault(
-                "system_prompt",
-                self.config.openai_compatible_system_prompt,
-            )
             return await openai_compatible_llm_model_func(
                 prompt,
                 model=self.config.openai_compatible_model,
                 base_url=self.config.openai_compatible_base_url,
                 api_key=self.config.openai_compatible_api_key,
                 timeout=self.config.openai_compatible_timeout,
-                **request_kwargs,
+                **kwargs,
             )
         return await local_noop_llm_model_func(prompt, **kwargs)
 
