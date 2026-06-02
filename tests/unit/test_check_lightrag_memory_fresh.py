@@ -11,6 +11,8 @@ def test_memory_fresh_guard_checks_seed_doc_status_export_and_query() -> None:
 
     assert "seed_lightrag_curated.ps1" in script
     assert "Dry run: 0 changed document" in script
+    assert "rebuild_lightrag_curated.ps1" in script
+    assert "duplicate docs" in script
     assert "check_omniroute.ps1" in script
     assert "-SkipSmoke" in script
     assert "check_lightrag_graph_export.ps1" in script

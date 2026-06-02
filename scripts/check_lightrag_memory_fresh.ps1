@@ -41,7 +41,7 @@ if ($seedExit -ne 0) {
 }
 $seedText = $seedOutput -join "`n"
 if ($seedText -notmatch "Dry run: 0 changed document") {
-    Write-Error "LightRAG memory не свежая: curated seed dry-run нашел измененные документы. Запустите .\scripts\seed_lightrag_curated.ps1 -Apply."
+    Write-Error "LightRAG memory не свежая: curated seed dry-run нашел измененные документы. Запустите .\scripts\rebuild_lightrag_curated.ps1, чтобы избежать duplicate docs."
 }
 
 if (-not (Test-Path -LiteralPath $docStatusPath)) {

@@ -26,6 +26,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Knowledge seeding automation: consider post-commit or scheduled local seeding only after
   seed runs are stable and bounded. Use `scripts/check_lightrag_memory_fresh.ps1` before
   agent-facing memory work.
+- Curated memory changes should use `scripts/rebuild_lightrag_curated.ps1` for persistent
+  storage recovery, because incremental apply can create duplicate source docs.
 - Curated shards: keep `docs/knowledge/*.md` synchronized with material Kiro planning
   changes and reseed LightRAG after updates.
 - Infisical recovery: define backup and restore discipline before deleting Docker volumes
@@ -37,8 +39,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Runtime cleanup: keep cleanup manual and scoped to regenerable artifacts.
 - LightRAG viewer: improve filters, labels, and readability as graph size grows.
 - OmniRoute benchmarking: re-run model ordering benchmark when provider behavior changes.
-- Data ingestion CLI: add user-facing ingestion command only after data quality validation
-  is implemented.
+- Data ingestion CLI: add user-facing ingestion command only after quality report generation
+  and dataset provenance are wired to the registry.
 
 ## Closed Follow-up
 
@@ -48,3 +50,4 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   0 duplicate failed docs, valid graph export, and successful control queries.
 - LightRAG memory freshness guard now checks curated seed freshness, OmniRoute/doc_status,
   graph export, human-facing viewer export, and a control query in one command.
+- Curated LightRAG clean rebuild now has automation in `scripts/rebuild_lightrag_curated.ps1`.

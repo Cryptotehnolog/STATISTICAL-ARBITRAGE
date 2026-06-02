@@ -215,3 +215,24 @@ quality validation, and registry writes in one service.
 
 Risks: A thin adapter still needs a later live smoke test against a real exchange and a
 service-level integration point once quality validation exists.
+
+## DEC-0014: Validate OHLCV quality as deterministic domain logic
+
+Status: accepted
+
+Decision: Implement OHLCV quality validation under `stat_arb.data_quality` as deterministic
+Python functions that return the existing `DataQualityReport` domain contract. The validator
+detects missing bars, duplicate raw timestamps, abnormal volume spikes, and UTC-normalized
+timestamps without calling live exchanges or LLM services.
+
+Rationale: Data Agent workflows need a stable validation boundary before statistical tests
+or backtests can trust ingested candles. Keeping validation separate from CCXT ingestion
+preserves the narrow adapter from task 4.1 while giving future registry/reporting code a
+strict pass/fail object.
+
+Alternatives considered: Add validation directly inside the CCXT adapter; return ad-hoc
+dictionaries; defer validation until the future Data Agent service.
+
+Risks: `OHLCVBar` and `OHLCVBatch` already reject impossible candles and non-positive
+prices, so runtime outlier reporting for those conditions requires a later raw-row
+validation layer if ingestion should preserve malformed source rows for diagnostics.

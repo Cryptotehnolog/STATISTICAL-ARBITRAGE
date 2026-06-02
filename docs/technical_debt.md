@@ -203,18 +203,18 @@ Follow-up:
 
 Related tasks: 11.1, 11.4.
 
-### TD-0014: Add service-level data ingestion CLI after quality validation is implemented
+### TD-0014: Add service-level data ingestion CLI after report/provenance integration
 
 Status: open
 
 Why deferred: The CCXT adapter exists, but a user-facing ingestion command should not bypass
-data quality validation.
+quality report generation, provenance tracking, or registry writes.
 
 Follow-up:
-- Add CLI/script entry points after task 4.3 creates validation functions.
+- Add CLI/script entry points after tasks 4.9 and 4.10 wire validation reports and provenance.
 - The command should fetch, validate, persist parquet, and return clear Russian output.
 
-Related tasks: 4.3, 4.9, 4.10, 15.1.
+Related tasks: 4.9, 4.10, 15.1.
 
 ## Closed
 
@@ -247,3 +247,13 @@ freshness, OmniRoute/doc_status, graph export, human-facing viewer export, and a
 query in one command.
 
 Closed by: `scripts/check_lightrag_memory_fresh.ps1`.
+
+### TD-CLOSED-0004: Automate curated LightRAG clean rebuild
+
+Status: closed
+
+Resolution: Added `scripts/rebuild_lightrag_curated.ps1` to backup current persistent
+LightRAG runtime storage, reseed only `docs/knowledge/*.md`, and run the memory freshness
+guard.
+
+Closed by: `scripts/rebuild_lightrag_curated.ps1`.
