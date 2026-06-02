@@ -39,11 +39,11 @@ LightRAG prompt, not only dashboard ping tests.
 
 ## IDEA-0004: Split large Kiro design knowledge into curated memory shards
 
-Status: proposed
+Status: implemented
 
 Idea: Extract durable architecture decisions, interface contracts, and implementation notes
 from large Kiro design files into smaller markdown shards under `docs/knowledge/`.
 
-Why later: The OmniRoute seed wrapper intentionally skips large documents. Splitting useful
-knowledge into smaller curated files will improve LightRAG extraction quality without
-sending bulky planning documents through the LLM path.
+Outcome: Added curated shards for MVP scope, agent memory contracts, research workflow
+contracts, and safety/testing acceptance. Added a suggestion script to identify future
+large markdown candidates.

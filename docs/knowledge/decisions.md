@@ -123,3 +123,20 @@ document through OmniRoute automatically.
 
 Risks: Large but useful sources may be skipped until they are split into smaller curated
 documents.
+
+## DEC-0009: Use curated knowledge shards instead of seeding large Kiro specs directly
+
+Status: accepted
+
+Decision: Keep `.kiro` specs as planning source documents and create smaller curated
+markdown shards under `docs/knowledge/` for LightRAG seeding.
+
+Rationale: Large design and requirements files contain useful context but are too bulky for
+routine LLM-backed graph extraction. Curated shards produce cleaner entities and
+relationships while preserving source references back to the original specs.
+
+Alternatives considered: Split the `.kiro` specs themselves; seed the full design and
+requirements files directly; rely only on README and decisions.
+
+Risks: Curated shards can drift from source specs if not reviewed after major planning
+changes. Use the shard suggestion script to find large sections that deserve extraction.

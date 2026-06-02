@@ -174,6 +174,10 @@ CRITIC_REVIEW → REPORTING → FINAL_DECISION
    ```bash
    .\scripts\pre_commit_check.ps1
    ```
+   To find large markdown files and candidate sections for curated memory shards:
+   ```bash
+   .\scripts\suggest_knowledge_shards.ps1
+   ```
 
 ### Running the System
 
