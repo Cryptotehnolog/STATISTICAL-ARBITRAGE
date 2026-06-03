@@ -231,6 +231,22 @@ Follow-up:
 
 Related tasks: 2.3, 18.1, 19.1.
 
+### TD-0016: Update GitHub Actions to Node.js 24-compatible actions
+
+Status: open
+
+Why deferred: The current CI run passes, but GitHub warns that Node.js 20 actions are
+deprecated and will be forced to Node.js 24 by default on June 16, 2026.
+
+Follow-up:
+- Check whether newer `actions/checkout`, `actions/setup-python`, and
+  `astral-sh/setup-uv` releases explicitly support Node.js 24.
+- Update `.github/workflows/ci.yml` action versions or set the recommended compatibility
+  environment variable when the upstream actions support it.
+- Confirm the next CI run remains green.
+
+Related tasks: 18.1, 18.4.
+
 ## Closed
 
 ### TD-CLOSED-0001: Make coverage artifacts part of runtime cleanup

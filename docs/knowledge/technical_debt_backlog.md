@@ -32,6 +32,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   changes and reseed LightRAG after updates.
 - Decisions shard split: split `docs/knowledge/decisions.md` into smaller thematic shards
   because it is now large enough to slow clean LightRAG rebuilds.
+- GitHub Actions Node.js 24 migration: CI is green, but GitHub warns Node.js 20 actions are
+  deprecated and must be updated before the enforced Node.js 24 transition.
 - Infisical recovery: define backup and restore discipline before deleting Docker volumes
   or rotating encryption keys.
 - Kiro skills cleanup: verify Codex can use installed `rust-skills`, then remove duplicate
