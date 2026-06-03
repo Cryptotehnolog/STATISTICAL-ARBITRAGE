@@ -247,6 +247,22 @@ Follow-up:
 
 Related tasks: 18.1, 18.4.
 
+### TD-0017: Write data-quality validation failures to LightRAG through Memory Agent
+
+Status: open
+
+Why deferred: Dataset registry persistence now stores passed quality reports and JSON
+sidecars, but failed validation summaries should be written through the Memory Agent
+boundary rather than coupling storage helpers directly to LightRAG.
+
+Follow-up:
+- Add a small failure-summary contract for `DataQualityReport` errors.
+- Route the summary through the Memory Agent when that agent owns LightRAG writes.
+- Keep structured numeric metrics and report IDs in the registry; store only concise
+  lessons, rejection reasons, and links in LightRAG.
+
+Related tasks: 4.9, 11.1, 11.4.
+
 ## Closed
 
 ### TD-CLOSED-0001: Make coverage artifacts part of runtime cleanup

@@ -26,4 +26,7 @@ def test_rebuild_lightrag_curated_supports_guard_skip_flags() -> None:
     assert "[switch]$SkipDocker" in script
     assert "[switch]$SkipQuery" in script
     assert "[switch]$SkipViewerExport" in script
+    assert "-SkipQuery:$SkipQuery" in script
+    assert "-SkipDocker:$SkipDocker" in script
+    assert "-SkipViewerExport:$SkipViewerExport" in script
     assert "Guard пропущен" in script

@@ -47,6 +47,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - OmniRoute benchmarking: re-run model ordering benchmark when provider behavior changes.
 - Data ingestion CLI: add user-facing ingestion command only after quality report generation
   and dataset provenance are wired to the registry.
+- Data-quality failure memory: write failed validation summaries to LightRAG through the
+  future Memory Agent boundary, while keeping numeric report details in the registry.
 
 ## Closed Follow-up
 

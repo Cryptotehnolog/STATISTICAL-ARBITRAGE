@@ -4,6 +4,7 @@ Data models for the Structured Registry.
 This module defines SQLAlchemy ORM models for all entities in the system:
 - Hypotheses: Trading pair candidates with rationale
 - Datasets: OHLCV data with quality metrics
+- Data Quality Reports: Validation reports linked to datasets
 - Statistical Test Results: Cointegration and ADF test results
 - Backtest Results: Performance metrics and cost attribution
 - Critic Reviews: Validation and objection tracking
@@ -126,6 +127,52 @@ class Dataset(Base):
     extra_metadata: Mapped[dict | None] = mapped_column(
         JSON, nullable=True
     )  # Timezone, exchange, etc.
+
+    # Relationships
+    quality_reports: Mapped[list["DataQualityReportRecord"]] = relationship(
+        "DataQualityReportRecord", back_populates="dataset"
+    )
+
+
+class DataQualityReportRecord(Base):
+    """
+    Durable data quality report linked to one dataset.
+
+    Stores validation metrics and issue details generated before statistical tests or backtests.
+    Requirements: 2.7-2.10, 9.3
+    """
+
+    __tablename__ = "data_quality_reports"
+
+    report_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    dataset_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("datasets.dataset_id"), nullable=False, index=True
+    )
+
+    symbol: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
+    timeframe: Mapped[str] = mapped_column(String(10), nullable=False)
+
+    start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    bar_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    expected_bar_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    missing_bars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    duplicate_timestamps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    outlier_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    zero_price_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    impossible_candle_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    abnormal_volume_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    timezone_normalized: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    alignment_score: Mapped[float] = mapped_column(Float, nullable=False)
+    quality_score: Mapped[float] = mapped_column(Float, nullable=False)
+    passed: Mapped[bool] = mapped_column(Boolean, nullable=False, index=True)
+    issues: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    report_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)
+
+    dataset: Mapped["Dataset"] = relationship("Dataset", back_populates="quality_reports")
 
 
 class StatisticalTestResult(Base):
@@ -390,6 +437,7 @@ __all__ = [
     "Base",
     "Hypothesis",
     "Dataset",
+    "DataQualityReportRecord",
     "StatisticalTestResult",
     "BacktestResult",
     "CriticReview",

@@ -274,3 +274,23 @@ Agent service; write Parquet first and quarantine failed batches afterward.
 Risks: Failed quality validation raises `OHLCVQualityError` and does not write Parquet
 files. Durable data-quality report storage, registry persistence, quarantine records, and
 LightRAG summaries remain separate follow-up tasks.
+
+## DEC-0017: Persist OHLCV quality reports in the registry with JSON sidecars
+
+Status: accepted
+
+Decision: Store validated OHLCV ingestion results through
+`stat_arb.storage.persist_ohlcv_ingestion_result`. The helper writes a `datasets` row, a
+`data_quality_reports` row, and deterministic JSON sidecars for dataset provenance and the
+full quality report.
+
+Rationale: The Structured Registry remains the source of truth for dataset IDs, quality
+report IDs, pass/fail status, and numeric metrics. JSON sidecars keep the raw ingestion
+artifact reproducible without making Parquet directories the only durable record.
+
+Alternatives considered: Store only JSON next to Parquet; overload `ReportArtifact` before
+an experiment exists; put registry writes directly inside the CCXT source adapter.
+
+Risks: Failed validation summaries are not yet written to LightRAG by this helper. That
+belongs behind the future Memory Agent boundary so registry writes do not depend on an LLM
+gateway.

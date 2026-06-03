@@ -45,17 +45,7 @@ if ($LASTEXITCODE -ne 0) {
 
 if (-not $SkipGuard) {
     Write-Output "- Проверка rebuilt memory"
-    $guardArgs = @()
-    if ($SkipDocker) {
-        $guardArgs += "-SkipDocker"
-    }
-    if ($SkipQuery) {
-        $guardArgs += "-SkipQuery"
-    }
-    if ($SkipViewerExport) {
-        $guardArgs += "-SkipViewerExport"
-    }
-    & $guardScript @guardArgs
+    & $guardScript -SkipDocker:$SkipDocker -SkipQuery:$SkipQuery -SkipViewerExport:$SkipViewerExport
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }

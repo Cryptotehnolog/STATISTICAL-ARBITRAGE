@@ -7,6 +7,7 @@ for the SQLite-based Structured Registry.
 The Structured Registry stores:
 - Hypotheses: Trading pair candidates with rationale
 - Datasets: OHLCV data with quality metrics
+- Data Quality Reports: Validation reports linked to datasets
 - Statistical Test Results: Cointegration and ADF test results
 - Backtest Results: Performance metrics and cost attribution
 - Critic Reviews: Validation and objection tracking
@@ -18,6 +19,7 @@ Requirements: 9.1-9.11, 27.14
 
 # Import models
 # Import database utilities
+from .data_quality import StoredOHLCVIngestionResult, persist_ohlcv_ingestion_result
 from .database import (
     DEFAULT_DB_PATH,
     DatabaseManager,
@@ -44,6 +46,7 @@ from .models import (
     BacktestResult,
     Base,
     CriticReview,
+    DataQualityReportRecord,
     Dataset,
     Experiment,
     Hypothesis,
@@ -56,11 +59,15 @@ __all__ = [
     "Base",
     "Hypothesis",
     "Dataset",
+    "DataQualityReportRecord",
     "StatisticalTestResult",
     "BacktestResult",
     "CriticReview",
     "Experiment",
     "ReportArtifact",
+    # Data quality persistence
+    "StoredOHLCVIngestionResult",
+    "persist_ohlcv_ingestion_result",
     # Database utilities
     "DatabaseManager",
     "get_database_url",

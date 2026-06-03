@@ -17,6 +17,7 @@ from stat_arb.storage.models import (
     BacktestResult,
     Base,
     CriticReview,
+    DataQualityReportRecord,
     Dataset,
     Experiment,
     Hypothesis,
@@ -100,6 +101,55 @@ def test_dataset_creation(session: Session):
     assert result.timeframe == "15m"
     assert result.bar_count == 10000
     assert result.quality_score == 0.95
+
+
+def test_data_quality_report_record_creation(session: Session):
+    """Test creating a durable data quality report record."""
+    dataset = Dataset(
+        dataset_id=str(uuid4()),
+        symbol="AAPL",
+        source="ccxt",
+        timeframe="15m",
+        start_date=datetime(2024, 1, 1),
+        end_date=datetime(2024, 6, 30),
+        bar_count=10000,
+        missing_bars=50,
+        outlier_count=10,
+        quality_score=0.95,
+        adjustment_mode="none",
+        file_path="/data/aapl_15m.parquet",
+    )
+    report = DataQualityReportRecord(
+        report_id=str(uuid4()),
+        dataset_id=dataset.dataset_id,
+        symbol="AAPL",
+        source="ccxt",
+        timeframe="15m",
+        start_date=datetime(2024, 1, 1),
+        end_date=datetime(2024, 6, 30),
+        bar_count=10000,
+        expected_bar_count=10050,
+        missing_bars=50,
+        duplicate_timestamps=0,
+        outlier_count=10,
+        zero_price_count=0,
+        impossible_candle_count=0,
+        abnormal_volume_count=10,
+        timezone_normalized=True,
+        alignment_score=0.995,
+        quality_score=0.95,
+        passed=True,
+        issues=[],
+        report_path="/data/aapl_15m.quality.json",
+    )
+
+    session.add_all([dataset, report])
+    session.commit()
+
+    result = session.query(DataQualityReportRecord).one()
+    assert result.dataset.symbol == "AAPL"
+    assert result.expected_bar_count == 10050
+    assert result.passed is True
 
 
 def test_statistical_test_result_creation(session: Session):
