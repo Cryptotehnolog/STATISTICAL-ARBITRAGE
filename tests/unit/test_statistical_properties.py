@@ -5,7 +5,11 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from stat_arb.statistical import adf_stationarity_test, engle_granger_cointegration_test
+from stat_arb.statistical import (
+    adf_stationarity_test,
+    engle_granger_cointegration_test,
+    estimate_half_life,
+)
 
 
 @pytest.mark.property
@@ -45,3 +49,18 @@ def test_adf_detects_stationary_ar1_residuals(seed: int, phi: float) -> None:
 
     assert result.passed is True
     assert result.p_value < 0.05
+
+
+@pytest.mark.property
+@settings(max_examples=20, deadline=None)
+@given(
+    half_life=st.floats(min_value=3.0, max_value=20.0, allow_nan=False, allow_infinity=False),
+)
+def test_half_life_estimation_tracks_synthetic_mean_reversion(half_life: float) -> None:
+    """Property 9: generated OU-like residuals should recover half-life within 20%."""
+    phi = float(np.exp(-np.log(2.0) / half_life))
+    residuals = phi ** np.arange(500)
+
+    result = estimate_half_life(residuals)
+
+    assert result.half_life_periods == pytest.approx(half_life, rel=0.2)

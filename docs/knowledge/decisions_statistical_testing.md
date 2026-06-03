@@ -65,8 +65,9 @@ documented hedge-ratio method until the full Statistical Testing Agent service i
 
 Status: accepted
 
-Decision: Cover synthetic cointegration and stationary residual detection with bounded
-Hypothesis tests under `tests/unit`, using a small `max_examples` count.
+Decision: Cover synthetic cointegration, stationary residual detection, and half-life
+formula recovery with bounded Hypothesis tests under `tests/unit`, using small
+`max_examples` counts.
 
 Rationale: `statsmodels` tests are materially slower than pure data-shape validation.
 Property tests are still valuable for numerical boundaries, but they must not make every
@@ -76,8 +77,8 @@ Alternatives considered: Put heavy property tests in the fast unit suite; skip o
 property tests; move all statistical property tests to a later CI-only workflow.
 
 Risks: The bounded suite is a smoke-level property baseline, not a full statistical
-simulation campaign. Broader Monte Carlo tests should live in a separate slow workflow
-once task 18.2 exists.
+simulation campaign. Stochastic half-life accuracy is intentionally left to a separate slow
+workflow because noisy OU simulations can be flaky near the 20% tolerance boundary.
 
 ## DEC-0031: Estimate hedge ratio with a pure OLS helper
 

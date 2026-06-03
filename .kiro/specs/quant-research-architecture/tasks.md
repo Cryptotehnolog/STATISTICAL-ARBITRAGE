@@ -162,7 +162,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Use Ornstein-Uhlenbeck process estimation
     - _Requirements: 4.6_
   
-  - [ ]* 6.6 Write property test for half-life estimation
+  - [x]* 6.6 Write property test for half-life estimation
     - **Property 9: Half-Life Estimation Accuracy**
     - **Validates: Requirements 4.6**
     - Generate OU processes with known half-lives
