@@ -177,3 +177,23 @@ its own split logic; defer walk-forward windows until the backtest engine.
 
 Risks: These helpers operate on integer observation indices, not timestamps. Service layers
 must map them back to aligned timestamped datasets and persist the exact windows used.
+
+## DEC-0038: Keep Statistical Testing Agent as a thin service boundary
+
+Status: accepted
+
+Decision: Integrate statistical testing through a thin `stat_arb.agents` service that
+requires passed registry data-quality reports, runs pure statistical helpers only on the
+chronological train window, persists structured metrics to `statistical_test_results`, and
+writes only concise summary lessons through the Memory Agent policy layer.
+
+Rationale: Statistical helpers should stay pure and testable, while the agent boundary owns
+registry prerequisites, persistence, and memory summaries. This prevents future agents from
+running pair tests on unvalidated data or writing raw metrics directly into ApeRAG.
+
+Alternatives considered: Put registry writes inside each statistical helper; write directly
+to ApeRAG from the service; wait until a full autonomous agent exists.
+
+Risks: The current boundary validates one pair at a time and uses index/timestamp inputs
+provided by callers. Batch pair screening and richer experiment orchestration should reuse
+this service rather than bypassing it.

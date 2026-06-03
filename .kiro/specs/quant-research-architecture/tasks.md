@@ -189,7 +189,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Prevent lookahead bias by using only past data
     - _Requirements: 4.2, 4.12_
   
-  - [ ] 6.11 Integrate Statistical Testing Agent with registry and ApeRAG
+  - [x] 6.11 Integrate Statistical Testing Agent with registry and ApeRAG
     - Write structured test results to SQLite registry
     - Write summary lessons to ApeRAG
     - Verify data quality reports exist before testing
