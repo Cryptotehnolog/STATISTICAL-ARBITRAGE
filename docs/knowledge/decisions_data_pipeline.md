@@ -157,3 +157,22 @@ transformation; add an optional caller-supplied output ID.
 
 Risks: If the resampling identity fields change later, downstream registry references may
 need a migration or explicit versioned identity scheme.
+
+## DEC-0021: Align pair OHLCV batches by shared timestamps
+
+Status: accepted
+
+Decision: Use `stat_arb.data_quality.align_ohlcv_pair` as the deterministic boundary for
+pair timestamp alignment. The function accepts two `OHLCVBatch` contracts, keeps only
+shared timestamps, returns aligned batches plus dropped-bar counts, and can require full
+overlap or a minimum overlap ratio.
+
+Rationale: Statistical testing should not infer alignment from two independent series.
+Keeping alignment in the data-quality layer gives later cointegration and backtesting code
+two batches with identical timestamp order and explicit provenance metadata.
+
+Alternatives considered: Align inside the Statistical Testing Agent; use pandas joins as
+the runtime contract; silently forward unmatched bars downstream.
+
+Risks: Partial overlap is allowed by default, so higher-level services should set
+`min_overlap_ratio` or `require_full_overlap` when a strategy needs stricter data quality.

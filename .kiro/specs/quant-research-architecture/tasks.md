@@ -109,12 +109,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - **Validates: Requirements 2.5**
     - Test that resampling produces identical results when applied multiple times
   
-  - [ ] 4.7 Implement timestamp alignment for pairs
+  - [x] 4.7 Implement timestamp alignment for pairs
     - Create alignment function ensuring both assets have matching timestamps
     - Handle partial overlaps and missing data
     - _Requirements: 2.6_
   
-  - [ ]* 4.8 Write property test for timestamp alignment
+  - [x]* 4.8 Write property test for timestamp alignment
     - **Property 6: Timestamp Alignment Consistency**
     - **Validates: Requirements 2.6**
     - Test that aligned timestamps exist in both series
