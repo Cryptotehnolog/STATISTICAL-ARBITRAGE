@@ -83,12 +83,6 @@
         cursor: pointer;
       }
 
-      .muted {
-        color: #64748b;
-        font-size: 13px;
-        line-height: 1.45;
-      }
-
       #selection {
         min-height: 90px;
         margin-top: 18px;
@@ -104,8 +98,14 @@
       }
 
       #scene {
-        position: absolute;
-        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: grab;
+      }
+
+      #scene.dragging {
+        cursor: grabbing;
       }
 
       #status {
@@ -120,13 +120,7 @@
         background: rgba(255, 255, 255, 0.92);
         box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
       }
-
-      .scene-nav-info {
-        display: none !important;
-      }
     </style>
-    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/3d-force-graph@1.73.3/dist/3d-force-graph.min.js"></script>
   </head>
   <body>
     <div id="app" data-viewer="aperag-knowledge-graph">
@@ -141,7 +135,7 @@
         <input id="search" placeholder="сущность, связь, ключевое слово" />
 
         <label for="limit">Максимум видимых узлов</label>
-        <input id="limit" type="number" min="20" max="1000" step="20" value="120" />
+        <input id="limit" type="number" min="20" max="1000" step="20" value="220" />
 
         <label for="degree">Минимальная степень связности</label>
         <input id="degree" type="range" min="0" max="10" value="0" />
@@ -153,7 +147,6 @@
         </select>
 
         <button id="important">Только важные узлы</button>
-        <button id="render">Обновить 3D-раскладку</button>
         <button id="reset">Сбросить вид</button>
 
         <h2>Выбор</h2>
@@ -161,7 +154,7 @@
       </aside>
       <main>
         <div id="status">Загрузка graph.json...</div>
-        <div id="scene"></div>
+        <canvas id="scene"></canvas>
       </main>
     </div>
 
@@ -176,53 +169,27 @@
         "#15803d",
         "#7c3aed"
       ];
-      const state = { raw: null, graph: null, importantOnly: false };
-      const scene = document.getElementById("scene");
+      const state = {
+        raw: null,
+        graph: null,
+        visible: { nodes: [], links: [] },
+        importantOnly: false,
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        dragging: false,
+        lastX: 0,
+        lastY: 0
+      };
+
+      const canvas = document.getElementById("scene");
+      const context = canvas.getContext("2d");
       const selection = document.getElementById("selection");
       const statusBox = document.getElementById("status");
       const searchInput = document.getElementById("search");
       const limitInput = document.getElementById("limit");
       const degreeInput = document.getElementById("degree");
       const colorMode = document.getElementById("colorMode");
-
-      const Graph = ForceGraph3D()(scene)
-        .backgroundColor("#f7f8fb")
-        .cooldownTicks(80)
-        .d3AlphaDecay(0.08)
-        .d3VelocityDecay(0.45)
-        .nodeRelSize(5)
-        .nodeOpacity(0.92)
-        .linkOpacity(0.3)
-        .linkDirectionalParticles(1)
-        .linkDirectionalParticleWidth(1.2)
-        .onEngineStop(() => {
-          Graph.pauseAnimation();
-          statusBox.textContent += " — раскладка остановлена для экономии CPU";
-        })
-        .onNodeClick((node) => {
-          selection.textContent = [
-            `Сущность: ${node.label}`,
-            `Тип: ${node.group || "неизвестно"}`,
-            `Степень: ${node.degree}`,
-            "",
-            node.description || ""
-          ].join("\n");
-          Graph.cameraPosition(
-            { x: node.x * 1.5, y: node.y * 1.5, z: node.z * 1.5 },
-            node,
-            800
-          );
-        })
-        .onLinkClick((link) => {
-          const source = link.source.label || link.source.id || link.source;
-          const target = link.target.label || link.target.id || link.target;
-          selection.textContent = [
-            `Связь: ${source} -> ${target}`,
-            `Тип: ${link.label || link.relation || "связь"}`,
-            "",
-            link.description || ""
-          ].join("\n");
-        });
 
       function textOf(value) {
         if (value == null) return "";
@@ -242,12 +209,15 @@
             group,
             description: textOf(node.description || node.summary || node.content || ""),
             raw: node,
-            degree: 0
+            degree: 0,
+            x: 0,
+            y: 0
           };
           nodeMap.set(id, normalized);
           return normalized;
         });
-        const edges = (raw.edges || raw.links || []).map((edge, index) => {
+
+        const links = (raw.edges || raw.links || []).map((edge, index) => {
           const source = textOf(edge.source || edge.source_id || edge.src || edge.from);
           const target = textOf(edge.target || edge.target_id || edge.dst || edge.to);
           if (nodeMap.has(source)) nodeMap.get(source).degree += 1;
@@ -260,7 +230,8 @@
             raw: edge
           };
         }).filter((edge) => nodeMap.has(edge.source) && nodeMap.has(edge.target));
-        return { nodes, links: edges };
+
+        return { nodes, links, nodeMap };
       }
 
       function colorFor(node) {
@@ -273,11 +244,82 @@
         return palette[key % palette.length];
       }
 
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+        canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        draw();
+      }
+
+      function layout(nodes) {
+        const rect = canvas.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const sorted = [...nodes].sort((a, b) => b.degree - a.degree || a.label.localeCompare(b.label));
+        sorted.forEach((node, index) => {
+          if (index === 0) {
+            node.x = centerX;
+            node.y = centerY;
+            return;
+          }
+          const angle = index * 2.399963229728653;
+          const radius = 34 + Math.sqrt(index) * 34;
+          node.x = centerX + Math.cos(angle) * radius;
+          node.y = centerY + Math.sin(angle) * radius;
+        });
+      }
+
+      function screenPoint(node) {
+        return {
+          x: node.x * state.scale + state.offsetX,
+          y: node.y * state.scale + state.offsetY
+        };
+      }
+
+      function draw() {
+        const rect = canvas.getBoundingClientRect();
+        context.clearRect(0, 0, rect.width, rect.height);
+        context.fillStyle = "#f7f8fb";
+        context.fillRect(0, 0, rect.width, rect.height);
+
+        const { nodes, links } = state.visible;
+        const nodeById = new Map(nodes.map((node) => [node.id, node]));
+
+        context.lineWidth = 1;
+        context.strokeStyle = "rgba(100, 116, 139, 0.26)";
+        links.forEach((link) => {
+          const source = nodeById.get(link.source);
+          const target = nodeById.get(link.target);
+          if (!source || !target) return;
+          const a = screenPoint(source);
+          const b = screenPoint(target);
+          context.beginPath();
+          context.moveTo(a.x, a.y);
+          context.lineTo(b.x, b.y);
+          context.stroke();
+        });
+
+        nodes.forEach((node) => {
+          const point = screenPoint(node);
+          const radius = Math.min(18, 5 + Math.sqrt(node.degree + 1) * 2.4);
+          context.beginPath();
+          context.fillStyle = colorFor(node);
+          context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+          context.fill();
+          if (node.degree >= 4) {
+            context.fillStyle = "#17202a";
+            context.font = "13px Arial";
+            context.fillText(node.label.slice(0, 34), point.x + radius + 4, point.y + 4);
+          }
+        });
+      }
+
       function applyFilters() {
         const query = searchInput.value.trim().toLowerCase();
         const minDegree = Number(degreeInput.value);
         const limit = Number(limitInput.value);
-        Graph.pauseAnimation();
         let nodes = state.graph.nodes.filter((node) => {
           const matchesSearch =
             !query ||
@@ -288,26 +330,48 @@
           const matchesImportant = !state.importantOnly || (node.degree > 1 && node.group !== "unknown");
           return matchesSearch && matchesDegree && matchesImportant;
         });
-        nodes = nodes.sort((a, b) => b.degree - a.degree).slice(0, limit);
+        nodes = nodes.sort((a, b) => b.degree - a.degree || a.label.localeCompare(b.label)).slice(0, limit);
         const visible = new Set(nodes.map((node) => node.id));
         const links = state.graph.links.filter((link) => visible.has(link.source) && visible.has(link.target));
-        Graph.graphData({ nodes, links });
-        Graph.nodeColor(colorFor);
-        Graph.resumeAnimation();
+
+        layout(nodes);
+        state.visible = { nodes, links };
         document.getElementById("nodeCount").textContent = nodes.length;
         document.getElementById("edgeCount").textContent = links.length;
         statusBox.textContent = `${nodes.length} видимых узлов, ${links.length} видимых связей`;
+        draw();
+      }
+
+      function pickNode(x, y) {
+        let best = null;
+        let bestDistance = 18;
+        state.visible.nodes.forEach((node) => {
+          const point = screenPoint(node);
+          const distance = Math.hypot(point.x - x, point.y - y);
+          if (distance < bestDistance) {
+            best = node;
+            bestDistance = distance;
+          }
+        });
+        return best;
+      }
+
+      function showNode(node) {
+        selection.textContent = [
+          `Сущность: ${node.label}`,
+          `Тип: ${node.group || "неизвестно"}`,
+          `Степень: ${node.degree}`,
+          "",
+          node.description || ""
+        ].join("\n");
       }
 
       async function boot() {
-        if (!window.ForceGraph3D) {
-          statusBox.textContent = "Не удалось загрузить 3D библиотеку. Проверьте доступ к CDN.";
-          return;
-        }
         const response = await fetch("graph.json", { cache: "no-store" });
         if (!response.ok) throw new Error(`graph.json HTTP ${response.status}`);
         state.raw = await response.json();
         state.graph = normalizeGraph(state.raw);
+        resizeCanvas();
         applyFilters();
       }
 
@@ -325,17 +389,45 @@
       document.getElementById("reset").addEventListener("click", () => {
         searchInput.value = "";
         degreeInput.value = "0";
-        limitInput.value = "120";
+        limitInput.value = "220";
+        state.scale = 1;
+        state.offsetX = 0;
+        state.offsetY = 0;
         state.importantOnly = false;
         document.getElementById("important").textContent = "Только важные узлы";
-        Graph.cameraPosition({ x: 0, y: 0, z: 520 }, { x: 0, y: 0, z: 0 }, 700);
         applyFilters();
       });
-      document.getElementById("render").addEventListener("click", () => {
-        Graph.resumeAnimation();
-        statusBox.textContent = "3D-раскладка обновляется...";
-        setTimeout(() => Graph.pauseAnimation(), 8000);
+
+      canvas.addEventListener("mousedown", (event) => {
+        state.dragging = true;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+        canvas.classList.add("dragging");
       });
+      window.addEventListener("mouseup", () => {
+        state.dragging = false;
+        canvas.classList.remove("dragging");
+      });
+      window.addEventListener("mousemove", (event) => {
+        if (!state.dragging) return;
+        state.offsetX += event.clientX - state.lastX;
+        state.offsetY += event.clientY - state.lastY;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+        draw();
+      });
+      canvas.addEventListener("click", (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const node = pickNode(event.clientX - rect.left, event.clientY - rect.top);
+        if (node) showNode(node);
+      });
+      canvas.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const factor = event.deltaY < 0 ? 1.08 : 0.92;
+        state.scale = Math.max(0.25, Math.min(4, state.scale * factor));
+        draw();
+      }, { passive: false });
+      window.addEventListener("resize", resizeCanvas);
 
       boot().catch((error) => {
         statusBox.textContent = `Ошибка загрузки graph.json: ${error.message}`;

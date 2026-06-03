@@ -22,19 +22,20 @@ def test_aperag_graph_export_reads_graph_endpoints() -> None:
     assert "source = \"ApeRAG\"" in script
 
 
-def test_aperag_graph_viewer_is_three_dimensional() -> None:
-    """Viewer should use a 3D graph library and human-facing Russian labels."""
+def test_aperag_graph_viewer_is_lightweight_2d() -> None:
+    """Viewer should use lightweight 2D canvas and human-facing Russian labels."""
     html = VIEWER.read_text(encoding="utf-8")
 
     assert "Граф знаний ApeRAG" in html
     assert "aperag-knowledge-graph" in html
-    assert "3d-force-graph" in html
-    assert "ForceGraph3D" in html
-    assert ".cooldownTicks(80)" in html
-    assert "Graph.pauseAnimation()" in html
-    assert 'value="120"' in html
+    assert '<canvas id="scene"></canvas>' in html
+    assert "getContext(\"2d\")" in html
+    assert "3d-force-graph" not in html
+    assert "ForceGraph3D" not in html
+    assert "requestAnimationFrame" not in html
+    assert "WebGL" not in html
+    assert 'value="220"' in html
     assert "Только важные узлы" in html
-    assert "Обновить 3D-раскладку" in html
     assert "Сбросить вид" in html
     assert "Left-click" not in html
 
