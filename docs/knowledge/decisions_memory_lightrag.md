@@ -3,6 +3,25 @@
 This shard contains durable decisions about LightRAG, vector storage, curated memory,
 OmniRoute, and future Memory Agent boundaries.
 
+## DEC-0019: Make ApeRAG the active project memory backend
+
+Status: accepted
+
+Decision: Use ApeRAG as the active backend for project memory, curated knowledge search, and
+knowledge graph extraction. Keep LightRAG only as a legacy migration fallback until ApeRAG
+has committed agent-memory integration and a human graph inspection path.
+
+Rationale: ApeRAG is already running through Docker with vector, full-text, and graph indexes
+for the main `stat-arb-project-knowledge` curated collection. The full curated parity check
+passed with non-empty labels, nodes, and edges, so new memory automation should target ApeRAG.
+
+Alternatives considered: Continue optimizing LightRAG; delete LightRAG immediately after the
+first ApeRAG smoke; keep both systems indefinitely.
+
+Risks: ApeRAG depends on its Docker stack and OmniRoute for graph extraction. LightRAG removal
+must wait until agent-facing memory writes and human graph inspection no longer depend on
+legacy scripts or runtime files.
+
 ## DEC-0001: Use FAISS for the local MVP LightRAG backend
 
 Status: accepted
@@ -146,4 +165,3 @@ before defining the contract.
 
 Risks: The summary is intentionally concise. If later Memory Agent workflows need richer
 context, add fields explicitly rather than passing the full raw report to LightRAG.
-

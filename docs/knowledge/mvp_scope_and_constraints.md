@@ -1,7 +1,7 @@
 # MVP Scope and Constraints
 
 This shard summarizes durable scope rules from the Kiro architecture specs. It is intended
-for LightRAG seeding and should stay smaller than the source design documents.
+for ApeRAG seeding and should stay smaller than the source design documents.
 
 ## V1 Scope
 
@@ -23,12 +23,12 @@ prefer simple components that do not require heavy always-on infrastructure.
 
 ## Infrastructure Rules
 
-The local MVP must work with Python, uv, SQLite, Parquet, and embedded LightRAG/vector
-storage. Docker is allowed for optional supporting tools and production-like testing, but it
+The local MVP must work with Python, uv, SQLite, Parquet, and ApeRAG-backed memory.
+Docker is allowed for supporting tools and production-like testing, but it
 must not block ordinary local development or pre-commit checks.
 
 Use SQLite or another simple structured registry as the source of truth for numeric metrics,
-experiment IDs, dataset IDs, parameters, costs, and final decisions. Use LightRAG for
+experiment IDs, dataset IDs, parameters, costs, and final decisions. Use ApeRAG for
 summaries, rationale, relationships, lessons learned, and development memory.
 
 ## Implementation Bias

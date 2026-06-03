@@ -3,6 +3,7 @@ param(
     [string]$KnowledgeDir = "docs\knowledge",
     [string]$CollectionTitle = "stat-arb-project-knowledge",
     [string]$CollectionDescription = "Curated project knowledge shards for Statistical Arbitrage agents.",
+    [switch]$EnableGraph,
     [switch]$Force
 )
 
@@ -11,12 +12,17 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $envPath = Join-Path $repoRoot $EnvFile
 $knowledgePath = Join-Path $repoRoot $KnowledgeDir
+$runtimeDir = Join-Path $repoRoot "data\aperag"
+$manifestFile = Join-Path $runtimeDir "curated_seed_manifest.json"
 
 if (-not (Test-Path -LiteralPath $envPath)) {
     Write-Error "ApeRAG env file не найден: $envPath"
 }
 if (-not (Test-Path -LiteralPath $knowledgePath)) {
     Write-Error "Knowledge directory не найден: $knowledgePath"
+}
+if (-not (Test-Path -LiteralPath $runtimeDir)) {
+    New-Item -ItemType Directory -Path $runtimeDir | Out-Null
 }
 
 Get-Content -LiteralPath $envPath | ForEach-Object {
@@ -69,7 +75,7 @@ $config = @{
     source = "system"
     enable_vector = $true
     enable_fulltext = $true
-    enable_knowledge_graph = $false
+    enable_knowledge_graph = [bool]$EnableGraph
     enable_summary = $false
     enable_vision = $false
     language = "en-US"
@@ -136,5 +142,24 @@ else {
         Write-Output "Uploaded: $($file.Name)"
     }
 }
+
+$manifest = [ordered]@{
+    collection_id = $collection.id
+    collection_title = $CollectionTitle
+    seeded_at_utc = (Get-Date).ToUniversalTime().ToString("o")
+    knowledge_dir = $KnowledgeDir
+    enable_graph = [bool]$EnableGraph
+    documents = @(
+        $files | ForEach-Object {
+            [ordered]@{
+                name = $_.Name
+                relative_path = ($_.FullName.Substring($repoRoot.Length + 1) -replace "\\", "/")
+                sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant()
+                length = $_.Length
+            }
+        }
+    )
+}
+$manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestFile -Encoding UTF8
 
 Write-Output "ApeRAG curated seed завершен: collection=$($collection.id), shards=$($files.Count)"

@@ -12,7 +12,7 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 ## Active Follow-up Themes
 
 - Ubuntu portability: add Linux-friendly commands or shell wrappers, then verify `uv sync`,
-  checks, SQLite, Parquet, LightRAG, Infisical Docker Compose, graph export, and CCXT smoke
+  checks, SQLite, Parquet, ApeRAG, Infisical Docker Compose, graph export, and CCXT smoke
   on Ubuntu before server deployment.
 - Ubuntu migration checklist: write exact Ubuntu operator commands, expected paths,
   environment variables, and validation steps before server migration.
@@ -22,7 +22,7 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   validation, registry, or CLI code first needs that boundary.
 - Runtime memory backend: revisit FAISS versus NanoVectorDB once memory-agent workflows
   are implemented.
-- Chroma: run a compatibility spike before advertising Chroma as an active LightRAG backend.
+- Chroma: keep compatibility work parked unless ApeRAG or another future backend needs it.
 - Knowledge seeding automation: keep agent-facing memory checks explicit until ApeRAG
   ingestion, vector search, and graph extraction are proven stable. Use
   `scripts/check_aperag_knowledge.ps1` before agent-facing memory work.
@@ -44,15 +44,15 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Runtime cleanup: keep cleanup manual and scoped to regenerable artifacts.
 - GitHub CLI in Codex: use `scripts/gh_no_proxy.ps1` for `gh` commands because this session
   can inherit broken process proxy variables pointing at `127.0.0.1:9`.
-- LightRAG viewer: improve filters, labels, and readability as graph size grows.
+- LightRAG cleanup: remove legacy LightRAG code, scripts, runtime assumptions, and viewer only
+  after ApeRAG has a committed replacement path for agent memory and human graph inspection.
 - OmniRoute benchmarking: re-run model ordering benchmark when provider behavior changes.
 - Data ingestion CLI: add user-facing ingestion command only after quality report generation
   and dataset provenance are wired to the registry.
 - Data-quality failure memory: route `DataQualityFailureSummary` to LightRAG through the
   future Memory Agent boundary, while keeping numeric report details in the registry.
-- ApeRAG graph parity: bounded graph smoke through OmniRoute passed, but full curated
-  graph extraction is not yet proven. Enable and validate curated ApeRAG graph extraction
-  before deleting LightRAG runtime/code.
+- ApeRAG human graph view: decide whether to build a local ApeRAG graph viewer or use ApeRAG UI
+  before deleting the legacy LightRAG viewer workflow.
 
 ## Closed Follow-up
 
@@ -66,3 +66,6 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Decisions memory is split into thematic shards:
   `decisions_memory_lightrag.md`, `decisions_infra_ci_secrets.md`, and
   `decisions_data_pipeline.md`.
+- ApeRAG graph parity is proven for the main curated collection. `stat-arb-project-knowledge`
+  has vector, full-text, and graph indexes active for all 10 curated shards, and graph endpoints
+  returned non-empty labels, nodes, and edges.

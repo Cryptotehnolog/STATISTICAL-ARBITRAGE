@@ -42,7 +42,7 @@ Status: accepted
 Decision: Add a GitHub Actions workflow on `ubuntu-latest` for push, pull request, and
 manual dispatch. The workflow installs dependencies with `uv`, runs user-facing Russian
 text checks, secret leak checks, Ruff, and fast unit tests. It intentionally excludes
-OmniRoute, Infisical auth, LightRAG seeding, and other local service checks.
+OmniRoute, Infisical auth, ApeRAG seeding, and other local service checks.
 
 Rationale: The project is developed on Windows but is expected to move to an Ubuntu server.
 Running fast CI on Ubuntu catches portability issues early while keeping GitHub Actions
@@ -53,4 +53,3 @@ OmniRoute and Infisical integration checks to every push.
 
 Risks: CI does not yet cover external service readiness, property tests, or reproducibility
 checks. Those remain separate follow-up tasks under the CI section.
-

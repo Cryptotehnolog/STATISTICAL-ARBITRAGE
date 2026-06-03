@@ -11,16 +11,16 @@ provenance.
 
 Raw market data belongs in Parquet. Dataset metadata and quality report references belong in
 the structured registry. Only validation failures, quarantine decisions, and concise lessons
-belong in LightRAG.
+belong in ApeRAG.
 
 ## Hypothesis Flow
 
 A hypothesis contains an ID, asset pair, rationale, source, similar hypothesis references,
-novelty score, and timestamp. The Hypothesis Agent should check LightRAG for similar prior
+novelty score, and timestamp. The Hypothesis Agent should check ApeRAG for similar prior
 hypotheses and the registry for invalidated pairs before creating a new candidate.
 
 Retests of rejected hypotheses require explicit justification. Similar hypotheses should be
-linked in LightRAG.
+linked in ApeRAG.
 
 ## Statistical Testing Flow
 
@@ -28,7 +28,7 @@ The Statistical Testing Agent performs Engle-Granger cointegration tests, ADF re
 stationarity checks, hedge ratio estimation, half-life estimation, z-score construction,
 multiple-testing correction, regime-change checks, and walk-forward validation.
 
-Structured values belong in the registry. LightRAG receives a summary lesson explaining why
+Structured values belong in the registry. ApeRAG receives a summary lesson explaining why
 the hypothesis passed, failed, or needs retesting.
 
 ## Backtest Flow
@@ -37,7 +37,7 @@ The Backtest Agent uses validated data and tested hypotheses. It tracks signals,
 gross PnL, net PnL, commissions, spread cost, slippage, funding cost, borrow cost, turnover,
 equity curve, drawdown, and report artifacts.
 
-The registry stores the numbers and artifact references. LightRAG stores conclusions,
+The registry stores the numbers and artifact references. ApeRAG stores conclusions,
 lessons learned, and notable regime/cost observations.
 
 ## Critic Flow

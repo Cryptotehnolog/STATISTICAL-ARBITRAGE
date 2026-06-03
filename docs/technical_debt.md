@@ -26,7 +26,7 @@ Related tasks: 18.1, 19.1, 22.4.
 
 Status: open
 
-Why deferred: LightRAG can answer the high-level Ubuntu portability theme, but the project
+Why deferred: ApeRAG can answer the high-level Ubuntu portability theme, but the project
 does not yet have a concrete operator checklist for server migration.
 
 Follow-up:
@@ -64,31 +64,28 @@ Follow-up:
 
 Related tasks: 4.3, 4.9, 4.10, 15.1.
 
-### TD-0004: Revisit FAISS versus NanoVectorDB for runtime memory
+### TD-0004: Revisit embedded vector stores only if ApeRAG is rejected
 
 Status: open
 
-Why deferred: NanoVectorDB is currently smoother for repeated Windows seed runs, while
-FAISS remains the intended local MVP vector backend.
+Why deferred: ApeRAG is now the active memory backend. Earlier FAISS and NanoVectorDB work is
+kept as legacy fallback knowledge until LightRAG is removed.
 
 Follow-up:
-- Re-test FAISS metadata replacement behavior after memory-agent workflows exist.
-- Decide whether runtime experiment memory should use FAISS, NanoVectorDB, or a different
-  backend.
+- Re-test FAISS/NanoVectorDB only if ApeRAG is rejected or proves operationally unsuitable.
+- Remove this item when LightRAG cleanup deletes the embedded vector-store path.
 
 Related tasks: 11.1, 11.2, 11.4.
 
-### TD-0005: Run a Chroma compatibility spike before advertising Chroma as active
+### TD-0005: Keep Chroma compatibility parked unless a future backend needs it
 
 Status: open
 
-Why deferred: Chroma was planned, but the current LightRAG environment did not expose a
-working Chroma storage path during setup.
+Why deferred: Chroma was planned for LightRAG, but ApeRAG is now the active memory backend.
 
 Follow-up:
-- Verify the installed LightRAG version supports Chroma in this project.
-- If useful, add an explicit Chroma profile and tests.
-- Do not make Chroma part of the default runtime until the spike passes.
+- Do not spend time on Chroma while ApeRAG is the active path.
+- Reopen only if a future ApeRAG or memory-agent design has a concrete Chroma requirement.
 
 Related tasks: 2.3, 20.1.
 
@@ -177,15 +174,16 @@ Follow-up:
 
 Related tasks: 19.1, TD-0001.
 
-### TD-0012: Add LightRAG viewer readability improvements as graph size grows
+### TD-0012: Decide ApeRAG human graph inspection path
 
 Status: open
 
-Why deferred: The local HTML viewer exists and is usable, but larger graphs may need more
-human-facing controls.
+Why deferred: LightRAG's local HTML viewer is legacy now that ApeRAG graph parity works.
+Before deleting it, the project needs an ApeRAG UI or local viewer path for human inspection.
 
 Follow-up:
-- Revisit filters, presets, search, labels, and layout once real project memory grows.
+- Decide whether ApeRAG's UI is enough for human graph inspection.
+- If not, build a local ApeRAG graph viewer against ApeRAG graph endpoints.
 - Keep all human-facing viewer labels in Russian.
 
 Related tasks: 11.2, 16.7.
@@ -194,12 +192,13 @@ Related tasks: 11.2, 16.7.
 
 Status: open
 
-Why deferred: The current `my-ai` order was benchmarked on one small LightRAG document, but
+Why deferred: The current `my-ai` order was benchmarked on one small graph document, but
 external model latency and quality can drift.
 
 Follow-up:
 - Re-run the benchmark script when OmniRoute account/model behavior changes.
-- Update the combo ordering based on measured seconds, nodes, and edges, not dashboard ping.
+- Update the combo ordering based on measured seconds, nodes, edges, and ApeRAG graph quality,
+  not dashboard ping.
 
 Related tasks: 11.1, 11.4.
 
@@ -216,21 +215,17 @@ Follow-up:
 
 Related tasks: 4.9, 4.10, 15.1.
 
-### TD-0015: Implement safe LightRAG source replacement for incremental curated updates
+### TD-0015: Remove legacy LightRAG path after ApeRAG agent integration
 
 Status: open
 
-Why deferred: Curated decisions are now split into smaller shards, but modified shards still
-need a clean rebuild because incremental apply can create duplicate source docs in persistent
-LightRAG storage.
+Why deferred: ApeRAG graph parity is proven, but agents are not yet wired to ApeRAG and the
+human graph inspection replacement is not finalized.
 
 Follow-up:
-- Add a safe replacement path by curated `source_id`, or confirm LightRAG exposes a reliable
-  document deletion API for the current storage backend.
-- Keep `scripts/rebuild_lightrag_curated.ps1` as the quality-preserving recovery path until
-  replacement is implemented.
-- After source replacement exists, make ordinary memory upkeep seed only changed shards and
-  reserve clean rebuild for schema or storage cleanup.
+- Wire Memory Agent contracts to ApeRAG.
+- Provide a human graph inspection path through ApeRAG UI or a local ApeRAG viewer.
+- Delete LightRAG code, scripts, README sections, viewer workflow, and runtime assumptions.
 
 Related tasks: 2.3, 18.1, 19.1.
 
@@ -265,22 +260,6 @@ Follow-up:
   lessons, rejection reasons, and links in ApeRAG.
 
 Related tasks: 4.9, 11.1, 11.4.
-
-### TD-0018: Validate ApeRAG graph parity before removing LightRAG
-
-Status: open
-
-Why deferred: ApeRAG now has working vector and full-text indexing for curated project
-memory, and a bounded graph smoke through OmniRoute passed. Full curated graph parity has
-not been enabled and benchmarked yet.
-
-Follow-up:
-- Enable ApeRAG knowledge graph extraction for the curated collection.
-- Run a bounded graph build on `docs/knowledge/*.md` and verify graph labels/export/search.
-- Delete LightRAG code, scripts, runtime assumptions, and viewer only after ApeRAG graph
-  parity is proven or explicitly rejected.
-
-Related tasks: 11.1, 11.2, memory backend migration.
 
 ## Closed
 
@@ -335,3 +314,15 @@ index and moved durable decisions into focused thematic shards:
 characters so future oversized shards are caught earlier.
 
 Closed by: LightRAG memory optimization task.
+
+### TD-CLOSED-0006: Validate ApeRAG graph parity before removing LightRAG
+
+Status: closed
+
+Resolution: Enabled ApeRAG knowledge graph extraction for the main
+`stat-arb-project-knowledge` curated collection, rebuilt graph indexes for all 10
+`docs/knowledge/*.md` shards, and verified non-empty labels, nodes, edges, search, and
+freshness checks.
+
+Closed by: `scripts/enable_aperag_curated_graph.ps1` and
+`scripts/check_aperag_memory_fresh.ps1`.
