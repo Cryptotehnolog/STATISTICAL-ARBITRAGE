@@ -141,7 +141,7 @@
         <input id="search" placeholder="сущность, связь, ключевое слово" />
 
         <label for="limit">Максимум видимых узлов</label>
-        <input id="limit" type="number" min="20" max="1000" step="20" value="220" />
+        <input id="limit" type="number" min="20" max="1000" step="20" value="120" />
 
         <label for="degree">Минимальная степень связности</label>
         <input id="degree" type="range" min="0" max="10" value="0" />
@@ -153,6 +153,7 @@
         </select>
 
         <button id="important">Только важные узлы</button>
+        <button id="render">Обновить 3D-раскладку</button>
         <button id="reset">Сбросить вид</button>
 
         <h2>Выбор</h2>
@@ -186,11 +187,18 @@
 
       const Graph = ForceGraph3D()(scene)
         .backgroundColor("#f7f8fb")
+        .cooldownTicks(80)
+        .d3AlphaDecay(0.08)
+        .d3VelocityDecay(0.45)
         .nodeRelSize(5)
         .nodeOpacity(0.92)
         .linkOpacity(0.3)
         .linkDirectionalParticles(1)
         .linkDirectionalParticleWidth(1.2)
+        .onEngineStop(() => {
+          Graph.pauseAnimation();
+          statusBox.textContent += " — раскладка остановлена для экономии CPU";
+        })
         .onNodeClick((node) => {
           selection.textContent = [
             `Сущность: ${node.label}`,
@@ -269,6 +277,7 @@
         const query = searchInput.value.trim().toLowerCase();
         const minDegree = Number(degreeInput.value);
         const limit = Number(limitInput.value);
+        Graph.pauseAnimation();
         let nodes = state.graph.nodes.filter((node) => {
           const matchesSearch =
             !query ||
@@ -284,6 +293,7 @@
         const links = state.graph.links.filter((link) => visible.has(link.source) && visible.has(link.target));
         Graph.graphData({ nodes, links });
         Graph.nodeColor(colorFor);
+        Graph.resumeAnimation();
         document.getElementById("nodeCount").textContent = nodes.length;
         document.getElementById("edgeCount").textContent = links.length;
         statusBox.textContent = `${nodes.length} видимых узлов, ${links.length} видимых связей`;
@@ -315,11 +325,16 @@
       document.getElementById("reset").addEventListener("click", () => {
         searchInput.value = "";
         degreeInput.value = "0";
-        limitInput.value = "220";
+        limitInput.value = "120";
         state.importantOnly = false;
         document.getElementById("important").textContent = "Только важные узлы";
         Graph.cameraPosition({ x: 0, y: 0, z: 520 }, { x: 0, y: 0, z: 0 }, 700);
         applyFilters();
+      });
+      document.getElementById("render").addEventListener("click", () => {
+        Graph.resumeAnimation();
+        statusBox.textContent = "3D-раскладка обновляется...";
+        setTimeout(() => Graph.pauseAnimation(), 8000);
       });
 
       boot().catch((error) => {

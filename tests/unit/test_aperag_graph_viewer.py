@@ -6,6 +6,7 @@ EXPORT_SCRIPT = Path("scripts/export_aperag_graph.ps1")
 CHECK_SCRIPT = Path("scripts/check_aperag_graph_export.ps1")
 SERVE_SCRIPT = Path("scripts/serve_aperag_graph.ps1")
 OPEN_SCRIPT = Path("scripts/open_aperag_graph.ps1")
+STOP_SCRIPT = Path("scripts/stop_aperag_graph.ps1")
 SHORTCUT_SCRIPT = Path("scripts/create_aperag_graph_shortcut.ps1")
 VIEWER = Path("docs/knowledge_graph/index.html")
 
@@ -29,7 +30,11 @@ def test_aperag_graph_viewer_is_three_dimensional() -> None:
     assert "aperag-knowledge-graph" in html
     assert "3d-force-graph" in html
     assert "ForceGraph3D" in html
+    assert ".cooldownTicks(80)" in html
+    assert "Graph.pauseAnimation()" in html
+    assert 'value="120"' in html
     assert "Только важные узлы" in html
+    assert "Обновить 3D-раскладку" in html
     assert "Сбросить вид" in html
     assert "Left-click" not in html
 
@@ -39,12 +44,15 @@ def test_aperag_graph_scripts_support_desktop_launch_and_checks() -> None:
     check_script = CHECK_SCRIPT.read_text(encoding="utf-8")
     serve_script = SERVE_SCRIPT.read_text(encoding="utf-8")
     open_script = OPEN_SCRIPT.read_text(encoding="utf-8")
+    stop_script = STOP_SCRIPT.read_text(encoding="utf-8")
     shortcut_script = SHORTCUT_SCRIPT.read_text(encoding="utf-8")
 
     assert "export_aperag_graph.ps1" in check_script
     assert "export_aperag_graph.ps1" in serve_script
     assert "WScript.Shell" in serve_script
     assert "aperag-knowledge-graph" in serve_script
+    assert "Stop-Process" in stop_script
+    assert "127\\.0\\.0\\.1:$Port" in stop_script
     assert "serve_aperag_graph.ps1" in open_script
     assert "Граф знаний ApeRAG.lnk" in shortcut_script
     assert "ApeRAG Knowledge Graph.lnk" in shortcut_script
