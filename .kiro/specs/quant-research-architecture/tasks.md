@@ -73,7 +73,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Test serialization/deserialization
     - _Requirements: 18.8_
 
-- [ ] 4. Build Data Agent with quality validation
+- [x] 4. Build Data Agent with quality validation
   - [x] 4.1 Implement OHLCV data ingestion from CCXT (crypto)
     - Create data source adapter for CCXT
     - Implement download logic for multiple exchanges (Binance, Coinbase, Kraken)
@@ -81,7 +81,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Store raw data in Parquet format partitioned by symbol and date
     - _Requirements: 2.1-2.10, 20.1-20.12_
 
-  - [ ]* 4.2 Write property test for timestamp normalization
+  - [x]* 4.2 Write property test for timestamp normalization
     - **Property 1: Timestamp Normalization Preserves Time**
     - **Validates: Requirements 2.1**
     - Test that normalizing timestamps to UTC preserves absolute time
@@ -93,7 +93,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Outlier detection (zero prices, impossible candles, volume spikes)
     - _Requirements: 2.1-2.4_
   
-  - [ ]* 4.4 Write property tests for data quality validation
+  - [x]* 4.4 Write property tests for data quality validation
     - **Property 2: Missing Bar Detection Completeness**
     - **Property 3: Duplicate Timestamp Detection Completeness**
     - **Property 4: Outlier Detection Sensitivity**

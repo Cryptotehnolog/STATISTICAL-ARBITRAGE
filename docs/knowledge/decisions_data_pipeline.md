@@ -201,3 +201,22 @@ review only; put alignment checks inside every statistical function.
 
 Risks: The guard is intentionally conservative and may need a narrow allowlist once the
 statistical package layout becomes concrete.
+
+## DEC-0023: Complete Data Agent property-test baseline
+
+Status: accepted
+
+Decision: Treat task 4 as complete only after property tests cover CCXT timestamp
+normalization, missing-bar completeness, duplicate timestamp completeness, volume spike
+sensitivity, resampling idempotence, and pair timestamp alignment.
+
+Rationale: Data Agent correctness depends on invariants, not only example cases. The
+property suite protects the data pipeline against silent timestamp shifts, undercounted
+gaps, missed duplicate raw bars, missed outliers, unstable resampling, and mismatched pair
+timestamps before Statistical Testing Agent work begins.
+
+Alternatives considered: Leave optional property tests open; rely on example-based tests;
+defer all property tests until production hardening.
+
+Risks: Current `DataQualityReport` domain validation requires `end_date` to be after
+`start_date`, so one-bar quality reports remain a separate contract decision.

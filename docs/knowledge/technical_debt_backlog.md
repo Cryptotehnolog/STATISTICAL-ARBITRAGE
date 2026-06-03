@@ -46,6 +46,9 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   and dataset provenance are wired to the registry.
 - Data-quality failure memory: route `DataQualityFailureSummary` to ApeRAG through the
   future Memory Agent boundary, while keeping numeric report details in the registry.
+- One-bar data quality reports: decide whether a single OHLCV bar should be invalid input
+  or a valid diagnostic `DataQualityReport`; current domain validation rejects equal
+  `start_date` and `end_date`.
 - ApeRAG human graph view: ApeRAG UI is the default inspection path; build a local viewer only
   if the UI proves insufficient.
 

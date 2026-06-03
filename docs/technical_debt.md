@@ -8,6 +8,23 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0018: Decide one-bar DataQualityReport contract
+
+Status: open
+
+Why deferred: Completing Data Agent property tests exposed that `DataQualityReport`
+currently requires `end_date` to be after `start_date`, so one-bar OHLCV validation cannot
+produce a valid report. This is not blocking normal research batches, but it is a real
+domain boundary decision.
+
+Follow-up:
+- Decide whether one-bar datasets are invalid input or valid diagnostic reports.
+- If valid, update `DataQualityReport` validation and add an explicit unit/property test.
+- If invalid, make `validate_ohlcv_batch` fail early with a clear message before creating
+  the report.
+
+Related tasks: 4.3, 4.4.
+
 ### TD-0001: Add Ubuntu portability hardening
 
 Status: open

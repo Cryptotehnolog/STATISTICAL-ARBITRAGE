@@ -3,6 +3,8 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from stat_arb.data_quality import (
     OHLCVQualityConfig,
@@ -68,6 +70,20 @@ def test_validate_ohlcv_batch_detects_missing_bars() -> None:
     assert report.issues[0].severity == DataQualitySeverity.ERROR
 
 
+@pytest.mark.property
+@settings(max_examples=100, deadline=None)
+@given(indexes=st.sets(st.integers(min_value=0, max_value=60), min_size=2, max_size=30))
+def test_validate_ohlcv_batch_missing_bar_count_is_complete(indexes: set[int]) -> None:
+    """Property 2: missing-bar count should equal gaps in the timestamp sequence."""
+    ordered_indexes = sorted(indexes)
+
+    report = validate_ohlcv_batch([_bar(index) for index in ordered_indexes])
+
+    expected_bar_count = ordered_indexes[-1] - ordered_indexes[0] + 1
+    assert report.expected_bar_count == expected_bar_count
+    assert report.missing_bars == expected_bar_count - len(ordered_indexes)
+
+
 def test_validate_ohlcv_batch_allows_missing_bars_within_threshold() -> None:
     """Configured thresholds should downgrade small missing gaps to warnings."""
     config = OHLCVQualityConfig(max_missing_bar_ratio=0.5)
@@ -92,6 +108,27 @@ def test_validate_ohlcv_batch_detects_duplicate_raw_timestamps() -> None:
     assert report.issues[0].code == "duplicate_timestamps"
 
 
+@pytest.mark.property
+@settings(max_examples=100, deadline=None)
+@given(
+    duplicate_index=st.integers(min_value=0, max_value=9),
+    duplicate_count=st.integers(min_value=1, max_value=5),
+)
+def test_validate_ohlcv_batch_duplicate_count_is_complete(
+    duplicate_index: int,
+    duplicate_count: int,
+) -> None:
+    """Property 3: duplicate timestamp detection should count every repeated raw bar."""
+    bars = [_bar(index) for index in range(10)]
+    bars.extend(_bar(duplicate_index).model_copy(update={"close": 101.25}) for _ in range(duplicate_count))
+
+    report = validate_ohlcv_batch(bars)
+
+    assert report.duplicate_timestamps == duplicate_count
+    assert any(issue.code == "duplicate_timestamps" for issue in report.issues)
+    assert report.passed is False
+
+
 def test_validate_ohlcv_batch_detects_abnormal_volume_spikes() -> None:
     """Volume spikes should be warning-level unless they exceed the configured ratio."""
     report = validate_ohlcv_batch([_bar(0), _bar(1), _bar(2, volume=500.0), _bar(3)])
@@ -100,6 +137,27 @@ def test_validate_ohlcv_batch_detects_abnormal_volume_spikes() -> None:
     assert report.abnormal_volume_count == 1
     assert report.issues[0].code == "abnormal_volume"
     assert report.issues[0].severity == DataQualitySeverity.ERROR
+
+
+@pytest.mark.property
+@settings(max_examples=100, deadline=None)
+@given(
+    bar_count=st.integers(min_value=3, max_value=40),
+    spike_index=st.integers(min_value=0, max_value=39),
+)
+def test_validate_ohlcv_batch_volume_spike_detection_is_sensitive(
+    bar_count: int,
+    spike_index: int,
+) -> None:
+    """Property 4: a single large volume spike should be detected in valid series."""
+    spike_index %= bar_count
+    bars = [_bar(index) for index in range(bar_count)]
+    bars[spike_index] = _bar(spike_index, volume=500.0)
+
+    report = validate_ohlcv_batch(bars)
+
+    assert report.abnormal_volume_count == 1
+    assert any(issue.code == "abnormal_volume" for issue in report.issues)
 
 
 def test_validate_ohlcv_batch_rejects_empty_or_mixed_series() -> None:

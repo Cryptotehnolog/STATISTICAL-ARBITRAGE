@@ -8,6 +8,8 @@ from uuid import uuid4
 
 import pandas as pd
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from stat_arb.domain import DatasetSource, OHLCVBar, OHLCVBatch
 from stat_arb.ingestion import CCXTOHLCVSource, write_ohlcv_batch_to_parquet
@@ -88,6 +90,26 @@ def test_ccxt_source_fetches_and_normalizes_ohlcv_batch() -> None:
             "params": {"price": "mark"},
         }
     ]
+
+
+@pytest.mark.property
+@settings(max_examples=100, deadline=None)
+@given(
+    timestamp_ms=st.integers(
+        min_value=int(datetime(2000, 1, 1, tzinfo=UTC).timestamp() * 1000),
+        max_value=int(datetime(2030, 1, 1, tzinfo=UTC).timestamp() * 1000),
+    )
+)
+def test_ccxt_timestamp_normalization_preserves_absolute_time(timestamp_ms: int) -> None:
+    """Property 1: CCXT millisecond timestamps should normalize to the same UTC instant."""
+    exchange = FakeExchange(rows=[[timestamp_ms, 100.0, 102.0, 99.0, 101.0, 10.0]])
+    source = CCXTOHLCVSource(exchange_id="fake", exchange=exchange, sleep=lambda _: None)
+
+    batch = source.fetch_ohlcv_batch("BTC/USDT", "1m")
+
+    assert len(batch.bars) == 1
+    assert batch.bars[0].timestamp.tzinfo == UTC
+    assert batch.bars[0].timestamp == datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC)
 
 
 def test_ccxt_source_retries_transient_fetch_errors() -> None:
