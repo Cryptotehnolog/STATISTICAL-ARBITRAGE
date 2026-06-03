@@ -133,7 +133,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
 - [x] 5. Checkpoint - Ensure data ingestion and validation works
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Build Statistical Testing Agent
+- [x] 6. Build Statistical Testing Agent
   - [x] 6.1 Implement Engle-Granger cointegration test (Python)
     - Create cointegration test function using statsmodels
     - Calculate test statistic and p-value
