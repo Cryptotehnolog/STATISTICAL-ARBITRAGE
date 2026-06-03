@@ -39,7 +39,7 @@ they depend on external service state.
 The MVP is complete when the project can initialize the repository and local infrastructure,
 ingest and validate at least one data source, run at least one scripted pair-screening
 workflow, run statistical testing and backtesting workflows, write structured records to the
-registry, write concise summaries to LightRAG, show experiments through a dashboard or
+registry, write concise summaries through the Memory Agent, show experiments through a dashboard or
 report view, and pass CI.
 
 Non-functional acceptance includes local PC support, Oracle Cloud Always Free compatibility,

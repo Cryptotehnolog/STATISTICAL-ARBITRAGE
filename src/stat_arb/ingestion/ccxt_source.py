@@ -1,7 +1,7 @@
 """CCXT OHLCV data source adapter.
 
 This module intentionally handles only ingestion and raw parquet persistence.
-Quality validation, registry writes, and LightRAG summaries are later tasks.
+Quality validation, registry writes, and Memory Agent summaries are separate tasks.
 """
 
 from __future__ import annotations

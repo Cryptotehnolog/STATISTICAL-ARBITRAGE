@@ -1,8 +1,4 @@
-"""Memory module for long-term project memory integration.
-
-This module exposes the active ApeRAG memory boundary plus legacy LightRAG classes kept
-temporarily for migration and tests.
-"""
+"""Memory module for long-term project memory integration."""
 
 from stat_arb.memory.aperag_client import (
     ApeRAGCollection,
@@ -14,8 +10,7 @@ from stat_arb.memory.aperag_client import (
     MemoryRecordType,
     MemoryWriteRequest,
 )
-from stat_arb.memory.config import ApeRAGConfig, LightRAGConfig
-from stat_arb.memory.lightrag_client import LightRAGClient
+from stat_arb.memory.config import ApeRAGConfig
 from stat_arb.memory.policy import (
     MemoryAgentPolicy,
     MemoryAgentService,
@@ -31,8 +26,6 @@ __all__ = [
     "ApeRAGGraphSummary",
     "ApeRAGMemoryClient",
     "ApeRAGSearchResult",
-    "LightRAGClient",
-    "LightRAGConfig",
     "MemoryRecordType",
     "MemoryAgentPolicy",
     "MemoryAgentService",

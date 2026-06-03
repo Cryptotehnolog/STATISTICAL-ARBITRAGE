@@ -179,7 +179,7 @@ def test_search_sends_bounded_vector_and_fulltext_payload() -> None:
                         {
                             "text": "ApeRAG is the active memory backend.",
                             "score": 0.88,
-                            "document_name": "decisions_memory_lightrag.md",
+                            "document_name": "decisions_memory_aperag.md",
                         }
                     ]
                 },
@@ -194,7 +194,7 @@ def test_search_sends_bounded_vector_and_fulltext_payload() -> None:
     assert seen_payload["fulltext_search"]["keywords"] == ["ApeRAG"]
     assert seen_payload["save_to_history"] is False
     assert results[0].text.startswith("ApeRAG")
-    assert results[0].source == "decisions_memory_lightrag.md"
+    assert results[0].source == "decisions_memory_aperag.md"
 
 
 def test_get_graph_summary_counts_labels_nodes_and_edges() -> None:

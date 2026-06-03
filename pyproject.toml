@@ -40,11 +40,8 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "alembic>=1.13.0",  # Database migrations
     
-    # LightRAG and vector store
-    "lightrag-hku>=0.0.0.2.2.1",
+    # Local embedding server for ApeRAG
     "sentence-transformers>=2.2.0",
-    "faiss-cpu>=1.7.4",  # Embedded vector store
-    "chromadb>=0.4.22",  # Reserved for future Chroma integration
     
     # Secrets management
     # Note: infisical Python SDK is not compatible with Pydantic v2

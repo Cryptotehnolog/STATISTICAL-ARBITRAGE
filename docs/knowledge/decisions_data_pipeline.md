@@ -46,7 +46,7 @@ Status: accepted
 Decision: Implement CCXT OHLCV ingestion as a narrow adapter under `stat_arb.ingestion`.
 The adapter fetches exchange rows, normalizes them into `OHLCVBatch`, applies retry
 behavior, and writes raw parquet partitions. Data quality reports, registry writes, and
-LightRAG summaries remain separate tasks.
+Memory Agent summaries remain separate tasks.
 
 Rationale: Task 4.1 should prove source access and raw persistence without mixing in the
 validation/reporting responsibilities from tasks 4.3, 4.9, and 4.10. Keeping ingestion
@@ -97,7 +97,7 @@ Agent service; write Parquet first and quarantine failed batches afterward.
 
 Risks: Failed quality validation raises `OHLCVQualityError` and does not write Parquet
 files. Durable data-quality report storage, registry persistence, quarantine records, and
-LightRAG summaries remain separate follow-up tasks.
+Memory Agent summaries remain separate follow-up tasks.
 
 ## DEC-0017: Persist OHLCV quality reports in the registry with JSON sidecars
 
@@ -115,7 +115,7 @@ artifact reproducible without making Parquet directories the only durable record
 Alternatives considered: Store only JSON next to Parquet; overload `ReportArtifact` before
 an experiment exists; put registry writes directly inside the CCXT source adapter.
 
-Risks: Failed validation summaries are not yet written to LightRAG by this helper. That
+Risks: Failed validation summaries are not yet written to ApeRAG by this helper. That
 belongs behind the future Memory Agent boundary so registry writes do not depend on an LLM
 gateway.
 
@@ -157,4 +157,3 @@ transformation; add an optional caller-supplied output ID.
 
 Risks: If the resampling identity fields change later, downstream registry references may
 need a migration or explicit versioned identity scheme.
-

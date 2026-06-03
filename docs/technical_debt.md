@@ -64,24 +64,12 @@ Follow-up:
 
 Related tasks: 4.3, 4.9, 4.10, 15.1.
 
-### TD-0004: Revisit embedded vector stores only if ApeRAG is rejected
-
-Status: open
-
-Why deferred: ApeRAG is now the active memory backend. Earlier FAISS and NanoVectorDB work is
-kept as legacy fallback knowledge until LightRAG is removed.
-
-Follow-up:
-- Re-test FAISS/NanoVectorDB only if ApeRAG is rejected or proves operationally unsuitable.
-- Remove this item when LightRAG cleanup deletes the embedded vector-store path.
-
-Related tasks: 11.1, 11.2, 11.4.
-
 ### TD-0005: Keep Chroma compatibility parked unless a future backend needs it
 
 Status: open
 
-Why deferred: Chroma was planned for LightRAG, but ApeRAG is now the active memory backend.
+Why deferred: Chroma was considered for an earlier local memory backend, but ApeRAG is now
+the active memory backend.
 
 Follow-up:
 - Do not spend time on Chroma while ApeRAG is the active path.
@@ -174,20 +162,6 @@ Follow-up:
 
 Related tasks: 19.1, TD-0001.
 
-### TD-0012: Decide ApeRAG human graph inspection path
-
-Status: open
-
-Why deferred: LightRAG's local HTML viewer is legacy now that ApeRAG graph parity works.
-Before deleting it, the project needs an ApeRAG UI or local viewer path for human inspection.
-
-Follow-up:
-- Decide whether ApeRAG's UI is enough for human graph inspection.
-- If not, build a local ApeRAG graph viewer against ApeRAG graph endpoints.
-- Keep all human-facing viewer labels in Russian.
-
-Related tasks: 11.2, 16.7.
-
 ### TD-0013: Add OmniRoute model-order rebenchmark workflow when provider behavior changes
 
 Status: open
@@ -214,20 +188,6 @@ Follow-up:
 - The command should fetch, validate, persist parquet, and return clear Russian output.
 
 Related tasks: 4.9, 4.10, 15.1.
-
-### TD-0015: Remove legacy LightRAG path after ApeRAG agent integration
-
-Status: open
-
-Why deferred: ApeRAG graph parity is proven, but agents are not yet wired to ApeRAG and the
-human graph inspection replacement is not finalized.
-
-Follow-up:
-- Wire Memory Agent contracts to ApeRAG.
-- Provide a human graph inspection path through ApeRAG UI or a local ApeRAG viewer.
-- Delete LightRAG code, scripts, README sections, viewer workflow, and runtime assumptions.
-
-Related tasks: 2.3, 18.1, 19.1.
 
 ### TD-0016: Update GitHub Actions to Node.js 24-compatible actions
 
@@ -309,7 +269,7 @@ Status: closed
 
 Resolution: Replaced the oversized `docs/knowledge/decisions.md` body with a navigation
 index and moved durable decisions into focused thematic shards:
-`decisions_memory_lightrag.md`, `decisions_infra_ci_secrets.md`, and
+`decisions_memory_aperag.md`, `decisions_infra_ci_secrets.md`, and
 `decisions_data_pipeline.md`. The curated seed wrapper now caps one document at 12000
 characters so future oversized shards are caught earlier.
 
@@ -326,3 +286,25 @@ freshness checks.
 
 Closed by: `scripts/enable_aperag_curated_graph.ps1` and
 `scripts/check_aperag_memory_fresh.ps1`.
+
+### TD-CLOSED-0007: Remove legacy LightRAG code path
+
+Status: closed
+
+Resolution: Removed the old local memory backend from runtime dependencies, `src`,
+PowerShell wrappers, and unit tests after ApeRAG project memory, graph parity, and
+operational agent memory smoke checks were committed. Added pre-commit guards for
+user-facing legacy memory commands and agent-facing legacy imports.
+
+Closed by: `scripts/check_no_legacy_lightrag_user_surface.ps1` and
+`scripts/check_no_legacy_lightrag_imports.ps1`.
+
+### TD-CLOSED-0008: Decide ApeRAG human graph inspection path
+
+Status: closed
+
+Resolution: ApeRAG UI is the default human inspection path for graph memory. A custom local
+viewer is no longer a prerequisite for removing the old local viewer workflow; add a new
+task only if ApeRAG UI proves insufficient.
+
+Closed by: ApeRAG migration cleanup.

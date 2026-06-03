@@ -7,7 +7,7 @@ Infisical, GitHub Actions, and portability constraints.
 
 Status: accepted
 
-Decision: Runtime storage, SQLite databases, LightRAG data, vector indexes, reports, logs,
+Decision: Runtime storage, SQLite databases, ApeRAG manifests, vector indexes, reports, logs,
 and scratch data must live under top-level ignored directories such as `data/`, not under
 `src/stat_arb/`.
 

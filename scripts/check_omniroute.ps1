@@ -3,17 +3,10 @@ param(
     [string]$BaseUrl = "http://localhost:20128/v1",
     [string]$Model = "my-ai",
     [string]$ApiKey = $env:OMNIROUTE_API_KEY,
-    [int]$TimeoutSeconds = 60,
-    [double]$SmokeTimeoutSeconds = 180,
-    [switch]$SkipDocStatus,
-    [switch]$SkipSmoke
+    [int]$TimeoutSeconds = 60
 )
 
 $ErrorActionPreference = "Stop"
-
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$smokeScript = Join-Path $PSScriptRoot "smoke_lightrag_omniroute.ps1"
-$python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 
 function New-OmniRouteHeaders {
     if ($ApiKey) {
@@ -78,45 +71,5 @@ if ($chatResponse.Content -notmatch "OK") {
     Write-Error "Chat endpoint не вернул ожидаемый OK response."
 }
 Write-Output "Chat endpoint OK"
-
-if (-not $SkipDocStatus) {
-    Write-Output "Проверка persistent LightRAG doc_status..."
-    Push-Location $repoRoot
-    try {
-        & $python -m stat_arb.scripts.check_lightrag_doc_status
-        if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-        }
-    }
-    finally {
-        Pop-Location
-    }
-}
-
-if (-not $SkipSmoke) {
-    Write-Output "Запуск LightRAG OmniRoute smoke..."
-    Push-Location $repoRoot
-    try {
-        if ($ApiKey) {
-            & $smokeScript `
-                -Model $Model `
-                -BaseUrl $BaseUrl `
-                -ApiKey $ApiKey `
-                -TimeoutSeconds $SmokeTimeoutSeconds
-        }
-        else {
-            & $smokeScript `
-                -Model $Model `
-                -BaseUrl $BaseUrl `
-                -TimeoutSeconds $SmokeTimeoutSeconds
-        }
-        if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-        }
-    }
-    finally {
-        Pop-Location
-    }
-}
 
 Write-Output "Проверка OmniRoute прошла."

@@ -52,7 +52,7 @@ Get-ChildItem -LiteralPath $repoRoot -Force -File -ErrorAction SilentlyContinue 
     ForEach-Object { [void]$targets.Add($_.FullName) }
 
 Get-ChildItem -LiteralPath (Join-Path $repoRoot "data") -Force -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -like "lightrag_graph_viewer_server*.json" } |
+    Where-Object { $_.Name -like "memory_graph_viewer_server*.json" } |
     Where-Object {
         try {
             $state = Get-Content -Raw -LiteralPath $_.FullName | ConvertFrom-Json
@@ -73,9 +73,6 @@ Add-ExistingDirectoriesByName `
     -Name "__pycache__"
 
 if ($IncludeSmokeArtifacts) {
-    Add-ExistingPath -Paths $targets -Path "data/ollama_lightrag_smoke"
-    Add-ExistingPath -Paths $targets -Path "data/omniroute_lightrag_smoke"
-    Add-ExistingPath -Paths $targets -Path "data/omniroute_lightrag_benchmark"
 }
 
 $uniqueTargets = @($targets | Sort-Object -Unique)

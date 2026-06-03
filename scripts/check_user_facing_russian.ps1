@@ -2,8 +2,7 @@ param(
     [string[]]$Paths = @(
         "README.md",
         "docs",
-        "scripts",
-        "src/stat_arb/scripts/export_lightrag_graph.py"
+        "scripts"
     )
 )
 

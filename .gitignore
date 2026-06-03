@@ -86,8 +86,7 @@ data/
 *.sqlite
 *.sqlite3
 
-# LightRAG and vector stores
-lightrag/
+# Local vector stores
 vector_store/
 *.faiss
 *.index

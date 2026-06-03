@@ -1,12 +1,12 @@
 # Knowledge Decisions Index
 
-This file is the navigation index for durable project decisions seeded into LightRAG.
+This file is the navigation index for durable project decisions seeded into ApeRAG.
 Keep detailed decisions in focused thematic shards so graph extraction stays clear and
 regular memory updates do not reprocess one oversized document.
 
 ## Decision Shards
 
-- `docs/knowledge/decisions_memory_lightrag.md`: LightRAG, vector storage, curated memory,
+- `docs/knowledge/decisions_memory_aperag.md`: ApeRAG, curated memory,
   OmniRoute, memory-agent boundaries.
 - `docs/knowledge/decisions_infra_ci_secrets.md`: runtime layout, Infisical, GitHub Actions,
   local-first infrastructure constraints.
@@ -16,4 +16,4 @@ regular memory updates do not reprocess one oversized document.
 ## Operating Rule
 
 New decisions must be added to the smallest relevant thematic shard. Add a new shard only
-when a topic becomes large enough to slow or muddy LightRAG extraction.
+when a topic becomes large enough to slow or muddy graph extraction.

@@ -78,7 +78,7 @@ $search = Invoke-ApeRagJson -Method "POST" -Path "/api/v1/collections/$($collect
     }
     fulltext_search = @{
         topk = 5
-        keywords = @("LightRAG", "ApeRAG", "memory", "backend")
+        keywords = @("ApeRAG", "memory", "backend")
     }
     save_to_history = $false
     rerank = $false
