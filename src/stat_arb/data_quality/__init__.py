@@ -5,9 +5,11 @@ from stat_arb.data_quality.ohlcv import (
     summarize_data_quality_failure,
     validate_ohlcv_batch,
 )
+from stat_arb.data_quality.resampling import resample_ohlcv_batch
 
 __all__ = [
     "OHLCVQualityConfig",
+    "resample_ohlcv_batch",
     "summarize_data_quality_failure",
     "validate_ohlcv_batch",
 ]

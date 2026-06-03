@@ -314,3 +314,23 @@ before defining the contract.
 
 Risks: The summary is intentionally concise. If later Memory Agent workflows need richer
 context, add fields explicitly rather than passing the full raw report to LightRAG.
+
+## DEC-0019: Resample OHLCV batches with deterministic domain rules
+
+Status: accepted
+
+Decision: Use `stat_arb.data_quality.resample_ohlcv_batch` to downsample `OHLCVBatch`
+contracts into coarser timeframes. The target timeframe must be coarser than the source
+timeframe and an exact multiple of it. Output timestamps are labeled by the UTC window
+start. OHLCV aggregation uses first open, max high, min low, last close, and summed volume.
+
+Rationale: Statistical tests and backtests need stable candle semantics before pair
+alignment. Keeping resampling in the domain/data-quality layer avoids passing DataFrames
+between agents and keeps deterministic behavior testable without live exchange access.
+
+Alternatives considered: Use pandas resampling directly as the agent contract; silently keep
+partial windows by default; allow arbitrary non-multiple target intervals.
+
+Risks: Strict resampling drops incomplete windows by default. Callers can explicitly keep
+partial windows for diagnostics, but production-quality datasets should validate gaps before
+statistical testing.
