@@ -255,3 +255,22 @@ OmniRoute and Infisical integration checks to every push.
 
 Risks: CI does not yet cover external service readiness, property tests, or reproducibility
 checks. Those remain separate follow-up tasks under the CI section.
+
+## DEC-0016: Add a narrow OHLCV ingestion pipeline boundary
+
+Status: accepted
+
+Decision: Use `stat_arb.ingestion.fetch_validate_write_ohlcv` as the first service
+boundary that composes `CCXTOHLCVSource`, `validate_ohlcv_batch`, and raw Parquet
+persistence.
+
+Rationale: The Data Agent should not pass ad-hoc DataFrames or dicts between steps. A
+narrow pipeline keeps the adapter focused on exchange access, keeps quality validation
+deterministic, and writes Parquet only after the domain `DataQualityReport` passes.
+
+Alternatives considered: Add validation into `CCXTOHLCVSource`; wait for a larger Data
+Agent service; write Parquet first and quarantine failed batches afterward.
+
+Risks: Failed quality validation raises `OHLCVQualityError` and does not write Parquet
+files. Durable data-quality report storage, registry persistence, quarantine records, and
+LightRAG summaries remain separate follow-up tasks.
