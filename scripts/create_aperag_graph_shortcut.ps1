@@ -22,7 +22,7 @@ $shortcut.TargetPath = $target
 $shortcut.Arguments = $arguments
 $shortcut.WorkingDirectory = $repoRoot
 $shortcut.IconLocation = "$env:SystemRoot\System32\shell32.dll,167"
-$shortcut.Description = "Запустить локальный 3D-граф знаний ApeRAG"
+$shortcut.Description = "Запустить локальный 2D-граф знаний ApeRAG"
 $shortcut.Save()
 
 Write-Output "Ярлык создан: $shortcutPath"
