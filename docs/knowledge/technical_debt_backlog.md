@@ -39,6 +39,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Rust boundary: keep Python-first MVP; introduce Rust only after profiling identifies a
   stable compute hotspot.
 - Runtime cleanup: keep cleanup manual and scoped to regenerable artifacts.
+- GitHub CLI in Codex: use `scripts/gh_no_proxy.ps1` for `gh` commands because this session
+  can inherit broken process proxy variables pointing at `127.0.0.1:9`.
 - LightRAG viewer: improve filters, labels, and readability as graph size grows.
 - OmniRoute benchmarking: re-run model ordering benchmark when provider behavior changes.
 - Data ingestion CLI: add user-facing ingestion command only after quality report generation
