@@ -97,6 +97,9 @@ outputs/
 logs/
 *.html
 *.pdf
+!docs/knowledge_graph/
+!docs/knowledge_graph/index.html
+docs/knowledge_graph/graph.json
 
 # Secrets and credentials
 .env

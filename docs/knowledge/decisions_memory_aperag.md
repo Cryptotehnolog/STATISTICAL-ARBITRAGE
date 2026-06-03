@@ -37,6 +37,27 @@ all future agents exist.
 
 Risks: Reintroducing a fallback would require a fresh design decision and new tests.
 
+## DEC-0021: Use a neutral ApeRAG graph viewer for human inspection
+
+Status: accepted
+
+Decision: Use `docs/knowledge_graph/index.html` as the human-facing 3D viewer for the
+ApeRAG project knowledge graph. The viewer reads a generated `graph.json` exported from
+the active `stat-arb-project-knowledge` collection. The desktop shortcut should refresh
+the export before opening the local viewer, but it must not trigger reseeding or LLM graph
+rebuilds on every browser launch.
+
+Rationale: Human graph inspection should reflect the active ApeRAG backend and should not
+depend on the removed legacy memory backend. Refreshing the export is fast and keeps the
+viewer current without coupling ordinary viewing to stateful memory writes.
+
+Alternatives considered: Keep the old local-memory graph viewer; use Gephi Desktop or
+Gephi Lite; rebuild the ApeRAG graph every time the viewer opens.
+
+Risks: The viewer depends on ApeRAG API availability during export and on browser access
+to the 3D graph JavaScript libraries. Keep `scripts/check_aperag_graph_export.ps1` as the
+fast guard for export health.
+
 ## DEC-0003: Keep knowledge seeding explicit but automatic
 
 Status: accepted

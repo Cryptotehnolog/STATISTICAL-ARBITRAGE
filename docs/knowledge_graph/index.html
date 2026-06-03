@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Граф знаний ApeRAG</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #f7f8fb;
+        color: #17202a;
+        font-family: Arial, sans-serif;
+      }
+
+      #app {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        height: 100%;
+      }
+
+      aside {
+        box-sizing: border-box;
+        padding: 20px;
+        border-right: 1px solid #d9e0ea;
+        background: #ffffff;
+        overflow: auto;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: 28px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .stat {
+        border: 1px solid #d9e0ea;
+        border-radius: 8px;
+        padding: 12px;
+        background: #eef3f8;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 24px;
+        margin-bottom: 4px;
+      }
+
+      label {
+        display: block;
+        margin: 14px 0 6px;
+        color: #516176;
+        font-size: 14px;
+      }
+
+      input,
+      select,
+      button {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 42px;
+        border: 1px solid #d4dce8;
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: #fff;
+        color: #17202a;
+        font-size: 15px;
+      }
+
+      button {
+        margin-top: 12px;
+        border-color: #087f73;
+        background: #087f73;
+        color: #fff;
+        cursor: pointer;
+      }
+
+      .muted {
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      #selection {
+        min-height: 90px;
+        margin-top: 18px;
+        padding: 12px;
+        border-radius: 8px;
+        background: #eef3f8;
+        border: 1px solid #d9e0ea;
+        white-space: pre-wrap;
+      }
+
+      main {
+        position: relative;
+      }
+
+      #scene {
+        position: absolute;
+        inset: 0;
+      }
+
+      #status {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        z-index: 2;
+        max-width: 520px;
+        padding: 10px 12px;
+        border: 1px solid #d9e0ea;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      }
+
+      .scene-nav-info {
+        display: none !important;
+      }
+    </style>
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/3d-force-graph@1.73.3/dist/3d-force-graph.min.js"></script>
+  </head>
+  <body>
+    <div id="app" data-viewer="aperag-knowledge-graph">
+      <aside>
+        <h1>Граф знаний ApeRAG</h1>
+        <div class="stats">
+          <div class="stat"><strong id="nodeCount">0</strong>узлов</div>
+          <div class="stat"><strong id="edgeCount">0</strong>связей</div>
+        </div>
+
+        <label for="search">Поиск</label>
+        <input id="search" placeholder="сущность, связь, ключевое слово" />
+
+        <label for="limit">Максимум видимых узлов</label>
+        <input id="limit" type="number" min="20" max="1000" step="20" value="220" />
+
+        <label for="degree">Минимальная степень связности</label>
+        <input id="degree" type="range" min="0" max="10" value="0" />
+
+        <label for="colorMode">Цвет</label>
+        <select id="colorMode">
+          <option value="type">тип сущности</option>
+          <option value="degree">степень связности</option>
+        </select>
+
+        <button id="important">Только важные узлы</button>
+        <button id="reset">Сбросить вид</button>
+
+        <h2>Выбор</h2>
+        <div id="selection">Выберите узел или связь.</div>
+      </aside>
+      <main>
+        <div id="status">Загрузка graph.json...</div>
+        <div id="scene"></div>
+      </main>
+    </div>
+
+    <script>
+      const palette = [
+        "#0f766e",
+        "#2563eb",
+        "#9333ea",
+        "#b45309",
+        "#be123c",
+        "#475569",
+        "#15803d",
+        "#7c3aed"
+      ];
+      const state = { raw: null, graph: null, importantOnly: false };
+      const scene = document.getElementById("scene");
+      const selection = document.getElementById("selection");
+      const statusBox = document.getElementById("status");
+      const searchInput = document.getElementById("search");
+      const limitInput = document.getElementById("limit");
+      const degreeInput = document.getElementById("degree");
+      const colorMode = document.getElementById("colorMode");
+
+      const Graph = ForceGraph3D()(scene)
+        .backgroundColor("#f7f8fb")
+        .nodeRelSize(5)
+        .nodeOpacity(0.92)
+        .linkOpacity(0.3)
+        .linkDirectionalParticles(1)
+        .linkDirectionalParticleWidth(1.2)
+        .onNodeClick((node) => {
+          selection.textContent = [
+            `Сущность: ${node.label}`,
+            `Тип: ${node.group || "неизвестно"}`,
+            `Степень: ${node.degree}`,
+            "",
+            node.description || ""
+          ].join("\n");
+          Graph.cameraPosition(
+            { x: node.x * 1.5, y: node.y * 1.5, z: node.z * 1.5 },
+            node,
+            800
+          );
+        })
+        .onLinkClick((link) => {
+          const source = link.source.label || link.source.id || link.source;
+          const target = link.target.label || link.target.id || link.target;
+          selection.textContent = [
+            `Связь: ${source} -> ${target}`,
+            `Тип: ${link.label || link.relation || "связь"}`,
+            "",
+            link.description || ""
+          ].join("\n");
+        });
+
+      function textOf(value) {
+        if (value == null) return "";
+        if (typeof value === "string") return value;
+        return JSON.stringify(value);
+      }
+
+      function normalizeGraph(raw) {
+        const nodeMap = new Map();
+        const nodes = (raw.nodes || []).map((node, index) => {
+          const id = textOf(node.id || node.name || node.label || `node-${index}`);
+          const label = textOf(node.label || node.name || node.id || id);
+          const group = textOf(node.type || node.entity_type || node.label_type || "unknown").toLowerCase();
+          const normalized = {
+            id,
+            label,
+            group,
+            description: textOf(node.description || node.summary || node.content || ""),
+            raw: node,
+            degree: 0
+          };
+          nodeMap.set(id, normalized);
+          return normalized;
+        });
+        const edges = (raw.edges || raw.links || []).map((edge, index) => {
+          const source = textOf(edge.source || edge.source_id || edge.src || edge.from);
+          const target = textOf(edge.target || edge.target_id || edge.dst || edge.to);
+          if (nodeMap.has(source)) nodeMap.get(source).degree += 1;
+          if (nodeMap.has(target)) nodeMap.get(target).degree += 1;
+          return {
+            source,
+            target,
+            label: textOf(edge.label || edge.relation || edge.type || `edge-${index}`),
+            description: textOf(edge.description || edge.summary || ""),
+            raw: edge
+          };
+        }).filter((edge) => nodeMap.has(edge.source) && nodeMap.has(edge.target));
+        return { nodes, links: edges };
+      }
+
+      function colorFor(node) {
+        if (colorMode.value === "degree") {
+          if (node.degree >= 8) return "#be123c";
+          if (node.degree >= 4) return "#b45309";
+          return "#2563eb";
+        }
+        const key = [...node.group].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+        return palette[key % palette.length];
+      }
+
+      function applyFilters() {
+        const query = searchInput.value.trim().toLowerCase();
+        const minDegree = Number(degreeInput.value);
+        const limit = Number(limitInput.value);
+        let nodes = state.graph.nodes.filter((node) => {
+          const matchesSearch =
+            !query ||
+            node.label.toLowerCase().includes(query) ||
+            node.group.toLowerCase().includes(query) ||
+            node.description.toLowerCase().includes(query);
+          const matchesDegree = node.degree >= minDegree;
+          const matchesImportant = !state.importantOnly || (node.degree > 1 && node.group !== "unknown");
+          return matchesSearch && matchesDegree && matchesImportant;
+        });
+        nodes = nodes.sort((a, b) => b.degree - a.degree).slice(0, limit);
+        const visible = new Set(nodes.map((node) => node.id));
+        const links = state.graph.links.filter((link) => visible.has(link.source) && visible.has(link.target));
+        Graph.graphData({ nodes, links });
+        Graph.nodeColor(colorFor);
+        document.getElementById("nodeCount").textContent = nodes.length;
+        document.getElementById("edgeCount").textContent = links.length;
+        statusBox.textContent = `${nodes.length} видимых узлов, ${links.length} видимых связей`;
+      }
+
+      async function boot() {
+        if (!window.ForceGraph3D) {
+          statusBox.textContent = "Не удалось загрузить 3D библиотеку. Проверьте доступ к CDN.";
+          return;
+        }
+        const response = await fetch("graph.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`graph.json HTTP ${response.status}`);
+        state.raw = await response.json();
+        state.graph = normalizeGraph(state.raw);
+        applyFilters();
+      }
+
+      searchInput.addEventListener("input", applyFilters);
+      limitInput.addEventListener("input", applyFilters);
+      degreeInput.addEventListener("input", applyFilters);
+      colorMode.addEventListener("change", applyFilters);
+      document.getElementById("important").addEventListener("click", () => {
+        state.importantOnly = !state.importantOnly;
+        document.getElementById("important").textContent = state.importantOnly
+          ? "Показать все узлы"
+          : "Только важные узлы";
+        applyFilters();
+      });
+      document.getElementById("reset").addEventListener("click", () => {
+        searchInput.value = "";
+        degreeInput.value = "0";
+        limitInput.value = "220";
+        state.importantOnly = false;
+        document.getElementById("important").textContent = "Только важные узлы";
+        Graph.cameraPosition({ x: 0, y: 0, z: 520 }, { x: 0, y: 0, z: 0 }, 700);
+        applyFilters();
+      });
+
+      boot().catch((error) => {
+        statusBox.textContent = `Ошибка загрузки graph.json: ${error.message}`;
+      });
+    </script>
+  </body>
+</html>
