@@ -145,7 +145,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Test stationarity of spread
     - _Requirements: 4.4_
   
-  - [ ]* 6.3 Write property tests for statistical functions
+  - [x]* 6.3 Write property tests for statistical functions
     - **Property 7: Cointegration Test Accuracy**
     - **Property 8: ADF Test Stationarity Detection**
     - **Validates: Requirements 4.3, 4.4, 4.5**

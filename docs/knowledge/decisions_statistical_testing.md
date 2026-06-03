@@ -60,3 +60,21 @@ inside the Engle-Granger helper; write statistical results directly from the ADF
 
 Risks: Callers remain responsible for providing residuals generated from aligned data and a
 documented hedge-ratio method until the full Statistical Testing Agent service is built.
+
+## DEC-0030: Keep statistical property tests bounded
+
+Status: accepted
+
+Decision: Cover synthetic cointegration and stationary residual detection with bounded
+Hypothesis tests under `tests/unit`, using a small `max_examples` count.
+
+Rationale: `statsmodels` tests are materially slower than pure data-shape validation.
+Property tests are still valuable for numerical boundaries, but they must not make every
+local commit or GitHub Actions run too slow for routine development.
+
+Alternatives considered: Put heavy property tests in the fast unit suite; skip optional
+property tests; move all statistical property tests to a later CI-only workflow.
+
+Risks: The bounded suite is a smoke-level property baseline, not a full statistical
+simulation campaign. Broader Monte Carlo tests should live in a separate slow workflow
+once task 18.2 exists.
