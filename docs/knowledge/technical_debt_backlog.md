@@ -50,9 +50,9 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   and dataset provenance are wired to the registry.
 - Data-quality failure memory: route `DataQualityFailureSummary` to LightRAG through the
   future Memory Agent boundary, while keeping numeric report details in the registry.
-- ApeRAG graph parity: enable and validate ApeRAG knowledge graph extraction through
-  OmniRoute before deleting LightRAG runtime/code, because current ApeRAG migration has
-  vector and full-text parity only.
+- ApeRAG graph parity: bounded graph smoke through OmniRoute passed, but full curated
+  graph extraction is not yet proven. Enable and validate curated ApeRAG graph extraction
+  before deleting LightRAG runtime/code.
 
 ## Closed Follow-up
 

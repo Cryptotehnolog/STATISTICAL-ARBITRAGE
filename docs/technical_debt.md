@@ -271,7 +271,8 @@ Related tasks: 4.9, 11.1, 11.4.
 Status: open
 
 Why deferred: ApeRAG now has working vector and full-text indexing for curated project
-memory, but graph extraction through OmniRoute has not been enabled and benchmarked yet.
+memory, and a bounded graph smoke through OmniRoute passed. Full curated graph parity has
+not been enabled and benchmarked yet.
 
 Follow-up:
 - Enable ApeRAG knowledge graph extraction for the curated collection.

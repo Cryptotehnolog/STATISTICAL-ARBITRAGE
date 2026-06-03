@@ -1,7 +1,9 @@
 param(
     [string]$ApiBaseUrl = "http://127.0.0.1:18000",
     [string]$FrontendUrl = "http://127.0.0.1:13000/web/",
-    [switch]$SkipDocker
+    [int]$GraphSmokeTimeoutSeconds = 240,
+    [switch]$SkipDocker,
+    [switch]$IncludeGraphSmoke
 )
 
 $ErrorActionPreference = "Stop"
@@ -86,6 +88,18 @@ Invoke-Check "Frontend" {
         Write-Error "ApeRAG frontend вернул status $statusCode"
     }
     Write-Output "ApeRAG frontend OK: HTTP $statusCode"
+}
+
+if ($IncludeGraphSmoke) {
+    Invoke-Check "Graph smoke" {
+        & (Join-Path $PSScriptRoot "check_aperag_graph_smoke.ps1") -TimeoutSeconds $GraphSmokeTimeoutSeconds
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
+    }
+}
+else {
+    Write-Output "- Graph smoke пропущен; используйте -IncludeGraphSmoke для проверки LLM graph extraction."
 }
 
 Write-Output "Проверка ApeRAG прошла."
