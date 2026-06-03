@@ -152,7 +152,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Generate synthetic cointegrated and non-cointegrated pairs
     - Verify test accuracy and hedge ratio estimation
   
-  - [ ] 6.4 Implement hedge ratio estimation
+  - [x] 6.4 Implement hedge ratio estimation
     - Use OLS regression to estimate hedge ratio
     - Calculate R² for regression quality
     - _Requirements: 4.5_

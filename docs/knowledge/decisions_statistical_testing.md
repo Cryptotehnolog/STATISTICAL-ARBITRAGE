@@ -78,3 +78,22 @@ property tests; move all statistical property tests to a later CI-only workflow.
 Risks: The bounded suite is a smoke-level property baseline, not a full statistical
 simulation campaign. Broader Monte Carlo tests should live in a separate slow workflow
 once task 18.2 exists.
+
+## DEC-0031: Estimate hedge ratio with a pure OLS helper
+
+Status: accepted
+
+Decision: Implement hedge-ratio estimation under `stat_arb.statistical` as a pure OLS
+helper that regresses dependent prices on independent prices and returns hedge ratio,
+intercept, R-squared, and observation count.
+
+Rationale: Hedge-ratio estimation is reused by spread construction, ADF residual testing,
+z-score signals, and later backtests. Keeping it pure avoids coupling the statistical math
+to registry persistence or ApeRAG writes before the full Statistical Testing Agent service
+exists.
+
+Alternatives considered: Estimate hedge ratio inside the cointegration helper; use ad-hoc
+NumPy formulas without regression metadata; defer hedge ratio until backtesting.
+
+Risks: The helper does not decide which asset should be dependent versus independent. The
+future Statistical Testing Agent workflow must document and persist that pair orientation.
