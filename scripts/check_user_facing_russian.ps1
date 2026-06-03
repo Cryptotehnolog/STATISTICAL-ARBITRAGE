@@ -12,7 +12,6 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 
 $excludedPathParts = @(
     "docs\knowledge",
-    "docs\knowledge_graph",
     "scripts\check_user_facing_russian.ps1",
     ".kiro",
     "data",

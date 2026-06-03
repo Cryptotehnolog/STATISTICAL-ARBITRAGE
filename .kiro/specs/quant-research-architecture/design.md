@@ -1,4 +1,4 @@
-# Technical Design Document: Multi-Agent Quantitative Research System
+﻿# Technical Design Document: Multi-Agent Quantitative Research System
 
 ## Overview
 
@@ -13,7 +13,7 @@ The system serves as a reproducible research platform with proper data quality c
 1. **Correctness over speed**: Prioritize reproducibility, data quality, and statistical rigor
 2. **Constrained resources**: Operate efficiently on local i5-1335U PC (32GB RAM) and Oracle Cloud Always Free ARM (4 vCPU, 24GB RAM)
 3. **Staged complexity**: Start simple (v1: research), add demo trading (v2), enable limited live trading (v3)
-4. **Memory from day one**: LightRAG provides long-term memory and knowledge graph from v1
+4. **Memory from day one**: ApeRAG provides long-term memory and knowledge graph from v1
 5. **Human in the loop**: Mandatory approval gates for critical decisions
 6. **Python-first with optional Rust optimization**: Start with Python implementations, add Rust only when profiling proves it necessary
 7. **Minimal infrastructure for v1**: SQLite + embedded vector store (FAISS/Chroma) for local development, with clear upgrade path
@@ -31,7 +31,7 @@ The system serves as a reproducible research platform with proper data quality c
 - Intraday OHLCV data ingestion with quality validation
 - Hypothesis generation and statistical testing
 - Reproducible backtesting with cost attribution
-- LightRAG long-term memory with minimal infrastructure (SQLite + embedded vector store)
+- ApeRAG long-term memory with minimal infrastructure (SQLite + embedded vector store)
 - Dashboard for experiment monitoring and report review
 - 15-minute bars as primary timeframe, 5-minute as secondary
 - Small universe (50-200 liquid assets), 1-2 asset classes
@@ -43,7 +43,7 @@ The system serves as a reproducible research platform with proper data quality c
 - Live trading or demo trading execution
 - Streaming infrastructure (Kafka, RisingWave, Memgraph)
 - Enterprise monitoring (ClickHouse, Grafana, Prometheus)
-- Neo4j (unless LightRAG explicitly requires it - prefer simpler alternatives)
+- Neo4j (unless ApeRAG explicitly requires it - prefer simpler alternatives)
 - Sub-100ms latency optimization
 - 1-minute bars (deferred until data quality and cost modeling validated)
 - Multi-strategy portfolios or dynamic strategy allocation
@@ -55,7 +55,7 @@ The system serves as a reproducible research platform with proper data quality c
 **v1 Local Development (No Docker Required)**:
 - **Database**: SQLite (single file, zero configuration)
 - **Vector Store**: FAISS or Chroma embedded (local directory)
-- **LightRAG**: Embedded backends (no separate servers)
+- **ApeRAG**: Embedded backends (no separate servers)
 - **Execution**: All components run as Python processes via `uv run`
 - **Setup Time**: < 5 minutes (just `uv sync` and init scripts)
 
@@ -66,7 +66,7 @@ The system serves as a reproducible research platform with proper data quality c
 - **Services**: Optional Postgres (instead of SQLite), optional Chroma server (instead of embedded)
 - **Profiles**: Services use Docker Compose profiles and only start when explicitly requested
 
-**Key Principle**: v1 MVP must run without Docker using uv, SQLite, Parquet, and embedded LightRAG/vector storage. Docker Compose is provided as an optional production-like infrastructure path for testing and future Oracle Cloud deployment, but must NOT block the local MVP.
+**Key Principle**: v1 MVP must run without Docker using uv, SQLite, Parquet, and embedded ApeRAG/vector storage. Docker Compose is provided as an optional production-like infrastructure path for testing and future Oracle Cloud deployment, but must NOT block the local MVP.
 
 
 ## Architecture
@@ -101,7 +101,7 @@ graph TB
     end
     
     subgraph "Storage Layer (Minimal v1)"
-        LightRAG[(LightRAG<br/>Embedded Vector Store)]
+        ApeRAG[(ApeRAG<br/>Embedded Vector Store)]
         Registry[(SQLite Registry<br/>Local File)]
         DataStore[(Data Store<br/>Parquet Files)]
         Secrets[Infisical<br/>Secrets Management]
@@ -136,7 +136,7 @@ graph TB
     StatTest -.optional.-> RustStats
     Backtest -.optional.-> RustBacktest
     
-    Memory --> LightRAG
+    Memory --> ApeRAG
     Data -.-> Secrets
     Backtest -.-> Secrets
 ```
@@ -149,9 +149,9 @@ graph TB
 - **Separation of concerns**: Each agent has a single, well-defined responsibility
 - **Testability**: Agents can be tested independently with mocked dependencies
 - **Extensibility**: New agents can be added without modifying existing ones
-- **Auditability**: Agent decisions are logged to LightRAG for review and learning
+- **Auditability**: Agent decisions are logged to ApeRAG for review and learning
 
-**Why LightRAG from v1?**
+**Why ApeRAG from v1?**
 - **Knowledge graph**: Captures relationships between hypotheses, tests, and results
 - **Dual-layer retrieval**: Combines vector similarity and graph traversal for context-aware queries
 - **Agent memory**: Enables agents to learn from past decisions and avoid repeated mistakes
@@ -174,7 +174,7 @@ graph TB
 
 **Rejected alternatives:**
 - **Mandatory Rust from day one**: Slows development, blocks MVP if team lacks Rust expertise
-- **Neo4j required for v1**: Adds infrastructure complexity, LightRAG can use simpler backends
+- **Neo4j required for v1**: Adds infrastructure complexity, ApeRAG can use simpler backends
 - **Docker Compose required for development**: Adds friction, not needed for SQLite + embedded stores
 - **Pure Python backtesting**: May be too slow, but worth trying before adding Rust complexity
 
@@ -192,12 +192,12 @@ graph TB
 
 **Outputs:**
 - Task assignments to agents
-- Lifecycle events to LightRAG
+- Lifecycle events to ApeRAG
 - Final decisions to registry
 
 **Tool Permissions:**
 - Read/write to structured registry
-- Write lifecycle events to LightRAG
+- Write lifecycle events to ApeRAG
 - Invoke other agents via task queue
 - Read experiment status and metrics
 
@@ -234,13 +234,13 @@ NEW → DATA_VALIDATION → STATISTICAL_TESTING → BACKTESTING → CRITIC_REVIE
 **Outputs:**
 - Validated OHLCV datasets (Parquet files)
 - Data quality reports to registry
-- Validation failures to LightRAG
+- Validation failures to ApeRAG
 
 **Tool Permissions:**
 - Read from data sources (APIs, files)
 - Write to data store (Parquet files)
 - Write to structured registry (dataset IDs, quality reports)
-- Write to LightRAG (validation failures, quarantine decisions)
+- Write to ApeRAG (validation failures, quarantine decisions)
 - Read from Infisical (API keys)
 
 **Data Source Recommendations:**
@@ -306,28 +306,28 @@ NEW → DATA_VALIDATION → STATISTICAL_TESTING → BACKTESTING → CRITIC_REVIE
 **Responsibility**: Generate candidate trading pairs with rationale and check for novelty.
 
 **Inputs:**
-- Market knowledge from LightRAG
-- Past hypotheses from LightRAG and registry
+- Market knowledge from ApeRAG
+- Past hypotheses from ApeRAG and registry
 - User-provided constraints (asset universe, sectors, market cap)
 
 **Outputs:**
-- New hypotheses with rationale to LightRAG
+- New hypotheses with rationale to ApeRAG
 - Hypothesis records to registry
 - Novelty check results
 
 **Tool Permissions:**
-- Read from LightRAG (market knowledge, past hypotheses)
+- Read from ApeRAG (market knowledge, past hypotheses)
 - Read from structured registry (invalidated pairs, test results)
-- Write to LightRAG (new hypotheses, rationale, links to similar hypotheses)
+- Write to ApeRAG (new hypotheses, rationale, links to similar hypotheses)
 - Write to structured registry (hypothesis records, novelty flags)
 - Optional: LLM access for hypothesis generation (with token budget)
 
 **Key Operations:**
-1. **Query past hypotheses**: Check LightRAG for similar pairs
+1. **Query past hypotheses**: Check ApeRAG for similar pairs
 2. **Query invalidated pairs**: Check registry for rejected pairs
 3. **Generate rationale**: Explain why pair might be cointegrated (sector, supply chain, substitutes)
 4. **Novelty check**: Compare to past hypotheses using embedding similarity
-5. **Link similar hypotheses**: Create graph edges in LightRAG
+5. **Link similar hypotheses**: Create graph edges in ApeRAG
 6. **Flag retests**: If similar to rejected hypothesis, require justification
 
 **Hypothesis Format:**
@@ -362,14 +362,14 @@ NEW → DATA_VALIDATION → STATISTICAL_TESTING → BACKTESTING → CRITIC_REVIE
 
 **Outputs:**
 - Structured test results to registry
-- Summary lessons to LightRAG
+- Summary lessons to ApeRAG
 - Pass/fail decision to Coordinator
 
 **Tool Permissions:**
 - Read from data store (Parquet files)
 - Read from structured registry (data quality reports)
 - Write to structured registry (test results, p-values, statistics)
-- Write to LightRAG (summary lessons, regime changes)
+- Write to ApeRAG (summary lessons, regime changes)
 - Call Rust statistical library via PyO3
 
 **Key Operations:**
@@ -414,14 +414,14 @@ result = cointegration_test(
 
 **Outputs:**
 - Backtest report to registry
-- Summary conclusions to LightRAG
+- Summary conclusions to ApeRAG
 - Performance metrics and equity curve
 
 **Tool Permissions:**
 - Read from data store (Parquet files)
 - Read from structured registry (test results, data quality reports)
 - Write to structured registry (performance metrics, cost attribution)
-- Write to LightRAG (summary conclusions, lessons learned)
+- Write to ApeRAG (summary conclusions, lessons learned)
 - Call Rust backtest engine via PyO3
 
 **Key Operations:**
@@ -476,14 +476,14 @@ result = run_backtest(
 
 **Outputs:**
 - Review status to registry
-- Objections and risks to LightRAG
+- Objections and risks to ApeRAG
 - Recommendation: reject, quarantine, or approve
 
 **Tool Permissions:**
 - Read from structured registry (all experiment data)
-- Read from LightRAG (past objections, lessons learned)
+- Read from ApeRAG (past objections, lessons learned)
 - Write to structured registry (review status, objections)
-- Write to LightRAG (detected risks, recommendations)
+- Write to ApeRAG (detected risks, recommendations)
 - Optional: LLM access for code review (with token budget)
 
 **Key Checks:**
@@ -531,19 +531,19 @@ result = run_backtest(
 
 **Inputs:**
 - Experiment data from registry
-- Agent decisions from LightRAG
+- Agent decisions from ApeRAG
 - User report requests
 
 **Outputs:**
 - HTML/PDF reports
 - Report artifact links to registry
-- Human-readable summaries to LightRAG
+- Human-readable summaries to ApeRAG
 
 **Tool Permissions:**
 - Read from structured registry (all experiment data)
-- Read from LightRAG (agent decisions, lessons learned)
+- Read from ApeRAG (agent decisions, lessons learned)
 - Write to structured registry (report artifact links)
-- Write to LightRAG (human-readable summaries)
+- Write to ApeRAG (human-readable summaries)
 - Generate plots and visualizations
 
 **Report Types:**
@@ -577,7 +577,7 @@ result = run_backtest(
 
 ### Memory Agent
 
-**Responsibility**: Manage LightRAG storage and retrieval operations.
+**Responsibility**: Manage ApeRAG storage and retrieval operations.
 
 **Inputs:**
 - Write requests from other agents
@@ -589,7 +589,7 @@ result = run_backtest(
 - Confirmation of write operations
 
 **Tool Permissions:**
-- Read/write to LightRAG
+- Read/write to ApeRAG
 - Read from structured registry (for ID references)
 - No write access to registry (read-only)
 
@@ -602,7 +602,7 @@ result = run_backtest(
 6. **Query by entity**: Find all information about a specific asset, hypothesis, or experiment
 7. **Query by relationship**: Traverse graph to find related hypotheses or similar past experiments
 
-**What to Store in LightRAG:**
+**What to Store in ApeRAG:**
 - Hypothesis rationale and source references
 - Statistical test summaries (not raw p-values, those go in registry)
 - Backtest conclusions and lessons learned
@@ -612,16 +612,16 @@ result = run_backtest(
 - Agent lessons learned
 - Manual notes and human decisions
 
-**What NOT to Store in LightRAG:**
+**What NOT to Store in ApeRAG:**
 - Raw logs or prompts
 - Large datasets or OHLCV data
 - Secrets or credentials
 - Precise numeric metrics (use registry instead)
 - Duplicate information already in registry
 
-**LightRAG Configuration:**
+**ApeRAG Configuration:**
 - Embedding model: sentence-transformers/all-MiniLM-L6-v2 (local, 384 dimensions)
-- Graph database: Neo4j or built-in LightRAG graph
+- Graph database: Neo4j or built-in ApeRAG graph
 - Vector store: FAISS or Chroma (local)
 - Chunk size: 512 tokens
 - Overlap: 50 tokens
@@ -951,7 +951,7 @@ CREATE INDEX idx_backtest_results_sharpe ON backtest_results(sharpe_ratio DESC);
 - **Stale data**: Prices older than expected update frequency
 
 **Handling:**
-- Log outage to LightRAG and registry
+- Log outage to ApeRAG and registry
 - Pause affected experiments
 - Retry with exponential backoff (1s, 2s, 4s, 8s, max 60s)
 - If retry exhausted, quarantine experiment and alert operator
@@ -963,7 +963,7 @@ CREATE INDEX idx_backtest_results_sharpe ON backtest_results(sharpe_ratio DESC);
 - **Insufficient data**: Not enough bars for reliable testing
 
 **Handling:**
-- Log rejection reason to registry and LightRAG
+- Log rejection reason to registry and ApeRAG
 - Mark experiment as rejected
 - Store lessons learned for future hypothesis generation
 - Do not retry without new justification
@@ -974,7 +974,7 @@ CREATE INDEX idx_backtest_results_sharpe ON backtest_results(sharpe_ratio DESC);
 - **Excessive turnover**: Operationally impractical trading frequency
 
 **Handling:**
-- Log error to registry and LightRAG
+- Log error to registry and ApeRAG
 - Quarantine experiment for review
 - If runtime error, check for code bugs or data issues
 - If negative PnL, reject strategy
@@ -988,12 +988,12 @@ CREATE INDEX idx_backtest_results_sharpe ON backtest_results(sharpe_ratio DESC);
 **Handling:**
 - Retry LLM call up to 3 times with exponential backoff
 - If retry exhausted, fall back to deterministic logic
-- Log hallucination to LightRAG for future prompt improvement
+- Log hallucination to ApeRAG for future prompt improvement
 - Reject unauthorized operations and log security event
 
 **5. Infrastructure Failures**
 - **Database failure**: SQLite/Postgres unavailable or corrupted
-- **RAG failure**: LightRAG unavailable or vector store corrupted
+- **RAG failure**: ApeRAG unavailable or vector store corrupted
 - **Secrets failure**: Infisical unavailable or credentials invalid
 
 **Handling:**
@@ -1020,7 +1020,7 @@ CREATE INDEX idx_backtest_results_sharpe ON backtest_results(sharpe_ratio DESC);
 
 **Incident Response:**
 1. Trigger kill switch or hard stop
-2. Log incident details to registry and LightRAG
+2. Log incident details to registry and ApeRAG
 3. Generate incident report with timeline, root cause, affected experiments/trades
 4. Quarantine affected strategies
 5. Require human review and approval before re-enable
@@ -1038,7 +1038,7 @@ CREATE INDEX idx_backtest_results_sharpe ON backtest_results(sharpe_ratio DESC);
 - **Console**: Real-time monitoring during development
 - **File**: Rotating log files (max 100MB per file, keep 10 files)
 - **Registry**: Structured events for experiment audit trail
-- **LightRAG**: High-level summaries and lessons learned
+- **ApeRAG**: High-level summaries and lessons learned
 
 **Monitoring (v1 - basic):**
 - Dashboard displays experiment status and recent errors
@@ -1083,7 +1083,7 @@ CREATE INDEX idx_backtest_results_sharpe ON backtest_results(sharpe_ratio DESC);
 **End-to-End Workflows:**
 1. **Full experiment workflow**: Hypothesis → Data validation → Statistical testing → Backtesting → Critic review → Reporting
 2. **Data ingestion workflow**: API call → Normalization → Quality validation → Parquet storage
-3. **LightRAG workflow**: Write hypothesis → Query similar hypotheses → Link relationships
+3. **ApeRAG workflow**: Write hypothesis → Query similar hypotheses → Link relationships
 4. **Registry workflow**: Write experiment → Query metrics → Generate report
 
 **Test Data:**
@@ -1094,7 +1094,7 @@ CREATE INDEX idx_backtest_results_sharpe ON backtest_results(sharpe_ratio DESC);
 **Infrastructure Tests:**
 - Docker Compose startup and healthchecks
 - Database migrations and schema validation
-- LightRAG initialization and query performance
+- ApeRAG initialization and query performance
 - Infisical secrets retrieval
 
 
@@ -1554,9 +1554,9 @@ quant-research-system/
 │   │   ├── __init__.py
 │   │   ├── interface.py              # Switches between Python/Rust
 │   │   └── python_impl.py            # Python implementations (REQUIRED)
-│   ├── memory/                       # LightRAG integration
+│   ├── memory/                       # ApeRAG integration
 │   │   ├── __init__.py
-│   │   ├── lightrag_client.py
+│   │   ├── aperag_client.py
 │   │   └── schemas.py
 │   ├── registry/                     # Structured registry (SQLite)
 │   │   ├── __init__.py
@@ -1592,7 +1592,7 @@ quant-research-system/
 │   │   └── test_agents.py
 │   ├── integration/
 │   │   ├── test_full_workflow.py
-│   │   ├── test_lightrag.py
+│   │   ├── test_aperag.py
 │   │   └── test_registry.py
 │   └── fixtures/
 │       ├── synthetic_data.py
@@ -1642,8 +1642,8 @@ uv sync
 # Initialize SQLite database
 uv run python -m src.registry.database init
 
-# Initialize LightRAG with embedded vector store
-uv run python -m src.memory.lightrag_client init
+# Initialize ApeRAG with embedded vector store
+uv run python -m src.memory.aperag_client init
 
 # Verify setup
 uv run pytest tests/integration/test_setup.py
@@ -1673,7 +1673,7 @@ uv run pytest tests/integration/
 - SQLite for structured registry (local file)
 - FAISS or Chroma embedded for vector store (local directory)
 - No separate database server needed
-- No Neo4j required (LightRAG can use simpler backends)
+- No Neo4j required (ApeRAG can use simpler backends)
 
 **v1 Docker Setup (Optional, for production-like environment)**:
 ```yaml
@@ -1718,7 +1718,7 @@ volumes:
   chroma_data:
 ```
 
-**Note**: Neo4j is NOT required for v1. LightRAG can use:
+**Note**: Neo4j is NOT required for v1. ApeRAG can use:
 - Embedded vector store (FAISS/Chroma) for similarity search
 - SQLite for graph relationships (if needed)
 - NetworkX for in-memory graph operations
@@ -1790,12 +1790,12 @@ POSTGRES_DB=quant_research
 POSTGRES_USER=quant
 POSTGRES_PASSWORD=changeme
 
-# LightRAG Configuration
-LIGHTRAG_BACKEND=embedded  # or "neo4j" for advanced setup
+# ApeRAG Configuration
+APERAG_BACKEND=embedded  # or "neo4j" for advanced setup
 VECTOR_STORE=faiss  # or "chroma"
 VECTOR_STORE_PATH=./data/vector_store
 
-# Optional Neo4j (only if using advanced LightRAG features)
+# Optional Neo4j (only if using advanced ApeRAG features)
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=changeme
@@ -1845,7 +1845,7 @@ LOG_LEVEL=INFO
 **v1 MVP (Local Development - No Docker Required)**:
 - SQLite for structured registry (single file database)
 - FAISS or Chroma embedded for vector store (local directory)
-- LightRAG with embedded backends (no separate servers)
+- ApeRAG with embedded backends (no separate servers)
 - All components run as Python processes via `uv run`
 - Zero infrastructure setup required beyond Python dependencies
 
@@ -1856,7 +1856,7 @@ LOG_LEVEL=INFO
 - Useful for Oracle Cloud deployment preparation
 - NOT required for v1 MVP completion
 
-**Key Principle**: Docker Compose is provided as an optional production-like infrastructure path for testing and future Oracle Cloud deployment. Docker Compose must NOT block the local MVP. All v1 development can proceed using uv, SQLite, Parquet, and embedded LightRAG/vector storage.
+**Key Principle**: Docker Compose is provided as an optional production-like infrastructure path for testing and future Oracle Cloud deployment. Docker Compose must NOT block the local MVP. All v1 development can proceed using uv, SQLite, Parquet, and embedded ApeRAG/vector storage.
 
 ### Local Deployment (Development)
 
@@ -1875,7 +1875,7 @@ LOG_LEVEL=INFO
 1. Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 2. Clone repository and sync dependencies: `uv sync`
 3. Initialize SQLite database: `uv run python -m src.registry.database init`
-4. Initialize LightRAG with embedded storage: `uv run python -m src.memory.lightrag_client init`
+4. Initialize ApeRAG with embedded storage: `uv run python -m src.memory.aperag_client init`
 5. Run agents via CLI or dashboard: `uv run python -m apps.cli.main` or `uv run streamlit run apps/dashboard/main.py`
 6. Monitor logs in console or dashboard
 
@@ -2001,7 +2001,7 @@ LOG_LEVEL=INFO
 
 **Health Checks:**
 - Database connectivity (every 60 seconds)
-- LightRAG availability (every 60 seconds)
+- ApeRAG availability (every 60 seconds)
 - Disk space (every 5 minutes)
 - Memory usage (every 5 minutes)
 
@@ -2056,7 +2056,7 @@ LOG_LEVEL=INFO
 - Store only necessary data (OHLCV, not order book depth)
 
 **Audit Trail:**
-- All agent decisions logged to LightRAG and registry
+- All agent decisions logged to ApeRAG and registry
 - All human approvals logged with timestamp and user ID
 - All parameter changes logged with reason
 - All execution decisions logged (v2+)
@@ -2140,11 +2140,11 @@ class ApprovalRequest(BaseModel):
 
 **Approval Process:**
 1. Agent or user creates approval request
-2. Request logged to registry and LightRAG
+2. Request logged to registry and ApeRAG
 3. Notification sent to approvers (email, Telegram, dashboard)
 4. Approver reviews request and supporting evidence
 5. Approver approves or rejects with notes
-6. Decision logged to registry and LightRAG
+6. Decision logged to registry and ApeRAG
 7. If approved, system proceeds with action
 8. If rejected, system logs reason and halts action
 
@@ -2232,7 +2232,7 @@ The dynamic layer adds streaming infrastructure for real-time market state witho
 - Real-time graph of market state (assets, positions, orders, signals)
 - Graph queries for relationship analysis (sector exposure, correlation networks)
 - Temporal graph for historical state reconstruction
-- Integration with LightRAG for unified knowledge graph
+- Integration with ApeRAG for unified knowledge graph
 
 **Kafka/Redpanda (Event Streaming):**
 - Ingest market data from exchanges (WebSocket → Kafka)
@@ -2242,12 +2242,12 @@ The dynamic layer adds streaming infrastructure for real-time market state witho
 
 ### Agent Query Patterns
 
-**Historical Questions (LightRAG):**
+**Historical Questions (ApeRAG):**
 - "What hypotheses have we tested for tech stocks?"
 - "Why did we reject the AAPL/MSFT pair last month?"
 - "What lessons have we learned about cointegration testing?"
 
-**Development Memory (LightRAG + Registry):**
+**Development Memory (ApeRAG + Registry):**
 - "What experiments are currently running?"
 - "What is the average Sharpe ratio of approved strategies?"
 - "Which data sources have the best quality scores?"
@@ -2264,7 +2264,7 @@ The dynamic layer adds streaming infrastructure for real-time market state witho
 # Agent code remains the same
 from src.query import query_system
 
-# Historical query (routed to LightRAG)
+# Historical query (routed to ApeRAG)
 result = query_system("Why did we reject AAPL/MSFT?")
 
 # Current state query (routed to RisingWave/Memgraph in v3, DuckDB in v1)
@@ -2272,7 +2272,7 @@ result = query_system("What is the current Z-score for AAPL/MSFT?")
 ```
 
 **Implementation:**
-- v1: All queries use DuckDB + Parquet + LightRAG
+- v1: All queries use DuckDB + Parquet + ApeRAG
 - v2: Add RisingWave for demo trading signals (optional)
 - v3: Full dynamic layer with Kafka + RisingWave + Memgraph
 
@@ -2310,7 +2310,7 @@ This system involves multiple components with different testing needs:
    - Integration logic, not pure functions
    - Use example-based unit tests and integration tests
 
-2. **LightRAG integration**: Knowledge graph operations
+2. **ApeRAG integration**: Knowledge graph operations
    - External service with non-deterministic behavior
    - Use integration tests with mocked responses
 
@@ -2615,7 +2615,7 @@ This enables traceability from requirements → design properties → test imple
 1. **Specific examples**: Known cointegrated pairs (e.g., Coca-Cola/Pepsi historical data)
 2. **Edge cases**: Empty datasets, single-bar datasets, all-zero prices
 3. **Error conditions**: Invalid inputs, missing data, API failures
-4. **Integration points**: Agent coordination, database transactions, LightRAG queries
+4. **Integration points**: Agent coordination, database transactions, ApeRAG queries
 
 **Balance:**
 - Avoid writing too many unit tests for cases covered by property tests
@@ -2633,7 +2633,7 @@ The v1 milestone is complete when the system can:
    - GitHub repository created with proper structure
    - Python environment managed with uv, pyproject.toml, uv.lock
    - SQLite database created with schema (no Docker required)
-   - LightRAG initialized with embedded vector store (FAISS or Chroma)
+   - ApeRAG initialized with embedded vector store (FAISS or Chroma)
    - All Python dependencies installed and working
 
 2. **Ingest and validate data**
@@ -2650,7 +2650,7 @@ The v1 milestone is complete when the system can:
    - At least one scripted statistical testing workflow (cointegration + ADF)
    - At least one scripted backtest workflow (walk-forward validation)
    - All results written to SQLite registry
-   - Summaries written to LightRAG
+   - Summaries written to ApeRAG
    - **All workflows use Python implementations** (Rust optional)
 
 4. **Provide visibility**
@@ -2688,7 +2688,7 @@ The v1 milestone is complete when the system can:
 - ✅ Cost attribution breaks down all cost components
 - ✅ Critic agent detects at least one issue (lookahead bias, overfitting, etc.)
 - ✅ Reports are human-readable and contain all required information
-- ✅ LightRAG stores and retrieves agent decisions
+- ✅ ApeRAG stores and retrieves agent decisions
 - ✅ Registry enables querying and comparison of experiments
 
 **Non-Functional:**
@@ -2711,9 +2711,9 @@ The v1 milestone is complete when the system can:
 
 ## Design Decisions and Rationales
 
-### Decision 1: LightRAG from v1
+### Decision 1: ApeRAG from v1
 
-**Decision**: Include LightRAG knowledge graph from v1, not defer to v2.
+**Decision**: Include ApeRAG knowledge graph from v1, not defer to v2.
 
 **Rationale**:
 - Agent memory is foundational for learning from past decisions
@@ -2724,15 +2724,15 @@ The v1 milestone is complete when the system can:
 **Alternatives Considered**:
 - Pure vector store (Chroma only): Lacks relationship modeling
 - Defer to v2: Would require agent refactoring and lose early learning benefits
-- Custom graph implementation: Reinventing the wheel, LightRAG is proven
+- Custom graph implementation: Reinventing the wheel, ApeRAG is proven
 
 **Risks**:
 - Additional complexity in v1
-- Learning curve for LightRAG
+- Learning curve for ApeRAG
 - Potential performance overhead
 
 **Mitigation**:
-- Start with simple LightRAG usage (store summaries, query by topic)
+- Start with simple ApeRAG usage (store summaries, query by topic)
 - Use Docker Compose for easy setup
 - Document common query patterns
 
@@ -2767,7 +2767,7 @@ The v1 milestone is complete when the system can:
 
 ### Decision 3: SQLite + Embedded Vector Store for v1
 
-**Decision**: Use SQLite for structured registry and embedded vector store (FAISS/Chroma) for LightRAG in v1. No Docker required.
+**Decision**: Use SQLite for structured registry and embedded vector store (FAISS/Chroma) for ApeRAG in v1. No Docker required.
 
 **Rationale**:
 - Zero configuration - works out of the box
@@ -2825,7 +2825,7 @@ The v1 milestone is complete when the system can:
 - Separation of concerns: Each agent has single responsibility
 - Testability: Agents can be tested independently
 - Extensibility: New agents can be added without modifying existing ones
-- Auditability: Agent decisions logged to LightRAG
+- Auditability: Agent decisions logged to ApeRAG
 
 **Alternatives Considered**:
 - Monolithic agent: Difficult to test, extend, and audit
@@ -2880,7 +2880,7 @@ The v1 milestone is complete when the system can:
 - **Probability**: Medium (depends on data volume and complexity)
 - **Mitigation**: Profile early, optimize Python first (vectorization, caching), add Rust only if needed, accept slower execution in v1 if it meets targets
 
-**Risk 2: LightRAG Performance**
+**Risk 2: ApeRAG Performance**
 - **Impact**: Slow queries, high memory usage
 - **Probability**: Low (embedded vector store is lightweight)
 - **Mitigation**: Start with small knowledge graph, optimize queries, use FAISS for speed, monitor performance, upgrade to server-based if needed
@@ -2930,16 +2930,16 @@ The v1 milestone is complete when the system can:
 
 ## Simplification Options
 
-### If LightRAG Proves Too Complex
+### If ApeRAG Proves Too Complex
 
-**Simplification**: Replace LightRAG with pure vector store (Chroma embedded) + SQLite for relationships.
+**Simplification**: Replace ApeRAG with pure vector store (Chroma embedded) + SQLite for relationships.
 
 **Trade-offs**:
 - Lose graph traversal capabilities
 - Simpler setup and maintenance
 - Less powerful relationship queries
 
-**When to Consider**: If LightRAG setup takes > 2 days or queries are consistently slow (> 5 seconds).
+**When to Consider**: If ApeRAG setup takes > 2 days or queries are consistently slow (> 5 seconds).
 
 **Note**: v1 already uses embedded vector store, so this simplification is minimal.
 
@@ -3013,7 +3013,7 @@ The v1 milestone is complete when the system can:
    - When team has Rust expertise available
    - **Recommendation**: Complete v1 MVP in Python, profile, then decide on Rust
 
-7. **LightRAG Backend**: Embedded vs. Neo4j?
+7. **ApeRAG Backend**: Embedded vs. Neo4j?
    - Embedded (FAISS + SQLite): Simpler, sufficient for v1
    - Neo4j: More powerful, adds infrastructure complexity
    - **Recommendation**: Start with embedded, migrate to Neo4j only if graph queries become bottleneck
@@ -3026,7 +3026,7 @@ This design document specifies a multi-agent quantitative research system for st
 ### Key Design Principles
 
 1. **Staged Development**: v1 (research), v2 (demo trading), v3 (limited live trading)
-2. **Memory from Day One**: LightRAG provides long-term memory with embedded vector store
+2. **Memory from Day One**: ApeRAG provides long-term memory with embedded vector store
 3. **Python-First with Optional Rust**: Complete v1 in Python, add Rust only if profiling proves necessary
 4. **Minimal Infrastructure**: SQLite + embedded vector store, no Docker required for v1
 5. **Human in the Loop**: Mandatory approval gates for critical decisions
@@ -3080,7 +3080,7 @@ The system is explicitly **not** a guarantee of profit or financial advice. It i
 
 **Key Changes in v1.2**:
 - Clarified Docker Compose is optional for v1 MVP (not mandatory)
-- v1 local development runs without Docker using uv, SQLite, Parquet, and embedded LightRAG/vector storage
+- v1 local development runs without Docker using uv, SQLite, Parquet, and embedded ApeRAG/vector storage
 - Docker Compose provided as optional production-like infrastructure path for testing and Oracle Cloud deployment
 - Updated data source recommendations (CCXT for crypto, Alpaca for equities; Yahoo Finance not recommended for intraday)
 - Clarified Python-first approach with optional Rust optimization path

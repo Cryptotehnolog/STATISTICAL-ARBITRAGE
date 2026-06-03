@@ -11,7 +11,6 @@ $excludedPathParts = @(
     ".git",
     ".venv",
     "data",
-    "docs\knowledge_graph",
     "htmlcov",
     ".pytest_cache",
     ".ruff_cache",
@@ -169,7 +168,7 @@ function Test-WorkingTreeEnvFiles {
 function Test-GitHistory {
     param([System.Collections.ArrayList]$Violations)
 
-    $history = git -C $repoRoot log --all -p -- . ":(exclude)uv.lock" ":(exclude)docs/knowledge_graph"
+    $history = git -C $repoRoot log --all -p -- . ":(exclude)uv.lock"
     $lineNumber = 0
     foreach ($line in $history) {
         $lineNumber += 1

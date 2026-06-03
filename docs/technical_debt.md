@@ -232,36 +232,32 @@ alongside `.coverage`, pytest caches, Ruff cache, and test temp data.
 
 Closed by: `ca4b224 Add OHLCV data quality domain contracts`.
 
-### TD-CLOSED-0002: Clean rebuild persistent LightRAG from curated shards
+### TD-CLOSED-0002: Clean rebuild persistent local memory from curated shards
 
 Status: closed
 
-Resolution: Backed up the previous persistent `data/lightrag` and
-`data/lightrag_seed_manifest.json` under `data/backups/`, then reseeded only
-`docs/knowledge/*.md` through OmniRoute. Post-rebuild checks passed with 7 processed docs,
-0 failed docs, 0 duplicate failed docs, valid graph export, and successful control queries.
+Resolution: Historical local memory storage was backed up and reseeded from curated
+`docs/knowledge/*.md` through OmniRoute before the ApeRAG migration superseded that path.
 
 Closed by: local runtime rebuild on 2026-06-03.
 
-### TD-CLOSED-0003: Add LightRAG memory freshness guard
+### TD-CLOSED-0003: Add local memory freshness guard
 
 Status: closed
 
-Resolution: Added `scripts/check_lightrag_memory_fresh.ps1` to verify curated seed
-freshness, OmniRoute/doc_status, graph export, human-facing viewer export, and a control
-query in one command.
+Resolution: Added a historical local memory freshness guard before the ApeRAG migration
+made ApeRAG the active backend.
 
-Closed by: `scripts/check_lightrag_memory_fresh.ps1`.
+Closed by: superseded local memory guard.
 
-### TD-CLOSED-0004: Automate curated LightRAG clean rebuild
+### TD-CLOSED-0004: Automate curated local memory clean rebuild
 
 Status: closed
 
-Resolution: Added `scripts/rebuild_lightrag_curated.ps1` to backup current persistent
-LightRAG runtime storage, reseed only `docs/knowledge/*.md`, and run the memory freshness
-guard.
+Resolution: Added a historical local clean rebuild wrapper before the ApeRAG migration
+made ApeRAG the active backend.
 
-Closed by: `scripts/rebuild_lightrag_curated.ps1`.
+Closed by: superseded local memory rebuild wrapper.
 
 ### TD-CLOSED-0005: Split large curated decisions memory shard
 
@@ -273,9 +269,9 @@ index and moved durable decisions into focused thematic shards:
 `decisions_data_pipeline.md`. The curated seed wrapper now caps one document at 12000
 characters so future oversized shards are caught earlier.
 
-Closed by: LightRAG memory optimization task.
+Closed by: memory optimization task.
 
-### TD-CLOSED-0006: Validate ApeRAG graph parity before removing LightRAG
+### TD-CLOSED-0006: Validate ApeRAG graph parity before removing the previous backend
 
 Status: closed
 
@@ -287,7 +283,7 @@ freshness checks.
 Closed by: `scripts/enable_aperag_curated_graph.ps1` and
 `scripts/check_aperag_memory_fresh.ps1`.
 
-### TD-CLOSED-0007: Remove legacy LightRAG code path
+### TD-CLOSED-0007: Remove previous local memory code path
 
 Status: closed
 
@@ -296,8 +292,8 @@ PowerShell wrappers, and unit tests after ApeRAG project memory, graph parity, a
 operational agent memory smoke checks were committed. Added pre-commit guards for
 user-facing legacy memory commands and agent-facing legacy imports.
 
-Closed by: `scripts/check_no_legacy_lightrag_user_surface.ps1` and
-`scripts/check_no_legacy_lightrag_imports.ps1`.
+Closed by: `scripts/check_no_legacy_memory_backend_user_surface.ps1` and
+`scripts/check_no_legacy_memory_backend_imports.ps1`.
 
 ### TD-CLOSED-0008: Decide ApeRAG human graph inspection path
 

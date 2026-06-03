@@ -8,8 +8,8 @@ agent memory, OmniRoute, and Memory Agent boundaries.
 Status: accepted
 
 Decision: Use ApeRAG as the active backend for project memory, curated knowledge search,
-operational agent memory, and knowledge graph extraction. Legacy LightRAG code and scripts
-were removed after ApeRAG agent-memory integration was committed.
+operational agent memory, and knowledge graph extraction. The previous local memory backend
+code and scripts were removed after ApeRAG agent-memory integration was committed.
 
 Rationale: ApeRAG is already running through Docker with vector, full-text, and graph indexes
 for the main `stat-arb-project-knowledge` curated collection. The full curated parity check

@@ -54,9 +54,9 @@ foreach ($file in Get-TargetFiles | Sort-Object FullName -Unique) {
 }
 
 if ($violations.Count -gt 0) {
-    Write-Output "Найдены legacy LightRAG imports в agent-facing коде:"
+    Write-Output "Найдены legacy memory backend imports в agent-facing коде:"
     $violations | Format-Table -AutoSize
     Write-Error "Agent-facing modules должны использовать ApeRAG через MemoryAgentService."
 }
 
-Write-Output "Проверка отсутствия legacy LightRAG imports прошла."
+Write-Output "Проверка отсутствия legacy memory backend imports прошла."

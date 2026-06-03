@@ -65,5 +65,5 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   operational memory through policy checks, not directly through `ApeRAGMemoryClient`.
 - ApeRAG operational agent memory has a dedicated `stat-arb-agent-memory` collection smoke
   path through `scripts/check_aperag_agent_memory.ps1`.
-- Legacy LightRAG code, scripts, tests, and dependencies were removed after ApeRAG became the
-  active project and operational agent memory backend.
+- The previous local memory backend code, scripts, tests, and dependencies were removed
+  after ApeRAG became the active project and operational agent memory backend.

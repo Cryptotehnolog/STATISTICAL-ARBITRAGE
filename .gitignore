@@ -95,7 +95,6 @@ vector_store/
 reports/
 outputs/
 logs/
-docs/knowledge_graph/
 *.html
 *.pdf
 

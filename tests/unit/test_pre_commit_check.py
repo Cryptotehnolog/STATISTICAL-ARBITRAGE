@@ -14,10 +14,10 @@ def test_pre_commit_check_includes_memory_contract_guard() -> None:
     assert "& $memoryContractsCheckScript" in script
 
 
-def test_pre_commit_check_includes_lightrag_import_guard() -> None:
-    """Fast pre-commit should block legacy LightRAG imports in agent-facing code."""
+def test_pre_commit_check_includes_legacy_backend_import_guard() -> None:
+    """Fast pre-commit should block legacy memory imports in agent-facing code."""
     script = SCRIPT_PATH.read_text(encoding="utf-8")
 
-    assert "check_no_legacy_lightrag_imports.ps1" in script
-    assert "$legacyLightRagImportsCheckScript" in script
-    assert "& $legacyLightRagImportsCheckScript" in script
+    assert "check_no_legacy_memory_backend_imports.ps1" in script
+    assert "$legacyMemoryBackendImportsCheckScript" in script
+    assert "& $legacyMemoryBackendImportsCheckScript" in script

@@ -6,7 +6,7 @@ SCRIPT_PATH = Path("scripts/check_memory_backend.ps1")
 
 
 def test_check_memory_backend_targets_aperag_only() -> None:
-    """Guard should check the active ApeRAG backend without LightRAG legacy calls."""
+    """Guard should check the active ApeRAG backend without old memory calls."""
     script = SCRIPT_PATH.read_text(encoding="utf-8")
 
     assert '[ValidateSet("aperag")]' in script

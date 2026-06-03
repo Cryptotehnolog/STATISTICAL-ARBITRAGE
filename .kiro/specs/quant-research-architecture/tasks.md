@@ -1,8 +1,8 @@
-# Implementation Plan: Multi-Agent Quantitative Research System
+﻿# Implementation Plan: Multi-Agent Quantitative Research System
 
 ## Overview
 
-This implementation plan breaks down the multi-agent quantitative research system into discrete coding tasks. The system is a reproducible research platform for statistical arbitrage and pairs trading, featuring data ingestion with quality validation, hypothesis generation, statistical testing, backtesting with cost attribution, critic review, and LightRAG memory management.
+This implementation plan breaks down the multi-agent quantitative research system into discrete coding tasks. The system is a reproducible research platform for statistical arbitrage and pairs trading, featuring data ingestion with quality validation, hypothesis generation, statistical testing, backtesting with cost attribution, critic review, and ApeRAG memory management.
 
 **Key Implementation Principles:**
 - Python-first approach with optional Rust optimization
@@ -49,10 +49,10 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - **Validates: Requirements 10.9**
     - Test that identical experiment data produces identical database records
   
-  - [x] 2.3 Initialize LightRAG with embedded vector store
-    - Configure LightRAG with FAISS or Chroma embedded backend
+  - [x] 2.3 Initialize ApeRAG with embedded vector store
+    - Configure ApeRAG with FAISS or Chroma embedded backend
     - Set up sentence-transformers/all-MiniLM-L6-v2 embedding model
-    - Create LightRAG initialization script
+    - Create ApeRAG initialization script
     - Configure chunk size (512 tokens) and overlap (50 tokens)
     - _Requirements: 8.1-8.12, 27.5_
   
@@ -122,7 +122,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - [ ] 4.9 Implement data quality report generation
     - Generate comprehensive quality reports with all validation results
     - Store reports in SQLite registry with dataset IDs
-    - Write validation failures to LightRAG
+    - Write validation failures to ApeRAG
     - _Requirements: 2.7-2.9_
   
   - [ ] 4.10 Implement dataset provenance tracking
@@ -189,9 +189,9 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Prevent lookahead bias by using only past data
     - _Requirements: 4.2, 4.12_
   
-  - [ ] 6.11 Integrate Statistical Testing Agent with registry and LightRAG
+  - [ ] 6.11 Integrate Statistical Testing Agent with registry and ApeRAG
     - Write structured test results to SQLite registry
-    - Write summary lessons to LightRAG
+    - Write summary lessons to ApeRAG
     - Verify data quality reports exist before testing
     - _Requirements: 4.1, 4.10, 4.11_
 
@@ -257,9 +257,9 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Store dependency lock file hash
     - _Requirements: 10.1-10.8, 5.11_
   
-  - [ ] 7.11 Integrate Backtest Agent with registry and LightRAG
+  - [ ] 7.11 Integrate Backtest Agent with registry and ApeRAG
     - Write structured performance metrics to SQLite registry
-    - Write summary conclusions to LightRAG
+    - Write summary conclusions to ApeRAG
     - Verify data quality reports exist before backtesting
     - _Requirements: 5.1, 5.12, 5.13_
   
@@ -280,18 +280,18 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 3.1_
 
   - [ ] 9.2 Implement novelty checking
-    - Query LightRAG for similar past hypotheses using embedding similarity
+    - Query ApeRAG for similar past hypotheses using embedding similarity
     - Query SQLite registry for rejected pairs
     - Calculate novelty score (0.0-1.0)
     - _Requirements: 3.2, 3.3_
   
   - [ ] 9.3 Implement hypothesis linking
-    - Create graph edges in LightRAG between similar hypotheses
+    - Create graph edges in ApeRAG between similar hypotheses
     - Flag retests of previously rejected hypotheses
     - _Requirements: 3.6, 3.7_
   
-  - [ ] 9.4 Integrate Hypothesis Agent with registry and LightRAG
-    - Write generated hypotheses with rationale to LightRAG
+  - [ ] 9.4 Integrate Hypothesis Agent with registry and ApeRAG
+    - Write generated hypotheses with rationale to ApeRAG
     - Write hypothesis records to SQLite registry
     - _Requirements: 3.4, 3.5_
   
@@ -339,8 +339,8 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Approve: no critical issues
     - _Requirements: 7.10_
   
-  - [ ] 10.7 Integrate Critic Agent with registry and LightRAG
-    - Write objections and detected risks to LightRAG
+  - [ ] 10.7 Integrate Critic Agent with registry and ApeRAG
+    - Write objections and detected risks to ApeRAG
     - Write final review status to SQLite registry
     - _Requirements: 7.8, 7.9_
   
@@ -351,14 +351,14 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 18.8_
 
 - [ ] 11. Build Memory Agent
-  - [ ] 11.1 Implement LightRAG write operations
+  - [ ] 11.1 Implement ApeRAG write operations
     - Store market knowledge (sectors, relationships)
     - Store development knowledge (architecture decisions)
     - Store agent decisions (hypotheses, test summaries, backtest conclusions)
     - Store manual notes from users
     - _Requirements: 8.2-8.10_
 
-  - [ ] 11.2 Implement LightRAG query operations
+  - [ ] 11.2 Implement ApeRAG query operations
     - Query by topic (retrieve relevant context)
     - Query by entity (find all info about asset/hypothesis/experiment)
     - Query by relationship (traverse graph for related hypotheses)
@@ -394,9 +394,9 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Trade distribution histogram
     - _Requirements: 11.4, 11.5_
   
-  - [ ] 12.4 Integrate Report Agent with registry and LightRAG
+  - [ ] 12.4 Integrate Report Agent with registry and ApeRAG
     - Write report artifact links to SQLite registry
-    - Write human-readable summaries to LightRAG
+    - Write human-readable summaries to ApeRAG
     - _Requirements: 11.10, 11.11_
 
   - [ ]* 12.5 Write unit tests for report generation
@@ -423,8 +423,8 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Prevent retesting rejected hypotheses without justification
     - _Requirements: 12.8, 12.9_
   
-  - [ ] 13.4 Integrate Coordinator Agent with registry and LightRAG
-    - Write task lifecycle events to LightRAG
+  - [ ] 13.4 Integrate Coordinator Agent with registry and ApeRAG
+    - Write task lifecycle events to ApeRAG
     - Write final decisions to SQLite registry
     - Write rejection/promotion reasons to both stores
     - _Requirements: 12.3-12.7_
@@ -519,7 +519,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 11.6_
   
   - [ ] 16.7 Implement memory search functionality
-    - Search LightRAG by topic, entity, or relationship
+    - Search ApeRAG by topic, entity, or relationship
     - Display search results with context
     - _Requirements: 11.7_
   
@@ -595,7 +595,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
 - [ ] 19. Create documentation and examples
   - [ ] 19.1 Write comprehensive README.md
     - Project overview and architecture
-    - Setup instructions (uv sync, database init, LightRAG init)
+    - Setup instructions (uv sync, database init, ApeRAG init)
     - Usage examples (CLI commands, scripted workflows)
     - Hardware requirements and constraints
     - _Requirements: 1.1-1.9, 22.1-22.14_
@@ -702,7 +702,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Cost attribution breaks down all cost components ✓
     - Critic agent detects at least one issue ✓
     - Reports are human-readable and complete ✓
-    - LightRAG stores and retrieves agent decisions ✓
+    - ApeRAG stores and retrieves agent decisions ✓
     - Registry enables querying and comparison ✓
     - _Requirements: 22.1-22.14_
   
@@ -738,7 +738,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
 - Property tests validate universal correctness properties (14 properties total)
 - Unit tests validate specific examples and edge cases
 - Python is used for all implementations (Rust optimization is optional and not required for MVP)
-- System must run without Docker using uv, SQLite, Parquet, and embedded LightRAG/vector storage
+- System must run without Docker using uv, SQLite, Parquet, and embedded ApeRAG/vector storage
 - Focus on correctness, reproducibility, and data quality over speed
 - GitHub repository already exists at https://github.com/Cryptotehnolog/STATISTICAL-ARBITRAGE
 

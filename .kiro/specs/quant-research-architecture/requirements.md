@@ -1,10 +1,10 @@
-# Requirements Document: Multi-Agent Quantitative Research System
+﻿# Requirements Document: Multi-Agent Quantitative Research System
 
 ## Introduction
 
 This document specifies requirements for a multi-agent quantitative research system focused on statistical arbitrage and pairs trading. The system is designed as a staged development platform for automated hypothesis generation, statistical validation, backtesting, and long-term memory management. This is an architecture planning package, not an implementation. The first milestone is a reproducible research platform with proper data quality controls, statistical validation, and cost modeling—not live trading.
 
-The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM and Oracle Cloud Always Free ARM instance with 4 vCPU and 24GB RAM) using Python for orchestration and Rust for performance-critical components. LightRAG provides long-term memory from the beginning. The system supports eventual demo trading after strict validation, but excludes live trading, streaming infrastructure (Kafka, RisingWave, Memgraph), and enterprise monitoring (ClickHouse, Grafana, Prometheus) from v1.
+The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM and Oracle Cloud Always Free ARM instance with 4 vCPU and 24GB RAM) using Python for orchestration and Rust for performance-critical components. ApeRAG provides long-term memory from the beginning. The system supports eventual demo trading after strict validation, but excludes live trading, streaming infrastructure (Kafka, RisingWave, Memgraph), and enterprise monitoring (ClickHouse, Grafana, Prometheus) from v1.
 
 ## Glossary
 
@@ -15,9 +15,9 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 - **Statistical_Testing_Agent**: Agent that executes cointegration tests, ADF tests, and hedge ratio estimation
 - **Backtest_Agent**: Agent that runs reproducible backtests with cost attribution
 - **Critic_Agent**: Agent that reviews results for leakage, overfitting, and weak assumptions
-- **Memory_Agent**: Agent that manages LightRAG storage and retrieval
+- **Memory_Agent**: Agent that manages ApeRAG storage and retrieval
 - **Report_Agent**: Agent that generates human-readable summaries and reports
-- **LightRAG**: Long-term memory and knowledge graph system for agent decisions and development knowledge
+- **ApeRAG**: Long-term memory and knowledge graph system for agent decisions and development knowledge
 - **Structured_Registry**: SQLite/Postgres database storing experiment metrics, dataset IDs, and test results
 - **Experiment**: A complete research workflow from hypothesis through statistical testing to backtest
 - **Hypothesis**: A candidate trading pair with rationale for testing
@@ -87,11 +87,11 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 #### Acceptance Criteria
 
 1. THE Hypothesis_Agent SHALL generate candidate trading pairs with rationale
-2. WHEN generating a hypothesis, THE Hypothesis_Agent SHALL query LightRAG to check for similar past hypotheses
+2. WHEN generating a hypothesis, THE Hypothesis_Agent SHALL query ApeRAG to check for similar past hypotheses
 3. WHEN generating a hypothesis, THE Hypothesis_Agent SHALL query the Structured_Registry to avoid retesting invalidated pairs
-4. THE Hypothesis_Agent SHALL write generated hypotheses to LightRAG with rationale and source references
+4. THE Hypothesis_Agent SHALL write generated hypotheses to ApeRAG with rationale and source references
 5. THE Hypothesis_Agent SHALL write hypothesis records to the Structured_Registry with novelty check results
-6. THE Hypothesis_Agent SHALL link new hypotheses to similar past hypotheses in LightRAG
+6. THE Hypothesis_Agent SHALL link new hypotheses to similar past hypotheses in ApeRAG
 7. WHERE a hypothesis is similar to a previously rejected hypothesis, THE Hypothesis_Agent SHALL flag the similarity and provide justification for retesting
 
 
@@ -111,7 +111,7 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 8. WHEN testing a pair, THE Statistical_Testing_Agent SHALL apply multiple-testing correction
 9. WHEN testing a pair, THE Statistical_Testing_Agent SHALL check for regime changes or structural breaks
 10. THE Statistical_Testing_Agent SHALL write structured test results to the Structured_Registry
-11. THE Statistical_Testing_Agent SHALL write summary lessons to LightRAG
+11. THE Statistical_Testing_Agent SHALL write summary lessons to ApeRAG
 12. THE Statistical_Testing_Agent SHALL prevent Lookahead_Bias by using only information available at each timestamp
 
 
@@ -133,7 +133,7 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 10. WHEN running a backtest, THE Backtest_Agent SHALL generate a Backtest_Report including all Cost_Attribution components
 11. THE Backtest_Agent SHALL store experiment metadata including Git commit hash, config hash, dataset IDs, run timestamp, and execution command
 12. THE Backtest_Agent SHALL write structured performance metrics to the Structured_Registry
-13. THE Backtest_Agent SHALL write summary conclusions to LightRAG
+13. THE Backtest_Agent SHALL write summary conclusions to ApeRAG
 14. THE Backtest_Agent SHALL prevent Lookahead_Bias in signal generation and position sizing
 
 
@@ -170,29 +170,29 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 5. THE Critic_Agent SHALL detect insufficient out-of-sample testing
 6. THE Critic_Agent SHALL detect strategies where net PnL becomes negative after realistic costs
 7. THE Critic_Agent SHALL detect strategies with operationally impractical Turnover
-8. THE Critic_Agent SHALL write objections and detected risks to LightRAG
+8. THE Critic_Agent SHALL write objections and detected risks to ApeRAG
 9. THE Critic_Agent SHALL write final review status to the Structured_Registry
 10. IF critical issues are detected, THEN THE Critic_Agent SHALL recommend rejection or quarantine
 
 
-### Requirement 8: Long-Term Memory with LightRAG
+### Requirement 8: Long-Term Memory with ApeRAG
 
 **User Story:** As a system operator, I want persistent memory of all research decisions and development knowledge, so that agents can learn from past work and avoid repeated mistakes.
 
 #### Acceptance Criteria
 
-1. THE System SHALL use LightRAG as the central long-term memory layer from v1
-2. THE Memory_Agent SHALL store market and fundamental knowledge in LightRAG
-3. THE Memory_Agent SHALL store development and agent memory in LightRAG
-4. THE Memory_Agent SHALL store architecture decisions in LightRAG
-5. THE Memory_Agent SHALL store all generated hypotheses with rationale in LightRAG
-6. THE Memory_Agent SHALL store statistical test summaries in LightRAG
-7. THE Memory_Agent SHALL store backtest summaries in LightRAG
-8. THE Memory_Agent SHALL store code references with commit hashes in LightRAG
-9. THE Memory_Agent SHALL store agent lessons learned in LightRAG
-10. THE Memory_Agent SHALL store manual notes and human decisions in LightRAG
-11. THE Memory_Agent SHALL reference Structured_Registry IDs instead of duplicating numeric metrics in LightRAG
-12. THE Memory_Agent SHALL NOT store raw logs, raw prompts, large datasets, or secrets in LightRAG
+1. THE System SHALL use ApeRAG as the central long-term memory layer from v1
+2. THE Memory_Agent SHALL store market and fundamental knowledge in ApeRAG
+3. THE Memory_Agent SHALL store development and agent memory in ApeRAG
+4. THE Memory_Agent SHALL store architecture decisions in ApeRAG
+5. THE Memory_Agent SHALL store all generated hypotheses with rationale in ApeRAG
+6. THE Memory_Agent SHALL store statistical test summaries in ApeRAG
+7. THE Memory_Agent SHALL store backtest summaries in ApeRAG
+8. THE Memory_Agent SHALL store code references with commit hashes in ApeRAG
+9. THE Memory_Agent SHALL store agent lessons learned in ApeRAG
+10. THE Memory_Agent SHALL store manual notes and human decisions in ApeRAG
+11. THE Memory_Agent SHALL reference Structured_Registry IDs instead of duplicating numeric metrics in ApeRAG
+12. THE Memory_Agent SHALL NOT store raw logs, raw prompts, large datasets, or secrets in ApeRAG
 
 
 ### Requirement 9: Structured Experiment Registry
@@ -249,7 +249,7 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 8. THE System SHALL provide a dashboard with a manual approval queue
 9. THE Report_Agent SHALL generate human-readable summaries of experiments
 10. THE Report_Agent SHALL write report artifact links to the Structured_Registry
-11. THE Report_Agent SHALL write human-readable summaries to LightRAG
+11. THE Report_Agent SHALL write human-readable summaries to ApeRAG
 
 
 ### Requirement 12: Coordinator Agent Task Management
@@ -260,11 +260,11 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 
 1. THE Coordinator_Agent SHALL manage the task queue for all experiments
 2. THE Coordinator_Agent SHALL manage experiment lifecycle from hypothesis through final decision
-3. THE Coordinator_Agent SHALL write task lifecycle events to LightRAG
+3. THE Coordinator_Agent SHALL write task lifecycle events to ApeRAG
 4. THE Coordinator_Agent SHALL write final decisions to the Structured_Registry
-5. THE Coordinator_Agent SHALL write rejection reasons to LightRAG and the Structured_Registry
-6. THE Coordinator_Agent SHALL write promotion reasons to LightRAG and the Structured_Registry
-7. THE Coordinator_Agent SHALL write links to registry records in LightRAG
+5. THE Coordinator_Agent SHALL write rejection reasons to ApeRAG and the Structured_Registry
+6. THE Coordinator_Agent SHALL write promotion reasons to ApeRAG and the Structured_Registry
+7. THE Coordinator_Agent SHALL write links to registry records in ApeRAG
 8. WHEN an experiment completes, THE Coordinator_Agent SHALL determine the next action based on results
 9. IF a hypothesis is rejected, THEN THE Coordinator_Agent SHALL prevent retesting without new justification
 10. THE Coordinator_Agent SHALL enforce agent tool permissions and validation rules
@@ -334,7 +334,7 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 
 1. THE System SHALL use Infisical as the required secrets management system
 2. THE System SHALL NOT store secrets in Git repositories
-3. THE System SHALL NOT store secrets in LightRAG
+3. THE System SHALL NOT store secrets in ApeRAG
 4. THE System SHALL NOT store secrets in experiment reports
 5. THE System SHALL NOT store secrets in logs
 6. THE System SHALL provide `.env.example` files documenting variable names only
@@ -393,7 +393,7 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 1. THE System SHALL use Docker Compose for local infrastructure services from v1
 2. THE System SHALL provide Docker Compose configuration for databases
 3. THE System SHALL provide Docker Compose configuration for vector stores
-4. THE System SHALL provide Docker Compose configuration for LightRAG dependencies
+4. THE System SHALL provide Docker Compose configuration for ApeRAG dependencies
 5. THE System SHALL provide Docker Compose configuration for API services where applicable
 6. THE System SHALL provide Docker Compose configuration for dashboard services where applicable
 7. THE System SHALL provide `.env.example` files for Docker services
@@ -442,7 +442,7 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 10. THE System SHALL log prompts, responses, tool calls, model name, model version, token counts, and cost estimates
 11. THE System SHALL prevent infinite agent loops
 12. THE System SHALL require critic review for agent-generated hypotheses and code
-13. THE System SHALL store useful summaries in LightRAG without storing unnecessary raw noise
+13. THE System SHALL store useful summaries in ApeRAG without storing unnecessary raw noise
 
 
 ### Requirement 22: MVP Scope and Acceptance Criteria
@@ -454,14 +454,14 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 1. THE System SHALL initialize a repository on GitHub before implementation work begins
 2. THE System SHALL manage Python environment with `uv`, `pyproject.toml`, and `uv.lock`
 3. THE System SHALL start required local infrastructure services with Docker Compose
-4. THE System SHALL configure LightRAG as central long-term memory
+4. THE System SHALL configure ApeRAG as central long-term memory
 5. THE System SHALL create a Structured_Registry
 6. THE System SHALL integrate at least one data source
 7. THE System SHALL ingest intraday OHLCV data for a small asset universe
 8. THE System SHALL generate Data_Quality_Report before tests and backtests
 9. THE System SHALL provide at least one scripted pair-screening workflow
 10. THE System SHALL provide at least one scripted backtest workflow
-11. THE System SHALL write all results to the Structured_Registry and summarize into LightRAG
+11. THE System SHALL write all results to the Structured_Registry and summarize into ApeRAG
 12. THE System SHALL provide a dashboard or report view showing experiments, pair results, and Backtest_Report
 13. THE System SHALL run tests and linting in GitHub Actions
 14. THE System SHALL define exact numeric MVP targets for number of assets, timeframe, number of pairs, runtime target, and required reports
@@ -497,7 +497,7 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 3. THE System SHALL define v3 scope to include limited live trading after strict validation
 4. THE System SHALL NOT include Kafka, Redpanda, RisingWave, or Memgraph in v1 unless justified
 5. THE System SHALL NOT include ClickHouse, Grafana, or Prometheus in v1 unless justified
-6. THE System SHALL prefer Parquet, SQLite/Postgres, DuckDB, FastAPI, Streamlit, and LightRAG for v1
+6. THE System SHALL prefer Parquet, SQLite/Postgres, DuckDB, FastAPI, Streamlit, and ApeRAG for v1
 7. THE System SHALL support 15-minute bars as primary v1 timeframe
 8. THE System SHALL support 5-minute bars as secondary v1 timeframe after pipeline validation
 9. THE System SHALL support 1-minute bars only after data quality checks, runtime limits, turnover analysis, slippage assumptions, and transaction-cost modeling are implemented
@@ -516,7 +516,7 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 2. THE System SHALL use Python for research workflows and notebooks
 3. THE System SHALL use Python for dashboards and reporting
 4. THE System SHALL use Python for API integration
-5. THE System SHALL use Python for RAG and LightRAG integration
+5. THE System SHALL use Python for RAG and ApeRAG integration
 6. THE System SHALL use Rust for performance-critical statistical calculations
 7. THE System SHALL use Rust for performance-critical backtesting acceleration where justified
 8. THE System SHALL define API boundaries using PyO3 or CLI interfaces
@@ -573,20 +573,20 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 
 #### Acceptance Criteria
 
-1. THE Coordinator_Agent SHALL write task lifecycle events to LightRAG
-2. THE Coordinator_Agent SHALL write final decisions and rejection/promotion reasons to the Structured_Registry and LightRAG
+1. THE Coordinator_Agent SHALL write task lifecycle events to ApeRAG
+2. THE Coordinator_Agent SHALL write final decisions and rejection/promotion reasons to the Structured_Registry and ApeRAG
 3. THE Data_Agent SHALL write dataset IDs, source metadata, and data quality summaries to the Structured_Registry
-4. THE Data_Agent SHALL write validation failures and quarantine decisions to LightRAG
-5. THE Hypothesis_Agent SHALL write generated hypotheses with rationale to LightRAG
+4. THE Data_Agent SHALL write validation failures and quarantine decisions to ApeRAG
+5. THE Hypothesis_Agent SHALL write generated hypotheses with rationale to ApeRAG
 6. THE Hypothesis_Agent SHALL write hypothesis records and novelty checks to the Structured_Registry
 7. THE Statistical_Testing_Agent SHALL write structured test results to the Structured_Registry
-8. THE Statistical_Testing_Agent SHALL write summary lessons to LightRAG
+8. THE Statistical_Testing_Agent SHALL write summary lessons to ApeRAG
 9. THE Backtest_Agent SHALL write structured performance metrics and cost attribution to the Structured_Registry
-10. THE Backtest_Agent SHALL write summary conclusions to LightRAG
-11. THE Critic_Agent SHALL write objections, detected risks, and review status to LightRAG and the Structured_Registry
+10. THE Backtest_Agent SHALL write summary conclusions to ApeRAG
+11. THE Critic_Agent SHALL write objections, detected risks, and review status to ApeRAG and the Structured_Registry
 12. THE Report_Agent SHALL write report artifact links to the Structured_Registry
-13. THE Report_Agent SHALL write human-readable summaries to LightRAG
-14. THE Memory_Agent SHALL NOT write raw logs, raw prompts, large datasets, or secrets to LightRAG
+13. THE Report_Agent SHALL write human-readable summaries to ApeRAG
+14. THE Memory_Agent SHALL NOT write raw logs, raw prompts, large datasets, or secrets to ApeRAG
 
 
 ### Requirement 29: Future Dynamic Layer Design
@@ -599,8 +599,8 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 2. THE System SHALL describe RisingWave for streaming SQL over price, volume, and event streams
 3. THE System SHALL describe Memgraph for live graph of market state
 4. THE System SHALL describe integration with Kafka or Redpanda for real-time ingestion
-5. THE System SHALL describe agent query patterns for historical questions using LightRAG
-6. THE System SHALL describe agent query patterns for development memory using LightRAG and Structured_Registry
+5. THE System SHALL describe agent query patterns for historical questions using ApeRAG
+6. THE System SHALL describe agent query patterns for development memory using ApeRAG and Structured_Registry
 7. THE System SHALL describe agent query patterns for current market state using RisingWave and Memgraph
 8. THE System SHALL simulate the dynamic layer in v1 using batch intraday data and DuckDB/Parquet queries
 9. THE System SHALL design explicit interfaces so RisingWave and Memgraph can be added later without rewriting agent logic

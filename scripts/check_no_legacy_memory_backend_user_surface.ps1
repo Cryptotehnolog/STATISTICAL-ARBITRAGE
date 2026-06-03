@@ -54,9 +54,9 @@ foreach ($path in $Paths) {
 }
 
 if ($violations.Count -gt 0) {
-    Write-Output "Найдены активные LightRAG упоминания в пользовательской поверхности:"
+    Write-Output "Найдены активные legacy memory backend упоминания в пользовательской поверхности:"
     $violations | Format-Table -AutoSize
-    Write-Error "Legacy LightRAG не должен возвращаться в README/docs как активный backend."
+    Write-Error "Legacy memory backend не должен возвращаться в README/docs как активный backend."
 }
 
-Write-Output "Проверка активной пользовательской LightRAG поверхности прошла."
+Write-Output "Проверка активной пользовательской legacy memory backend поверхности прошла."

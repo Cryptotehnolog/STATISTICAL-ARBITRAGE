@@ -22,7 +22,7 @@ def test_ci_workflow_runs_core_python_checks() -> None:
 
 
 def test_ci_workflow_does_not_require_local_services_or_secrets() -> None:
-    """Fast CI should not depend on Docker services, OmniRoute, Infisical, or LightRAG seed."""
+    """Fast CI should not depend on Docker services, OmniRoute, Infisical, or memory seed."""
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert "check_omniroute.ps1" not in workflow
