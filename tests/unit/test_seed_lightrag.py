@@ -70,7 +70,7 @@ def test_curated_seed_wrapper_uses_bounded_but_large_enough_limits() -> None:
     """Curated seed wrapper should fit current curated shards without unbounded seeding."""
     script = Path("scripts/seed_lightrag_curated.ps1").read_text(encoding="utf-8")
 
-    assert "[int]$MaxDocumentChars = 20000" in script
+    assert "[int]$MaxDocumentChars = 12000" in script
     assert "[int]$MaxTotalChars = 50000" in script
     assert '"docs/knowledge/*.md"' in script
 

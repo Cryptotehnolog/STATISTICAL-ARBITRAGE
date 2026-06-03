@@ -3,7 +3,7 @@ param(
     [string]$Model = "my-ai",
     [string]$BaseUrl = "http://localhost:20128/v1",
     [string]$ApiKey = $env:OMNIROUTE_API_KEY,
-    [int]$MaxDocumentChars = 20000,
+    [int]$MaxDocumentChars = 12000,
     [int]$MaxTotalChars = 50000,
     [int]$MaxWorkers = 1,
     [switch]$Force,

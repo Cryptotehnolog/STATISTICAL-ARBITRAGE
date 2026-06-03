@@ -216,18 +216,21 @@ Follow-up:
 
 Related tasks: 4.9, 4.10, 15.1.
 
-### TD-0015: Split large curated decisions memory shard
+### TD-0015: Implement safe LightRAG source replacement for incremental curated updates
 
 Status: open
 
-Why deferred: `docs/knowledge/decisions.md` is now large enough to make clean LightRAG
-rebuilds slow and close to curated seed limits.
+Why deferred: Curated decisions are now split into smaller shards, but modified shards still
+need a clean rebuild because incremental apply can create duplicate source docs in persistent
+LightRAG storage.
 
 Follow-up:
-- Split decisions into smaller curated shards by theme, for example architecture,
-  memory/LLM, data pipeline, and CI.
-- Keep the shard names stable so LightRAG source IDs remain human-readable.
-- Rebuild LightRAG after the split and confirm graph export plus query smoke still pass.
+- Add a safe replacement path by curated `source_id`, or confirm LightRAG exposes a reliable
+  document deletion API for the current storage backend.
+- Keep `scripts/rebuild_lightrag_curated.ps1` as the quality-preserving recovery path until
+  replacement is implemented.
+- After source replacement exists, make ordinary memory upkeep seed only changed shards and
+  reserve clean rebuild for schema or storage cleanup.
 
 Related tasks: 2.3, 18.1, 19.1.
 
@@ -304,3 +307,15 @@ LightRAG runtime storage, reseed only `docs/knowledge/*.md`, and run the memory 
 guard.
 
 Closed by: `scripts/rebuild_lightrag_curated.ps1`.
+
+### TD-CLOSED-0005: Split large curated decisions memory shard
+
+Status: closed
+
+Resolution: Replaced the oversized `docs/knowledge/decisions.md` body with a navigation
+index and moved durable decisions into focused thematic shards:
+`decisions_memory_lightrag.md`, `decisions_infra_ci_secrets.md`, and
+`decisions_data_pipeline.md`. The curated seed wrapper now caps one document at 12000
+characters so future oversized shards are caught earlier.
+
+Closed by: LightRAG memory optimization task.

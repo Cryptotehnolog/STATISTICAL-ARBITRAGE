@@ -27,11 +27,12 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   seed runs are stable and bounded. Use `scripts/check_lightrag_memory_fresh.ps1` before
   agent-facing memory work.
 - Curated memory changes should use `scripts/rebuild_lightrag_curated.ps1` for persistent
-  storage recovery, because incremental apply can create duplicate source docs.
+  storage recovery until source replacement is implemented, because incremental apply can
+  create duplicate source docs for modified shards.
 - Curated shards: keep `docs/knowledge/*.md` synchronized with material Kiro planning
   changes and reseed LightRAG after updates.
-- Decisions shard split: split `docs/knowledge/decisions.md` into smaller thematic shards
-  because it is now large enough to slow clean LightRAG rebuilds.
+- LightRAG source replacement: implement safe deletion/replacement by curated `source_id`
+  before making incremental apply the normal path for modified shards.
 - GitHub Actions Node.js 24 migration: CI is green, but GitHub warns Node.js 20 actions are
   deprecated and must be updated before the enforced Node.js 24 transition.
 - Infisical recovery: define backup and restore discipline before deleting Docker volumes
@@ -59,3 +60,6 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - LightRAG memory freshness guard now checks curated seed freshness, OmniRoute/doc_status,
   graph export, human-facing viewer export, and a control query in one command.
 - Curated LightRAG clean rebuild now has automation in `scripts/rebuild_lightrag_curated.ps1`.
+- Decisions memory is split into thematic shards:
+  `decisions_memory_lightrag.md`, `decisions_infra_ci_secrets.md`, and
+  `decisions_data_pipeline.md`.
