@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid5
 
 from stat_arb.domain import OHLCVBar, OHLCVBatch
 
@@ -13,6 +14,7 @@ _TIMEFRAME_UNITS = {
     "d": "days",
     "w": "weeks",
 }
+_RESAMPLING_NAMESPACE = UUID("d723f762-f1f0-47b7-a16c-81ee17fd6f6e")
 
 
 def resample_ohlcv_batch(
@@ -64,12 +66,35 @@ def resample_ohlcv_batch(
         raise ValueError("resampling produced no complete OHLCV windows")
 
     return OHLCVBatch(
+        dataset_id=_resampled_dataset_id(batch, target_timeframe, resampled_bars),
         symbol=batch.symbol,
         source=batch.source,
         timeframe=target_timeframe,
         bars=resampled_bars,
         exchange=batch.exchange,
     )
+
+
+def _resampled_dataset_id(
+    batch: OHLCVBatch,
+    target_timeframe: str,
+    bars: list[OHLCVBar],
+) -> UUID:
+    first_timestamp = bars[0].timestamp.isoformat()
+    last_timestamp = bars[-1].timestamp.isoformat()
+    identity = "|".join(
+        [
+            str(batch.dataset_id),
+            batch.symbol,
+            str(batch.source),
+            batch.timeframe,
+            target_timeframe,
+            first_timestamp,
+            last_timestamp,
+            str(len(bars)),
+        ]
+    )
+    return uuid5(_RESAMPLING_NAMESPACE, identity)
 
 
 def _timeframe_delta(timeframe: str) -> timedelta:

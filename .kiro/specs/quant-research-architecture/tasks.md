@@ -104,7 +104,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Apply deterministic rules for OHLC, volume, and timestamp labeling
     - _Requirements: 2.5_
   
-  - [ ]* 4.6 Write property test for resampling idempotence
+  - [x]* 4.6 Write property test for resampling idempotence
     - **Property 5: Resampling Idempotence**
     - **Validates: Requirements 2.5**
     - Test that resampling produces identical results when applied multiple times

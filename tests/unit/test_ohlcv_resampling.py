@@ -3,6 +3,8 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from stat_arb.data_quality import resample_ohlcv_batch
 from stat_arb.domain import DatasetSource, OHLCVBar, OHLCVBatch
@@ -50,6 +52,49 @@ def _five_minute_batch(count: int) -> OHLCVBatch:
         symbol="BTC/USDT",
         source=DatasetSource.CCXT,
         timeframe="5m",
+        bars=bars,
+        exchange="binance",
+    )
+
+
+@st.composite
+def _complete_one_minute_batches(draw) -> OHLCVBatch:
+    window_count = draw(st.integers(min_value=1, max_value=8))
+    bar_count = window_count * 5
+    start_hour = draw(st.integers(min_value=0, max_value=23))
+    start_minute = draw(st.sampled_from([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]))
+    base_price = draw(st.floats(min_value=1.0, max_value=10_000.0, allow_nan=False, allow_infinity=False))
+    step = draw(st.floats(min_value=0.01, max_value=10.0, allow_nan=False, allow_infinity=False))
+    volumes = draw(
+        st.lists(
+            st.floats(min_value=0.0, max_value=1_000_000.0, allow_nan=False, allow_infinity=False),
+            min_size=bar_count,
+            max_size=bar_count,
+        )
+    )
+    start = datetime(2024, 1, 1, start_hour, start_minute, tzinfo=UTC)
+    bars: list[OHLCVBar] = []
+    for index, volume in enumerate(volumes):
+        open_price = base_price + (index * step)
+        bars.append(
+            OHLCVBar(
+                symbol="BTC/USDT",
+                source=DatasetSource.CCXT,
+                timeframe="1m",
+                timestamp=start + timedelta(minutes=index),
+                open=open_price,
+                high=open_price + step,
+                low=max(0.01, open_price - step),
+                close=open_price + (step / 2),
+                volume=volume,
+                exchange="binance",
+            )
+        )
+
+    return OHLCVBatch(
+        symbol="BTC/USDT",
+        source=DatasetSource.CCXT,
+        timeframe="1m",
         bars=bars,
         exchange="binance",
     )
@@ -116,3 +161,14 @@ def test_resample_ohlcv_batch_requires_at_least_one_output_window() -> None:
     """Strict resampling should fail if every window is incomplete."""
     with pytest.raises(ValueError, match="no complete"):
         resample_ohlcv_batch(_batch(4), "5m")
+
+
+@pytest.mark.property
+@settings(max_examples=100, deadline=None)
+@given(batch=_complete_one_minute_batches())
+def test_resample_ohlcv_batch_is_idempotent_for_same_input(batch: OHLCVBatch) -> None:
+    """Property 5: identical resampling inputs should always produce identical outputs."""
+    first = resample_ohlcv_batch(batch, "5m")
+    second = resample_ohlcv_batch(batch, "5m")
+
+    assert second.model_dump(mode="json") == first.model_dump(mode="json")

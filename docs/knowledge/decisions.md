@@ -334,3 +334,22 @@ partial windows by default; allow arbitrary non-multiple target intervals.
 Risks: Strict resampling drops incomplete windows by default. Callers can explicitly keep
 partial windows for diagnostics, but production-quality datasets should validate gaps before
 statistical testing.
+
+## DEC-0020: Make resampled OHLCV dataset IDs deterministic
+
+Status: accepted
+
+Decision: Resampled `OHLCVBatch` outputs use deterministic UUIDv5 dataset IDs derived from
+the source dataset ID, symbol, source timeframe, target timeframe, output timestamp range,
+and output bar count.
+
+Rationale: Property-based resampling idempotence tests found that repeated resampling of
+the same input produced equivalent bars but different generated dataset IDs. Dataset IDs are
+part of downstream registry provenance, so repeated deterministic transformations should
+produce stable identifiers.
+
+Alternatives considered: Ignore dataset IDs in property tests; keep random IDs for every
+transformation; add an optional caller-supplied output ID.
+
+Risks: If the resampling identity fields change later, downstream registry references may
+need a migration or explicit versioned identity scheme.
