@@ -37,7 +37,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Kiro skills cleanup: verify Codex can use installed `rust-skills`, then remove duplicate
   `.kiro/skills` source if no longer needed.
 - Rust boundary: keep Python-first MVP; introduce Rust only after profiling identifies a
-  stable compute hotspot.
+  stable compute hotspot with Python reference tests, stable API boundary, benchmark, and
+  Ubuntu/Windows build check.
 - Runtime cleanup: keep cleanup manual and scoped to regenerable artifacts.
 - GitHub CLI in Codex: use `scripts/gh_no_proxy.ps1` for `gh` commands because this session
   can inherit broken process proxy variables pointing at `127.0.0.1:9`.

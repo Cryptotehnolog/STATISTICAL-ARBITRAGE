@@ -73,21 +73,23 @@ already existed; defer reproducibility checks until final MVP validation.
 Risks: This property currently covers the experiment/hypothesis registry boundary only.
 Broader reproducibility checks for full experiment artifacts remain later MVP work.
 
-## DEC-0034: Control heavy local runtime infrastructure explicitly
+## DEC-0035: Keep Rust behind a measured performance boundary
 
 Status: accepted
 
-Decision: Use dedicated `start_runtime_infra.ps1` and `stop_runtime_infra.ps1` operator
-scripts for the heavy local stack: ApeRAG, Infisical, OmniRoute, and the local embedding
-server. The stop script must pause services without deleting Docker volumes, and WSL
-shutdown must remain an explicit flag.
+Decision: Keep the MVP Python-first and introduce Rust only after profiling identifies a
+stable compute hotspot with a documented API boundary, Python reference implementation,
+unit/property tests, and benchmark evidence.
 
-Rationale: Docker Desktop on Windows runs through WSL2, so `VmmemWSL` can retain several
-gigabytes while local services are active. A single safe stop command frees CPU/RAM during
-development pauses without risking ApeRAG, Infisical, or OmniRoute state.
+Rationale: The current work is still stabilizing domain contracts, ingestion, validation,
+registry persistence, memory boundaries, and statistical reference behavior. Adding Rust
+before those boundaries settle would add packaging, CI, Windows/Ubuntu build, and FFI
+complexity without proven benefit.
 
-Alternatives considered: Leave manual `docker stop` commands in chat; run `docker compose
-down -v`; shut down WSL automatically every time.
+Alternatives considered: Start a Rust core immediately; rewrite statistical helpers in
+Rust because the final system may need speed; add Rust modules to increase the GitHub
+language percentage.
 
-Risks: `wsl --shutdown` can affect other local WSL workloads, so it must stay opt-in via
-`-ShutdownWsl`.
+Risks: Python implementations may become slow for large pair universes or backtests. When
+profiling proves that, introduce Rust through a narrow optional acceleration package and
+use the installed `rust-skills` guidance for Rust code.

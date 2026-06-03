@@ -161,6 +161,8 @@ Follow-up:
 - Use Python for orchestration, agents, RAG, APIs, dashboard, and research flow.
 - Introduce Rust only when profiling identifies a stable compute hotspot, likely in
   statistics or backtesting.
+- Before adding a Rust module, require a Python reference implementation, stable API
+  boundary, unit/property tests, benchmark before/after, and Ubuntu/Windows build check.
 - Use the installed `rust-skills` guidance when writing Rust.
 
 Related tasks: 6.x, 7.x, 22.5.

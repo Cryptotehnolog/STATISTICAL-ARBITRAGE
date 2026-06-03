@@ -173,7 +173,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Standardize residuals to Z-scores
     - _Requirements: 4.7_
   
-  - [ ]* 6.8 Write property test for Z-score properties
+  - [x]* 6.8 Write property test for Z-score properties
     - **Property 10: Z-Score Statistical Properties**
     - **Validates: Requirements 4.7**
     - Verify Z-scores have mean ≈ 0 and std ≈ 1
