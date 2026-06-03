@@ -72,3 +72,22 @@ already existed; defer reproducibility checks until final MVP validation.
 
 Risks: This property currently covers the experiment/hypothesis registry boundary only.
 Broader reproducibility checks for full experiment artifacts remain later MVP work.
+
+## DEC-0034: Control heavy local runtime infrastructure explicitly
+
+Status: accepted
+
+Decision: Use dedicated `start_runtime_infra.ps1` and `stop_runtime_infra.ps1` operator
+scripts for the heavy local stack: ApeRAG, Infisical, OmniRoute, and the local embedding
+server. The stop script must pause services without deleting Docker volumes, and WSL
+shutdown must remain an explicit flag.
+
+Rationale: Docker Desktop on Windows runs through WSL2, so `VmmemWSL` can retain several
+gigabytes while local services are active. A single safe stop command frees CPU/RAM during
+development pauses without risking ApeRAG, Infisical, or OmniRoute state.
+
+Alternatives considered: Leave manual `docker stop` commands in chat; run `docker compose
+down -v`; shut down WSL automatically every time.
+
+Risks: `wsl --shutdown` can affect other local WSL workloads, so it must stay opt-in via
+`-ShutdownWsl`.

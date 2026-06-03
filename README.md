@@ -145,6 +145,24 @@ CRITIC_REVIEW -> REPORTING -> FINAL_DECISION
 
 ### Команды ApeRAG и OmniRoute
 
+Остановить тяжелую runtime-инфраструктуру, чтобы разгрузить CPU/RAM без удаления данных:
+
+```powershell
+.\scripts\stop_runtime_infra.ps1
+```
+
+Если нужно дополнительно освободить память `VmmemWSL` после остановки контейнеров:
+
+```powershell
+.\scripts\stop_runtime_infra.ps1 -ShutdownWsl
+```
+
+Поднять runtime-инфраструктуру обратно:
+
+```powershell
+.\scripts\start_runtime_infra.ps1
+```
+
 Проверить ApeRAG containers, API, embedding endpoint и optional graph smoke:
 
 ```powershell
