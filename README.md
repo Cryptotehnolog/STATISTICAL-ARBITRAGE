@@ -1,6 +1,6 @@
 # Statistical Arbitrage: мультиагентная платформа quantitative research
 
-Воспроизводимая исследовательская платформа для statistical arbitrage и pairs trading: генерация гипотез, строгая statistical validation, backtesting с подробным учетом costs и долгосрочная память через LightRAG.
+Воспроизводимая исследовательская платформа для statistical arbitrage и pairs trading: генерация гипотез, строгая statistical validation, backtesting с подробным учетом costs и долгосрочная память через ApeRAG.
 
 ## Обзор проекта
 
@@ -13,7 +13,7 @@
 Ключевые возможности:
 
 - Multi-agent architecture для data, hypothesis generation, statistical testing, backtesting и review.
-- Долгосрочная память и knowledge graph через LightRAG.
+- Долгосрочная память и knowledge graph через ApeRAG.
 - Строгая data quality validation: timezone normalization, missing bars, outliers, alignment.
 - Statistical testing: Engle-Granger cointegration, ADF tests, hedge ratio estimation.
 - Walk-forward backtesting с подробным cost attribution.
@@ -27,7 +27,7 @@
 1. **Корректность важнее скорости**: приоритет у reproducibility, data quality и statistical rigor.
 2. **Ограниченные ресурсы**: работа на локальном ПК и Oracle Cloud Always Free ARM.
 3. **Пошаговое усложнение**: сначала research, затем demo trading, затем ограниченный live trading.
-4. **Память с первого дня**: LightRAG хранит долгосрочную память и knowledge graph.
+4. **Память с первого дня**: ApeRAG хранит долгосрочную память, knowledge search и graph.
 5. **Human in the loop**: критичные решения проходят через approval gates.
 6. **Python-first, Rust только по профилированию**: Rust добавляется только там, где Python реально стал узким местом.
 7. **Минимальная инфраструктура для v1**: SQLite + embedded vector store (FAISS/NanoVectorDB).
@@ -46,9 +46,9 @@ Data Agent | Hypothesis Agent | Statistical Testing Agent
 Backtest Agent | Critic Agent | Report Agent
         |
 Memory Agent
-LightRAG Operations
+ApeRAG Operations
         |
-LightRAG (Memory) | SQLite (Registry) | Parquet (Data)
+ApeRAG (Memory) | SQLite (Registry) | Parquet (Data)
 ```
 
 ### Жизненный цикл experiment
@@ -126,115 +126,53 @@ CRITIC_REVIEW -> REPORTING -> FINAL_DECISION
    uv run python -m stat_arb.scripts.init_database
    ```
 
-6. Инициализировать LightRAG:
+6. Поднять ApeRAG как active memory backend:
 
-   ```bash
-   uv run python -m stat_arb.scripts.init_lightrag
+   ```powershell
+   .\scripts\start_aperag_embedding_server.ps1
+   .\scripts\start_aperag.ps1
+   .\scripts\configure_aperag.ps1
    ```
 
-   Более тяжелая локальная проверка с загрузкой embedding model и insert/query smoke test:
+7. Наполнить curated project memory и проверить backend:
 
-   ```bash
-   uv run python -m stat_arb.scripts.init_lightrag --smoke-test
+   ```powershell
+   .\scripts\seed_aperag_curated.ps1 -Force -EnableGraph
+   .\scripts\enable_aperag_curated_graph.ps1
+   .\scripts\check_memory_backend.ps1 -RequireGraph
+   .\scripts\check_aperag_agent_memory.ps1
    ```
 
-### Команды LightRAG и OmniRoute
+### Команды ApeRAG и OmniRoute
 
-Наполнить LightRAG проектными знаниями из README, docs и `.kiro/specs`:
+Проверить ApeRAG containers, API, embedding endpoint и optional graph smoke:
 
-```bash
-.\scripts\seed_lightrag.ps1
+```powershell
+.\scripts\check_aperag.ps1
 ```
 
-На первом запуске машины разрешить разовую загрузку embedding model:
+Проверить, что project memory синхронизирована и отвечает на search:
 
-```bash
-.\scripts\seed_lightrag.ps1 --allow-model-download
+```powershell
+.\scripts\check_aperag_memory_fresh.ps1 -RequireGraph
 ```
 
-Включить entity/relation extraction через OpenAI-compatible gateway:
+Проверить active memory backend без legacy memory path:
 
-```bash
-.\scripts\seed_lightrag.ps1 --llm-provider openai_compatible --openai-compatible-model my-ai
+```powershell
+.\scripts\check_memory_backend.ps1 -RequireGraph
 ```
 
-Preview ограниченного OmniRoute seed без записи:
+Проверить отдельную operational agent memory collection:
 
-```bash
-.\scripts\seed_lightrag_omniroute.ps1
+```powershell
+.\scripts\check_aperag_agent_memory.ps1
 ```
 
-Применить ограниченный OmniRoute seed:
+Проверить OmniRoute container, API и короткий chat route:
 
-```bash
-.\scripts\seed_lightrag_omniroute.ps1 -Apply
-```
-
-Preview или apply только curated shards из `docs/knowledge`:
-
-```bash
-.\scripts\seed_lightrag_curated.ps1
-.\scripts\seed_lightrag_curated.ps1 -Apply
-```
-
-Smoke-test graph extraction через OmniRoute:
-
-```bash
-.\scripts\smoke_lightrag_omniroute.ps1
-```
-
-Benchmark порядка моделей OmniRoute для LightRAG extraction:
-
-```bash
-.\scripts\benchmark_lightrag_omniroute.ps1
-```
-
-Проверить OmniRoute container, API, chat route и LightRAG smoke:
-
-```bash
+```powershell
 .\scripts\check_omniroute.ps1
-```
-
-Smoke-query persistent curated LightRAG memory:
-
-```bash
-.\scripts\query_lightrag_curated.ps1
-```
-
-Экспортировать persistent LightRAG graph в локальный HTML viewer:
-
-```bash
-.\scripts\export_lightrag_graph.ps1
-```
-
-Проверить экспорт LightRAG graph без открытия browser:
-
-```bash
-.\scripts\check_lightrag_graph_export.ps1
-```
-
-Запустить локальный server для viewer-а LightRAG graph:
-
-```bash
-.\scripts\serve_lightrag_graph.ps1
-```
-
-Поднять server при необходимости и открыть viewer в browser:
-
-```bash
-.\scripts\open_lightrag_graph.ps1
-```
-
-Создать локальный desktop shortcut для открытия viewer-а:
-
-```bash
-.\scripts\create_lightrag_graph_shortcut.ps1
-```
-
-Остановить локальный server viewer-а LightRAG graph:
-
-```bash
-.\scripts\serve_lightrag_graph.ps1 -Stop
 ```
 
 Локальный pre-commit checklist без LLM-зависимостей:
@@ -379,7 +317,7 @@ uv run pytest && uv run ruff check . && uv run mypy src/stat_arb
 ├── src/stat_arb/           # Основной package code
 │   ├── agents/             # Agent implementations
 │   ├── models/             # Pydantic data models
-│   ├── storage/            # Database и LightRAG interfaces
+│   ├── storage/            # Database interfaces
 │   ├── data/               # Data ingestion и validation
 │   ├── statistical/        # Statistical testing functions
 │   ├── backtest/           # Backtesting engine
@@ -392,7 +330,7 @@ uv run pytest && uv run ruff check . && uv run mypy src/stat_arb
 │   └── property/           # Property-based tests
 ├── data/                   # Runtime data, ignored by Git
 │   ├── parquet/            # OHLCV data
-│   ├── lightrag/           # LightRAG storage
+│   ├── aperag/             # ApeRAG runtime config и manifests
 │   ├── vector_store/       # Embedded vector store
 │   └── reports/            # Generated reports
 ├── docs/                   # Документация
@@ -530,7 +468,7 @@ Exchange terms of service:
 
 Audit logs:
 
-- Все agent decisions логируются в LightRAG.
+- Все agent decisions проходят через Memory Agent policy layer и пишутся в ApeRAG.
 - Все experiments отслеживаются в SQLite registry.
 - Audit trails нужны для compliance.
 
@@ -543,7 +481,7 @@ Audit logs:
 - Statistical testing: cointegration, ADF, hedge ratio.
 - Walk-forward backtesting с cost attribution.
 - Critic review на bias и overfitting.
-- LightRAG memory и knowledge graph.
+- ApeRAG memory, search и knowledge graph.
 - Dashboard и CLI tools.
 
 ### v2: Demo Trading
@@ -578,7 +516,7 @@ MIT License, см. `LICENSE`.
 
 ## Acknowledgments
 
-- **LightRAG**: long-term memory и knowledge graph framework.
+- **ApeRAG**: long-term memory, search и knowledge graph framework.
 - **CCXT**: unified cryptocurrency exchange API.
 - **Statsmodels**: statistical testing и econometrics.
 - **Streamlit**: interactive dashboard framework.
