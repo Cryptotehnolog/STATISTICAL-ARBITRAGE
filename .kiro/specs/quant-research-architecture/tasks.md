@@ -183,7 +183,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Flag regime changes in test results
     - _Requirements: 4.9_
   
-  - [ ] 6.10 Implement train/test split and walk-forward validation
+  - [x] 6.10 Implement train/test split and walk-forward validation
     - Create train/test split utilities (70/30 default)
     - Implement rolling window logic for walk-forward
     - Prevent lookahead bias by using only past data

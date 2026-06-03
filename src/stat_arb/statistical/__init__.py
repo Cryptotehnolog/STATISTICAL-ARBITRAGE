@@ -14,6 +14,14 @@ from stat_arb.statistical.regime import (
     detect_regime_changes,
 )
 from stat_arb.statistical.stationarity import ADFTestResult, adf_stationarity_test
+from stat_arb.statistical.validation import (
+    IndexWindow,
+    TrainTestSplit,
+    WalkForwardWindow,
+    assert_no_lookahead,
+    chronological_train_test_split,
+    generate_walk_forward_windows,
+)
 from stat_arb.statistical.zscore import ZScoreResult, construct_rolling_zscore
 
 __all__ = [
@@ -21,15 +29,21 @@ __all__ = [
     "CointegrationTestResult",
     "HalfLifeResult",
     "HedgeRatioResult",
+    "IndexWindow",
     "MultipleTestingMethod",
     "RegimeChangePoint",
     "RegimeChangeResult",
+    "TrainTestSplit",
+    "WalkForwardWindow",
     "ZScoreResult",
     "adf_stationarity_test",
+    "assert_no_lookahead",
     "adjust_p_values",
+    "chronological_train_test_split",
     "construct_rolling_zscore",
     "detect_regime_changes",
     "engle_granger_cointegration_test",
     "estimate_half_life",
     "estimate_hedge_ratio",
+    "generate_walk_forward_windows",
 ]
