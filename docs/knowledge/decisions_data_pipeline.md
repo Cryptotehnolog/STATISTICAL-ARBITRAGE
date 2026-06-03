@@ -119,6 +119,11 @@ Risks: Failed validation summaries are not yet written to ApeRAG by this helper.
 belongs behind the future Memory Agent boundary so registry writes do not depend on an LLM
 gateway.
 
+Update: Failed `DataQualityReport` objects can now be converted to policy-safe
+`MemoryWriteRequest` records through `stat_arb.memory.data_quality_failure_memory_request`
+and written through `write_data_quality_failure_memory`. Registry persistence remains
+independent from the LLM gateway; runtime writes go through `MemoryAgentService`.
+
 ## DEC-0019: Resample OHLCV batches with deterministic domain rules
 
 Status: accepted
@@ -176,3 +181,23 @@ the runtime contract; silently forward unmatched bars downstream.
 
 Risks: Partial overlap is allowed by default, so higher-level services should set
 `min_overlap_ratio` or `require_full_overlap` when a strategy needs stricter data quality.
+
+## DEC-0022: Guard statistical pair boundaries with explicit alignment
+
+Status: accepted
+
+Decision: Run `scripts/check_pair_alignment_boundary.ps1` in local pre-commit and CI. The
+guard watches future pair/statistical modules and fails if they introduce pair testing
+boundaries without an explicit `align_ohlcv_pair`, `PairAlignmentResult`, or
+`aligned_timestamps` reference.
+
+Rationale: Timestamp alignment is now a data-quality contract, not an optional detail left
+to statistical tests. Adding the guard before the first statistical service prevents a
+future module from accepting two raw `OHLCVBatch` series and silently comparing mismatched
+timestamps.
+
+Alternatives considered: Wait until the Statistical Testing Agent exists; rely on code
+review only; put alignment checks inside every statistical function.
+
+Risks: The guard is intentionally conservative and may need a narrow allowlist once the
+statistical package layout becomes concrete.

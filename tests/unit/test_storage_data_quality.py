@@ -1,5 +1,6 @@
 """Unit tests for durable data quality report persistence."""
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from shutil import rmtree
@@ -112,7 +113,17 @@ def test_persist_ohlcv_ingestion_result_writes_registry_and_sidecars(session: Se
         assert report.issues == []
         assert stored.metadata_path.exists()
         assert stored.report_path.exists()
-        assert stored.report_path.read_text(encoding="utf-8").count("parquet_paths") == 1
+        metadata_payload = json.loads(stored.metadata_path.read_text(encoding="utf-8"))
+        report_payload = json.loads(stored.report_path.read_text(encoding="utf-8"))
+
+        assert metadata_payload["dataset_id"] == dataset.dataset_id
+        assert metadata_payload["quality_report_id"] == report.report_id
+        assert metadata_payload["symbol_mapping"] == {"BTC/USDT": "BTCUSDT"}
+        assert metadata_payload["parquet_paths"] == [str(path) for path in ingestion_result.parquet_paths]
+        assert metadata_payload["quality_report_path"] == str(stored.report_path)
+        assert report_payload["report_id"] == report.report_id
+        assert report_payload["metadata_path"] == str(stored.metadata_path)
+        assert report_payload["parquet_paths"] == [str(path) for path in ingestion_result.parquet_paths]
     finally:
         rmtree(output_root, ignore_errors=True)
         rmtree(metadata_root, ignore_errors=True)

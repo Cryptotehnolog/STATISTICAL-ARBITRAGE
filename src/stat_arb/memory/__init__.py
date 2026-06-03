@@ -11,6 +11,10 @@ from stat_arb.memory.aperag_client import (
     MemoryWriteRequest,
 )
 from stat_arb.memory.config import ApeRAGConfig
+from stat_arb.memory.data_quality import (
+    data_quality_failure_memory_request,
+    write_data_quality_failure_memory,
+)
 from stat_arb.memory.policy import (
     MemoryAgentPolicy,
     MemoryAgentService,
@@ -32,4 +36,6 @@ __all__ = [
     "MemoryPolicyViolation",
     "MemoryWriteRequest",
     "MemoryWriteResult",
+    "data_quality_failure_memory_request",
+    "write_data_quality_failure_memory",
 ]

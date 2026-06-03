@@ -5,6 +5,7 @@ $checkScript = Join-Path $PSScriptRoot "check.ps1"
 $russianCheckScript = Join-Path $PSScriptRoot "check_user_facing_russian.ps1"
 $secretLeakCheckScript = Join-Path $PSScriptRoot "check_secret_leaks.ps1"
 $memoryContractsCheckScript = Join-Path $PSScriptRoot "check_memory_contracts.ps1"
+$pairAlignmentBoundaryCheckScript = Join-Path $PSScriptRoot "check_pair_alignment_boundary.ps1"
 $legacyMemoryBackendSurfaceCheckScript = Join-Path $PSScriptRoot "check_no_legacy_memory_backend_user_surface.ps1"
 $legacyMemoryBackendImportsCheckScript = Join-Path $PSScriptRoot "check_no_legacy_memory_backend_imports.ps1"
 
@@ -12,6 +13,7 @@ Write-Output "Запуск локального pre-commit checklist..."
 Write-Output "- Русификация user-facing текста: check_user_facing_russian.ps1"
 Write-Output "- Secret leak guard: check_secret_leaks.ps1"
 Write-Output "- Проверка memory contracts: check_memory_contracts.ps1"
+Write-Output "- Проверка pair alignment boundary: check_pair_alignment_boundary.ps1"
 Write-Output "- Проверка активной пользовательской memory surface: check_no_legacy_memory_backend_user_surface.ps1"
 Write-Output "- Проверка отсутствия legacy memory backend imports: check_no_legacy_memory_backend_imports.ps1"
 Write-Output "- Unit и lint baseline: check.ps1"
@@ -22,6 +24,7 @@ try {
     & $russianCheckScript
     & $secretLeakCheckScript
     & $memoryContractsCheckScript
+    & $pairAlignmentBoundaryCheckScript
     & $legacyMemoryBackendSurfaceCheckScript
     & $legacyMemoryBackendImportsCheckScript
     & $checkScript

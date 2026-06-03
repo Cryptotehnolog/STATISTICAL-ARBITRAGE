@@ -119,13 +119,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - **Validates: Requirements 2.6**
     - Test that aligned timestamps exist in both series
 
-  - [ ] 4.9 Implement data quality report generation
+  - [x] 4.9 Implement data quality report generation
     - Generate comprehensive quality reports with all validation results
     - Store reports in SQLite registry with dataset IDs
     - Write validation failures to ApeRAG
     - _Requirements: 2.7-2.9_
   
-  - [ ] 4.10 Implement dataset provenance tracking
+  - [x] 4.10 Implement dataset provenance tracking
     - Store source, download time, symbol mapping, timeframe, adjustment mode
     - Create metadata JSON sidecar files
     - _Requirements: 2.10_

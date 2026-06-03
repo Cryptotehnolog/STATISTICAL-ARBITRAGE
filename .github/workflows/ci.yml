@@ -44,6 +44,10 @@ jobs:
         shell: pwsh
         run: ./scripts/check_secret_leaks.ps1
 
+      - name: Check pair alignment boundary
+        shell: pwsh
+        run: ./scripts/check_pair_alignment_boundary.ps1
+
       - name: Run Ruff
         run: uv run ruff check --no-cache src tests
 
