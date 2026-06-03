@@ -178,7 +178,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - **Validates: Requirements 4.7**
     - Verify Z-scores have mean ≈ 0 and std ≈ 1
   
-  - [ ] 6.9 Implement regime change detection
+  - [x] 6.9 Implement regime change detection
     - Use Chow test or rolling statistics to detect structural breaks
     - Flag regime changes in test results
     - _Requirements: 4.9_

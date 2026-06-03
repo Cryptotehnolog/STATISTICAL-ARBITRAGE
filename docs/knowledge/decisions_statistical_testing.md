@@ -137,3 +137,23 @@ partial-window early signals; persist signal rows from the helper itself.
 Risks: The helper does not decide entry/exit thresholds or trading direction. Those rules
 belong to later signal/backtest tasks and must preserve the pair orientation established by
 hedge-ratio estimation.
+
+## DEC-0036: Detect regime changes before backtest signal generation
+
+Status: accepted
+
+Decision: Implement regime change detection under `stat_arb.statistical` as a pure helper
+that compares adjacent rolling windows for mean shifts and volatility shifts, returning
+typed structural break candidates.
+
+Rationale: Pair strategies can pass cointegration and stationarity checks on one segment
+while becoming unstable after a structural break. Regime detection belongs before signal
+generation and backtesting so the Statistical Testing Agent can flag unstable pairs rather
+than feeding them blindly into entry/exit rules.
+
+Alternatives considered: Skip regime checks until the Critic Agent; implement a full Chow
+test immediately; put regime logic inside the backtest engine.
+
+Risks: Rolling-statistics detection is a pragmatic first screen, not a complete structural
+break test suite. Later services should persist detected breakpoints and can add Chow-style
+or model-based tests when pair testing workflows are mature.
