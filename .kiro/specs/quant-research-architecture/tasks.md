@@ -140,7 +140,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Apply multiple testing correction (Bonferroni or Benjamini-Hochberg)
     - _Requirements: 4.3, 4.8_
   
-  - [ ] 6.2 Implement ADF test for residuals (Python)
+  - [x] 6.2 Implement ADF test for residuals (Python)
     - Create ADF test function using statsmodels
     - Test stationarity of spread
     - _Requirements: 4.4_

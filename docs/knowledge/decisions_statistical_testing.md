@@ -41,3 +41,22 @@ correction until the future Hypothesis Agent.
 
 Risks: The correction method must be selected at the service/workflow boundary once batch
 pair screening exists.
+
+## DEC-0029: Keep ADF residual stationarity testing pure
+
+Status: accepted
+
+Decision: Implement ADF stationarity testing under `stat_arb.statistical` as a pure helper
+that accepts spread residuals, validates one-dimensional finite non-constant input, and
+returns a typed `ADFTestResult`.
+
+Rationale: Residual construction, hedge ratio estimation, registry persistence, and ApeRAG
+lesson writes belong to later Statistical Testing Agent tasks. The ADF helper should only
+answer whether the residual/spread series rejects the unit-root null under an explicit
+alpha threshold.
+
+Alternatives considered: Combine residual construction and ADF in one function; run ADF
+inside the Engle-Granger helper; write statistical results directly from the ADF function.
+
+Risks: Callers remain responsible for providing residuals generated from aligned data and a
+documented hedge-ratio method until the full Statistical Testing Agent service is built.
