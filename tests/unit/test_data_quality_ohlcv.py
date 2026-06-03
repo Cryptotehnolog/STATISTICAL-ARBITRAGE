@@ -4,8 +4,18 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from stat_arb.data_quality import OHLCVQualityConfig, validate_ohlcv_batch
-from stat_arb.domain import DataQualitySeverity, DatasetSource, OHLCVBar, OHLCVBatch
+from stat_arb.data_quality import (
+    OHLCVQualityConfig,
+    summarize_data_quality_failure,
+    validate_ohlcv_batch,
+)
+from stat_arb.domain import (
+    DataQualityFailureSummary,
+    DataQualitySeverity,
+    DatasetSource,
+    OHLCVBar,
+    OHLCVBatch,
+)
 
 
 def _bar(index: int, *, volume: float = 10.0) -> OHLCVBar:
@@ -100,3 +110,29 @@ def test_validate_ohlcv_batch_rejects_empty_or_mixed_series() -> None:
     wrong_symbol = _bar(1).model_copy(update={"symbol": "ETH/USDT"})
     with pytest.raises(ValueError, match="first bar symbol"):
         validate_ohlcv_batch([_bar(0), wrong_symbol])
+
+
+def test_summarize_data_quality_failure_builds_memory_safe_contract() -> None:
+    """Failed reports should produce concise summaries for future Memory Agent writes."""
+    report = validate_ohlcv_batch([_bar(0), _bar(2)])
+
+    summary = summarize_data_quality_failure(report)
+
+    assert summary.report_id == report.report_id
+    assert summary.dataset_id == report.dataset_id
+    assert summary.symbol == "BTC/USDT"
+    assert summary.issue_codes == ["missing_bars"]
+    assert summary.registry_reference == f"data_quality_reports/{report.report_id}"
+    assert "failed data quality validation" in summary.summary
+    assert "missing_bars: 1" in summary.summary
+
+    restored = DataQualityFailureSummary.model_validate_json(summary.model_dump_json())
+    assert restored == summary
+
+
+def test_summarize_data_quality_failure_rejects_passing_reports() -> None:
+    """Passing reports should not be written to failure memory."""
+    report = validate_ohlcv_batch([_bar(0), _bar(1), _bar(2)])
+
+    with pytest.raises(ValueError, match="Only failed data quality reports"):
+        summarize_data_quality_failure(report)

@@ -353,6 +353,36 @@ class DataQualityReport(DomainModel):
         return self
 
 
+class DataQualityFailureSummary(DomainModel):
+    """Concise memory-safe summary of a failed data quality report."""
+
+    report_id: UUID
+    dataset_id: UUID
+    symbol: str = Field(min_length=1, max_length=50)
+    source: DatasetSource
+    timeframe: str = Field(pattern=r"^\d+[mhdw]$")
+    quality_score: float = Field(ge=0.0, le=1.0)
+    issue_codes: list[str] = Field(min_length=1)
+    summary: str = Field(min_length=1)
+    registry_reference: str = Field(min_length=1)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        """Normalize asset symbols to uppercase compact strings."""
+        return value.strip().upper()
+
+    @field_validator("issue_codes")
+    @classmethod
+    def normalize_issue_codes(cls, value: list[str]) -> list[str]:
+        """Normalize issue codes for stable Memory Agent matching."""
+        normalized = [code.strip().lower() for code in value if code.strip()]
+        if not normalized:
+            raise ValueError("issue_codes must include at least one non-empty code")
+        return sorted(dict.fromkeys(normalized))
+
+
 class StatisticalTestResult(DomainModel):
     """Statistical validation result for a pair."""
 

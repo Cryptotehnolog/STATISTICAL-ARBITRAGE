@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from stat_arb.domain import (
+    DataQualityFailureSummary,
     DataQualityIssue,
     DataQualityReport,
     DataQualitySeverity,
@@ -136,6 +137,38 @@ def validate_ohlcv_batch(
         quality_score=quality_score,
         passed=passed,
         issues=issues,
+    )
+
+
+def summarize_data_quality_failure(report: DataQualityReport) -> DataQualityFailureSummary:
+    """Build a concise Memory Agent input from a failed quality report."""
+    if report.passed:
+        raise ValueError("Only failed data quality reports can be summarized as failures")
+
+    error_issues = [
+        issue for issue in report.issues if issue.severity == DataQualitySeverity.ERROR
+    ]
+    blocking_issues = error_issues or report.issues
+    issue_codes = [issue.code for issue in blocking_issues]
+    issue_fragments = [
+        f"{issue.code}: {issue.count}" for issue in blocking_issues
+    ]
+    summary = (
+        f"Dataset {report.symbol} {report.timeframe} from {report.source} failed "
+        f"data quality validation. Quality score {report.quality_score:.3f}; "
+        f"issues: {', '.join(issue_fragments)}."
+    )
+
+    return DataQualityFailureSummary(
+        report_id=report.report_id,
+        dataset_id=report.dataset_id,
+        symbol=report.symbol,
+        source=report.source,
+        timeframe=report.timeframe,
+        quality_score=report.quality_score,
+        issue_codes=issue_codes,
+        summary=summary,
+        registry_reference=f"data_quality_reports/{report.report_id}",
     )
 
 

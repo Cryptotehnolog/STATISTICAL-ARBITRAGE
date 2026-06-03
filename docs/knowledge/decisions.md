@@ -294,3 +294,23 @@ an experiment exists; put registry writes directly inside the CCXT source adapte
 Risks: Failed validation summaries are not yet written to LightRAG by this helper. That
 belongs behind the future Memory Agent boundary so registry writes do not depend on an LLM
 gateway.
+
+## DEC-0018: Keep data-quality failure summaries as pure contracts
+
+Status: accepted
+
+Decision: Use `DataQualityFailureSummary` and `summarize_data_quality_failure` as a pure
+contract for future Memory Agent writes. The helper converts a failed `DataQualityReport`
+into a concise summary with issue codes and a registry reference, without calling LightRAG
+or writing storage state.
+
+Rationale: Data Agent and registry code should not depend directly on an LLM gateway.
+Structured metrics stay in the registry, while the future Memory Agent receives only a
+small, memory-safe failure summary.
+
+Alternatives considered: Write failed validation summaries directly to LightRAG from the
+quality validator; store all issue details in LightRAG; wait until Memory Agent exists
+before defining the contract.
+
+Risks: The summary is intentionally concise. If later Memory Agent workflows need richer
+context, add fields explicitly rather than passing the full raw report to LightRAG.

@@ -256,8 +256,8 @@ sidecars, but failed validation summaries should be written through the Memory A
 boundary rather than coupling storage helpers directly to LightRAG.
 
 Follow-up:
-- Add a small failure-summary contract for `DataQualityReport` errors.
-- Route the summary through the Memory Agent when that agent owns LightRAG writes.
+- Route `DataQualityFailureSummary` through the Memory Agent when that agent owns LightRAG
+  writes.
 - Keep structured numeric metrics and report IDs in the registry; store only concise
   lessons, rejection reasons, and links in LightRAG.
 
