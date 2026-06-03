@@ -97,3 +97,22 @@ NumPy formulas without regression metadata; defer hedge ratio until backtesting.
 
 Risks: The helper does not decide which asset should be dependent versus independent. The
 future Statistical Testing Agent workflow must document and persist that pair orientation.
+
+## DEC-0032: Estimate half-life from residual mean reversion
+
+Status: accepted
+
+Decision: Implement half-life estimation under `stat_arb.statistical` as a pure helper that
+fits `delta_residual ~ lagged_residual`, derives the AR(1) phi value, and returns half-life
+in both periods and days.
+
+Rationale: Half-life is a statistical property of the spread/residual series and should be
+computed before signal construction and backtesting. Keeping the helper pure allows
+synthetic OU-style tests and avoids registry or ApeRAG coupling before service integration.
+
+Alternatives considered: Estimate half-life directly inside z-score signal construction;
+store only the raw regression beta; defer half-life until the Backtest Agent.
+
+Risks: Half-life estimates are sensitive to sample length and residual construction. The
+future Statistical Testing Agent should persist method assumptions and reject non-positive
+mean-reversion estimates explicitly.

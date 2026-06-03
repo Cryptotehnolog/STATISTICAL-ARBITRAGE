@@ -157,7 +157,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Calculate R² for regression quality
     - _Requirements: 4.5_
 
-  - [ ] 6.5 Implement half-life estimation
+  - [x] 6.5 Implement half-life estimation
     - Calculate mean reversion speed from residuals
     - Use Ornstein-Uhlenbeck process estimation
     - _Requirements: 4.6_
