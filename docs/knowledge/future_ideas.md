@@ -56,3 +56,19 @@ runtime storage, and reseeds only `docs/knowledge/*.md` through the OpenAI-compa
 provider.
 
 Outcome: Superseded by ApeRAG curated seeding and graph freshness checks.
+
+## IDEA-0006: Agent execution observability inspired by patoles/agent-flow
+
+Status: proposed
+
+Idea: Evaluate `patoles/agent-flow` as a developer tool for visualizing Codex sessions, then
+decide whether to build a project-native agent observability view for Statistical
+Arbitrage. The native view should follow the same concept of a live graph, timeline,
+transcript, tool calls, and file attention, but use our own name, branding, and data model.
+
+Why later: Real project agents are not implemented yet. Building the UI now would risk
+visualizing mostly empty flows. The better moment is after Statistical Testing Agent,
+Backtest Agent, Critic Agent, and Memory Agent boundaries start emitting structured events.
+
+Notes: Do not copy the Agent Flow trademark, logo, or exact branding. Apache-2.0 makes the
+technical approach reusable, but the project should keep its own design identity.
