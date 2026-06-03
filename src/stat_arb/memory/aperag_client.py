@@ -211,6 +211,61 @@ class ApeRAGMemoryClient:
         """Return ApeRAG API health payload."""
         return self._request("GET", "/api/v1/health")
 
+    def ensure_collection(
+        self,
+        *,
+        title: str,
+        description: str,
+        enable_knowledge_graph: bool = False,
+    ) -> ApeRAGCollection:
+        """Create a collection when missing and return its effective config."""
+        try:
+            return self.get_collection(title)
+        except ApeRAGError:
+            pass
+
+        config = {
+            "source": "system",
+            "enable_vector": True,
+            "enable_fulltext": True,
+            "enable_knowledge_graph": enable_knowledge_graph,
+            "enable_summary": False,
+            "enable_vision": False,
+            "language": "en-US",
+            "embedding": {
+                "model": self.config.embedding_model,
+                "model_service_provider": self.config.embedding_provider,
+                "custom_llm_provider": "openai",
+                "timeout": 60,
+            },
+            "completion": {
+                "model": self.config.completion_model,
+                "model_service_provider": self.config.completion_provider,
+                "custom_llm_provider": "openai",
+                "temperature": 0.1,
+                "max_tokens": 2048,
+                "timeout": 120,
+            },
+        }
+        created = self._request(
+            "POST",
+            "/api/v1/collections",
+            json_body={
+                "title": title,
+                "description": description,
+                "type": "document",
+                "config": config,
+            },
+        )
+        return ApeRAGCollection(
+            id=str(created["id"]),
+            title=str(created["title"]),
+            description=created.get("description"),
+            enable_vector=True,
+            enable_fulltext=True,
+            enable_knowledge_graph=enable_knowledge_graph,
+        )
+
     def get_collection(self, title: str | None = None) -> ApeRAGCollection:
         """Find a collection by title and return its effective memory config."""
         collection_title = title or self.config.collection_title
@@ -248,6 +303,10 @@ class ApeRAGMemoryClient:
             )
             for item in data.get("items", [])
         ]
+
+    def delete_document(self, *, collection_id: str, document_id: str) -> None:
+        """Delete one ApeRAG document from a collection."""
+        self._request("DELETE", f"/api/v1/collections/{collection_id}/documents/{document_id}")
 
     def search(
         self,

@@ -73,3 +73,5 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   contracts and `MemoryWriteRequest` for future Memory Agent writes.
 - Memory Agent policy layer exists in `MemoryAgentService`; future agents must write
   operational memory through policy checks, not directly through `ApeRAGMemoryClient`.
+- ApeRAG operational agent memory has a dedicated `stat-arb-agent-memory` collection smoke
+  path through `scripts/check_aperag_agent_memory.ps1`.

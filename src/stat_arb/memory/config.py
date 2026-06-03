@@ -50,6 +50,22 @@ class ApeRAGConfig(BaseSettings):
         ge=0.0,
         le=1.0,
     )
+    embedding_provider: str = Field(
+        default="stat-arb-local-embeddings",
+        description="ApeRAG model service provider for embeddings",
+    )
+    embedding_model: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        description="ApeRAG embedding model",
+    )
+    completion_provider: str = Field(
+        default="stat-arb-omniroute",
+        description="ApeRAG model service provider for completion",
+    )
+    completion_model: str = Field(
+        default="my-ai",
+        description="ApeRAG completion model or combo",
+    )
 
     @property
     def normalized_api_base_url(self) -> str:

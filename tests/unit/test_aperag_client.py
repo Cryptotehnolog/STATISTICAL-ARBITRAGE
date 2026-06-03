@@ -73,6 +73,40 @@ def test_get_collection_reads_detail_config() -> None:
     assert collection.enable_knowledge_graph is True
 
 
+def test_ensure_collection_creates_agent_collection_when_missing() -> None:
+    """Client should create the operational agent memory collection when absent."""
+    seen_payload = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal seen_payload
+        if request.url.path == "/api/v1/collections" and request.method == "GET":
+            return httpx.Response(200, json={"items": []})
+        if request.url.path == "/api/v1/collections" and request.method == "POST":
+            seen_payload = json.loads(request.content)
+            return httpx.Response(
+                200,
+                json={
+                    "id": "agent-col",
+                    "title": "stat-arb-agent-memory",
+                    "description": "Operational memory",
+                },
+            )
+        return httpx.Response(404)
+
+    client = make_client(httpx.MockTransport(handler))
+
+    collection = client.ensure_collection(
+        title="stat-arb-agent-memory",
+        description="Operational memory",
+    )
+
+    assert collection.id == "agent-col"
+    assert seen_payload["config"]["enable_vector"] is True
+    assert seen_payload["config"]["enable_fulltext"] is True
+    assert seen_payload["config"]["enable_knowledge_graph"] is False
+    assert seen_payload["config"]["embedding"]["model_service_provider"] == "stat-arb-local-embeddings"
+
+
 def test_list_documents_normalizes_readiness() -> None:
     """Document status should expose active-memory readiness."""
 
@@ -105,6 +139,25 @@ def test_list_documents_normalizes_readiness() -> None:
 
     assert docs[0].name == "agent_memory_contracts.md"
     assert docs[0].is_ready is True
+
+
+def test_delete_document_uses_document_delete_endpoint() -> None:
+    """Client should expose document deletion for stable smoke writes."""
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal seen
+        seen = {"method": request.method, "path": request.url.path}
+        return httpx.Response(200, json={"ok": True})
+
+    client = make_client(httpx.MockTransport(handler))
+
+    client.delete_document(collection_id="col-1", document_id="doc-1")
+
+    assert seen == {
+        "method": "DELETE",
+        "path": "/api/v1/collections/col-1/documents/doc-1",
+    }
 
 
 def test_search_sends_bounded_vector_and_fulltext_payload() -> None:

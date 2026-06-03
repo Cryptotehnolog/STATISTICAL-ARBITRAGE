@@ -74,15 +74,21 @@ references but does not write registry rows. It supports topic, entity, and rela
 queries for other agents.
 
 Memory has two layers. Curated project knowledge is the development/architecture memory
-seeded from `docs/knowledge/*.md`. Operational agent memory is a separate write layer for
-runtime lessons, hypotheses, validation failures, critic reviews, and report summaries.
-Agents may read curated project knowledge, but agent writes must target operational memory
-through policy-controlled contracts.
+seeded from `docs/knowledge/*.md`; it should contain stable contracts, safety rules, and
+accepted architecture decisions, not raw development chatter. Operational agent memory is a
+separate `stat-arb-agent-memory` collection for runtime lessons, hypotheses, validation
+failures, critic reviews, and report summaries. Agents may read curated project knowledge
+only for stable rules and contracts. Agent writes must target operational memory through
+policy-controlled contracts.
 
 The read boundary is `ApeRAGMemoryClient`: use it for health checks, collection discovery,
 document readiness, search, and graph summaries. Runtime writes must pass through
 `MemoryAgentService` with `MemoryWriteRequest`; agents must not write raw logs, secrets,
 prompts, or metric-heavy payloads directly to ApeRAG.
+
+Use `scripts/check_aperag_agent_memory.ps1` for an end-to-end smoke that creates or checks
+the operational collection, writes one policy-approved smoke lesson, waits for indexes, and
+verifies search.
 
 ## Source References
 
