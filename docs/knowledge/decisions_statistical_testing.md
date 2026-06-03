@@ -117,3 +117,23 @@ store only the raw regression beta; defer half-life until the Backtest Agent.
 Risks: Half-life estimates are sensitive to sample length and residual construction. The
 future Statistical Testing Agent should persist method assumptions and reject non-positive
 mean-reversion estimates explicitly.
+
+## DEC-0033: Construct rolling Z-scores as a pure signal helper
+
+Status: accepted
+
+Decision: Implement rolling Z-score construction under `stat_arb.statistical` as a pure
+helper that accepts finite one-dimensional spread residuals, requires a full rolling
+window, and returns typed arrays for Z-scores, rolling mean, and rolling standard
+deviation.
+
+Rationale: Z-scores are the boundary between statistical validation and later trading
+signal generation. Keeping them pure makes the calculation easy to test and prevents early
+coupling to the registry, ApeRAG, or backtesting services.
+
+Alternatives considered: Build Z-score logic directly into the Backtest Agent; allow
+partial-window early signals; persist signal rows from the helper itself.
+
+Risks: The helper does not decide entry/exit thresholds or trading direction. Those rules
+belong to later signal/backtest tasks and must preserve the pair orientation established by
+hedge-ratio estimation.

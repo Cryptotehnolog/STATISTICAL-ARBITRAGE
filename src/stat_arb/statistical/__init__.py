@@ -9,6 +9,7 @@ from stat_arb.statistical.cointegration import (
 from stat_arb.statistical.hedge_ratio import HedgeRatioResult, estimate_hedge_ratio
 from stat_arb.statistical.mean_reversion import HalfLifeResult, estimate_half_life
 from stat_arb.statistical.stationarity import ADFTestResult, adf_stationarity_test
+from stat_arb.statistical.zscore import ZScoreResult, construct_rolling_zscore
 
 __all__ = [
     "ADFTestResult",
@@ -16,8 +17,10 @@ __all__ = [
     "HalfLifeResult",
     "HedgeRatioResult",
     "MultipleTestingMethod",
+    "ZScoreResult",
     "adf_stationarity_test",
     "adjust_p_values",
+    "construct_rolling_zscore",
     "engle_granger_cointegration_test",
     "estimate_half_life",
     "estimate_hedge_ratio",

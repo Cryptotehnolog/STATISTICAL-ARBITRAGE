@@ -168,7 +168,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Generate OU processes with known half-lives
     - Verify estimation within 20% tolerance
   
-  - [ ] 6.7 Implement Z-score signal construction
+  - [x] 6.7 Implement Z-score signal construction
     - Calculate rolling mean and standard deviation
     - Standardize residuals to Z-scores
     - _Requirements: 4.7_
