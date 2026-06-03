@@ -30,6 +30,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   storage recovery, because incremental apply can create duplicate source docs.
 - Curated shards: keep `docs/knowledge/*.md` synchronized with material Kiro planning
   changes and reseed LightRAG after updates.
+- Decisions shard split: split `docs/knowledge/decisions.md` into smaller thematic shards
+  because it is now large enough to slow clean LightRAG rebuilds.
 - Infisical recovery: define backup and restore discipline before deleting Docker volumes
   or rotating encryption keys.
 - Kiro skills cleanup: verify Codex can use installed `rust-skills`, then remove duplicate

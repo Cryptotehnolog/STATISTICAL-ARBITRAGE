@@ -1,6 +1,6 @@
 param(
-    [string]$Query = "What is the rule for deferred do later work in this project?",
-    [string[]]$Expect = @("technical_debt.md", "docs/knowledge"),
+    [string]$Query = "According to the project knowledge, what is the active LightRAG LLM gateway and what documents should regular curated seeding use?",
+    [string[]]$Expect = @("OmniRoute", "docs/knowledge"),
     [int]$QueryTimeoutSeconds = 240,
     [switch]$SkipQuery,
     [switch]$SkipDocker,

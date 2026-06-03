@@ -18,7 +18,7 @@ def test_memory_fresh_guard_checks_seed_doc_status_export_and_query() -> None:
     assert "check_lightrag_graph_export.ps1" in script
     assert "export_lightrag_graph.ps1" in script
     assert "query_lightrag_curated.ps1" in script
-    assert "technical_debt.md" in script
+    assert "OmniRoute" in script
     assert "docs/knowledge" in script
     assert "kv_store_doc_status.json" in script
     assert "duplicate source_id" in script

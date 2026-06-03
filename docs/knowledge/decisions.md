@@ -236,3 +236,22 @@ dictionaries; defer validation until the future Data Agent service.
 Risks: `OHLCVBar` and `OHLCVBatch` already reject impossible candles and non-positive
 prices, so runtime outlier reporting for those conditions requires a later raw-row
 validation layer if ingestion should preserve malformed source rows for diagnostics.
+
+## DEC-0015: Run fast Python CI on Ubuntu without external services
+
+Status: accepted
+
+Decision: Add a GitHub Actions workflow on `ubuntu-latest` for push, pull request, and
+manual dispatch. The workflow installs dependencies with `uv`, runs user-facing Russian
+text checks, secret leak checks, Ruff, and fast unit tests. It intentionally excludes
+OmniRoute, Infisical auth, LightRAG seeding, and other local service checks.
+
+Rationale: The project is developed on Windows but is expected to move to an Ubuntu server.
+Running fast CI on Ubuntu catches portability issues early while keeping GitHub Actions
+free from local secrets and long-running LLM dependencies.
+
+Alternatives considered: Windows-only CI; running the local PowerShell `check.ps1`; adding
+OmniRoute and Infisical integration checks to every push.
+
+Risks: CI does not yet cover external service readiness, property tests, or reproducibility
+checks. Those remain separate follow-up tasks under the CI section.

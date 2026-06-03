@@ -216,6 +216,21 @@ Follow-up:
 
 Related tasks: 4.9, 4.10, 15.1.
 
+### TD-0015: Split large curated decisions memory shard
+
+Status: open
+
+Why deferred: `docs/knowledge/decisions.md` is now large enough to make clean LightRAG
+rebuilds slow and close to curated seed limits.
+
+Follow-up:
+- Split decisions into smaller curated shards by theme, for example architecture,
+  memory/LLM, data pipeline, and CI.
+- Keep the shard names stable so LightRAG source IDs remain human-readable.
+- Rebuild LightRAG after the split and confirm graph export plus query smoke still pass.
+
+Related tasks: 2.3, 18.1, 19.1.
+
 ## Closed
 
 ### TD-CLOSED-0001: Make coverage artifacts part of runtime cleanup
