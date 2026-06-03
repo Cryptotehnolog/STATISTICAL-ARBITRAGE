@@ -239,3 +239,22 @@ Alternatives considered: Keep round-trip tests only for the first few models; re
 Pydantic defaults; defer complete serialization tests until API endpoints exist.
 
 Risks: Future domain entities must be added to the round-trip baseline when introduced.
+
+## DEC-0026: Use a deterministic checkpoint for Data Agent readiness
+
+Status: accepted
+
+Decision: Use `scripts/check_data_pipeline.ps1` as the task 5 readiness command. The
+checkpoint uses fake CCXT rows and an in-memory SQLite registry to verify ingestion,
+quality validation, Parquet persistence, registry rows, JSON sidecars, and failed quality
+memory writes through `MemoryAgentService`.
+
+Rationale: Checkpoint 5 should prove existing data-pipeline boundaries work together
+without depending on live exchange availability, Docker, Infisical, OmniRoute, or ApeRAG
+runtime latency.
+
+Alternatives considered: Call a live CCXT exchange; rely only on unit tests; run a manual
+sequence of separate commands.
+
+Risks: Live exchange smoke remains a separate opt-in follow-up because rate limits and
+network behavior should not block the fast local checkpoint.
