@@ -10,6 +10,8 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -482,6 +484,97 @@ def test_experiment_lifecycle(session: Session):
     assert result.status == "data_validation"
     assert result.data_quality_passed is True
     assert result.hypothesis.asset_a == "AAPL"
+
+
+def _persist_experiment_snapshot(payload: dict[str, str]) -> dict[str, object]:
+    engine = create_engine("sqlite:///:memory:", echo=False)
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine)
+    db_session = session_factory()
+    created_at = datetime(2024, 1, 1, 12, 0, 0)
+    try:
+        hypothesis = Hypothesis(
+            hypothesis_id=payload["hypothesis_id"],
+            asset_a=payload["asset_a"],
+            asset_b=payload["asset_b"],
+            rationale=payload["rationale"],
+            source="property_test",
+            novelty_score=0.75,
+            status="new",
+            created_by="test",
+            created_at=created_at,
+        )
+        experiment = Experiment(
+            experiment_id=payload["experiment_id"],
+            hypothesis_id=payload["hypothesis_id"],
+            status="data_validation",
+            current_agent="data_agent",
+            data_quality_passed=True,
+            created_at=created_at,
+        )
+        db_session.add_all([hypothesis, experiment])
+        db_session.commit()
+
+        stored = db_session.query(Experiment).one()
+        return {
+            "experiment_id": stored.experiment_id,
+            "hypothesis_id": stored.hypothesis_id,
+            "status": stored.status,
+            "current_agent": stored.current_agent,
+            "data_quality_passed": stored.data_quality_passed,
+            "created_at": stored.created_at.isoformat(),
+            "asset_a": stored.hypothesis.asset_a,
+            "asset_b": stored.hypothesis.asset_b,
+            "rationale": stored.hypothesis.rationale,
+            "source": stored.hypothesis.source,
+            "novelty_score": stored.hypothesis.novelty_score,
+        }
+    finally:
+        db_session.close()
+        engine.dispose()
+
+
+@pytest.mark.property
+@settings(max_examples=100, deadline=None)
+@given(
+    hypothesis_id=st.uuids().map(str),
+    experiment_id=st.uuids().map(str),
+    asset_a=st.text(
+        alphabet=st.characters(whitelist_categories=("Lu",), min_codepoint=65, max_codepoint=90),
+        min_size=1,
+        max_size=8,
+    ),
+    asset_b=st.text(
+        alphabet=st.characters(whitelist_categories=("Lu",), min_codepoint=65, max_codepoint=90),
+        min_size=1,
+        max_size=8,
+    ),
+    rationale=st.text(
+        alphabet=st.characters(whitelist_categories=("Ll", "Lu", "Nd"), min_codepoint=32, max_codepoint=126),
+        min_size=1,
+        max_size=80,
+    ),
+)
+def test_identical_experiment_data_produces_identical_registry_records(
+    hypothesis_id: str,
+    experiment_id: str,
+    asset_a: str,
+    asset_b: str,
+    rationale: str,
+) -> None:
+    """Property 14: identical experiment data should persist reproducibly."""
+    payload = {
+        "hypothesis_id": hypothesis_id,
+        "experiment_id": experiment_id,
+        "asset_a": asset_a,
+        "asset_b": asset_b,
+        "rationale": rationale,
+    }
+
+    first_snapshot = _persist_experiment_snapshot(payload)
+    second_snapshot = _persist_experiment_snapshot(payload)
+
+    assert first_snapshot == second_snapshot
 
 
 def test_report_artifact_creation(session: Session):

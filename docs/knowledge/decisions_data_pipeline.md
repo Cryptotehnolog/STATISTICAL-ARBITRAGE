@@ -220,3 +220,22 @@ defer all property tests until production hardening.
 
 Risks: Current `DataQualityReport` domain validation requires `end_date` to be after
 `start_date`, so one-bar quality reports remain a separate contract decision.
+
+## DEC-0025: Require JSON round-trip coverage for every domain entity
+
+Status: accepted
+
+Decision: Task 3.2 is complete only when every Pydantic domain entity has validation tests
+and at least one JSON serialization/deserialization round-trip check. The round-trip
+baseline covers hypotheses, datasets, OHLCV bars and batches, data quality issues and
+reports, data-quality failure summaries, statistical tests, backtests, critic reviews,
+experiments, and report artifacts.
+
+Rationale: Agents will pass domain objects through files, registry boundaries, API
+payloads, and memory summaries. A model that validates on construction but fails
+serialization is not a stable contract.
+
+Alternatives considered: Keep round-trip tests only for the first few models; rely on
+Pydantic defaults; defer complete serialization tests until API endpoints exist.
+
+Risks: Future domain entities must be added to the round-trip baseline when introduced.

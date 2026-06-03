@@ -53,3 +53,22 @@ OmniRoute and Infisical integration checks to every push.
 
 Risks: CI does not yet cover external service readiness, property tests, or reproducibility
 checks. Those remain separate follow-up tasks under the CI section.
+
+## DEC-0024: Close bootstrap tasks 1-4 only after registry reproducibility property test
+
+Status: accepted
+
+Decision: Treat tasks 1-4 as complete only when repository setup, core infrastructure,
+domain models, and Data Agent quality validation all have executable checks. Task 2.2 adds
+Property 14 by persisting identical experiment payloads into clean SQLite registries and
+verifying identical stored snapshots.
+
+Rationale: The Structured Registry is the source of truth for experiment state. Before the
+project moves into checkpoint 5 and statistical testing, identical experiment inputs should
+produce stable records rather than relying on ad-hoc manual inspection.
+
+Alternatives considered: Skip optional task 2.2; close parent task 2 because the schema
+already existed; defer reproducibility checks until final MVP validation.
+
+Risks: This property currently covers the experiment/hypothesis registry boundary only.
+Broader reproducibility checks for full experiment artifacts remain later MVP work.

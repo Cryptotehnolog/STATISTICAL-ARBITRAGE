@@ -37,14 +37,14 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - Create initial `README.md` with project overview and setup instructions
   - _Requirements: 22.1, 17.1-17.8, 27.1-27.16_
 
-- [ ] 2. Set up core infrastructure and storage layer
+- [x] 2. Set up core infrastructure and storage layer
   - [x] 2.1 Create SQLite database schema for Structured Registry
     - Define tables for hypotheses, datasets, statistical tests, backtests, critic reviews, experiments
     - Implement database initialization script
     - Create database migration utilities
     - _Requirements: 9.1-9.11, 27.14_
 
-  - [ ]* 2.2 Write property test for database schema integrity
+  - [x]* 2.2 Write property test for database schema integrity
     - **Property 14: Experiment Reproducibility**
     - **Validates: Requirements 10.9**
     - Test that identical experiment data produces identical database records
@@ -62,7 +62,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Document required secrets in `.env.example`
     - _Requirements: 16.1-16.10_
 
-- [ ] 3. Implement data models and validation
+- [x] 3. Implement data models and validation
   - [x] 3.1 Create Pydantic data models for all entities
     - Implement Hypothesis, Dataset, StatisticalTestResult, BacktestResult, CriticReview, Experiment models
     - Add validation rules and type constraints
