@@ -23,14 +23,14 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Runtime memory backend: revisit FAISS versus NanoVectorDB once memory-agent workflows
   are implemented.
 - Chroma: run a compatibility spike before advertising Chroma as an active LightRAG backend.
-- Knowledge seeding automation: consider post-commit or scheduled local seeding only after
-  seed runs are stable and bounded. Use `scripts/check_lightrag_memory_fresh.ps1` before
-  agent-facing memory work.
+- Knowledge seeding automation: keep agent-facing memory checks explicit until ApeRAG
+  ingestion, vector search, and graph extraction are proven stable. Use
+  `scripts/check_aperag_knowledge.ps1` before agent-facing memory work.
 - Curated memory changes should use `scripts/rebuild_lightrag_curated.ps1` for persistent
   storage recovery until source replacement is implemented, because incremental apply can
   create duplicate source docs for modified shards.
 - Curated shards: keep `docs/knowledge/*.md` synchronized with material Kiro planning
-  changes and reseed LightRAG after updates.
+  changes and reseed ApeRAG after updates.
 - LightRAG source replacement: implement safe deletion/replacement by curated `source_id`
   before making incremental apply the normal path for modified shards.
 - GitHub Actions Node.js 24 migration: CI is green, but GitHub warns Node.js 20 actions are
@@ -50,6 +50,9 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   and dataset provenance are wired to the registry.
 - Data-quality failure memory: route `DataQualityFailureSummary` to LightRAG through the
   future Memory Agent boundary, while keeping numeric report details in the registry.
+- ApeRAG graph parity: enable and validate ApeRAG knowledge graph extraction through
+  OmniRoute before deleting LightRAG runtime/code, because current ApeRAG migration has
+  vector and full-text parity only.
 
 ## Closed Follow-up
 

@@ -16,8 +16,8 @@ Why deferred: Current development runs on Windows and uses PowerShell scripts.
 
 Follow-up:
 - Add Linux-friendly shell commands or `.sh` wrappers for the core local workflow.
-- Verify `uv sync`, Ruff, pytest, SQLite, Parquet, FAISS/NanoVectorDB, LightRAG, Infisical
-  Docker Compose, graph export, and CCXT smoke on Ubuntu.
+- Verify `uv sync`, Ruff, pytest, SQLite, Parquet, ApeRAG Docker Compose, Infisical
+  Docker Compose, memory checks, and CCXT smoke on Ubuntu.
 - Document the server migration path before deploying to an Ubuntu host.
 
 Related tasks: 18.1, 19.1, 22.4.
@@ -31,7 +31,7 @@ does not yet have a concrete operator checklist for server migration.
 
 Follow-up:
 - Document exact Ubuntu setup commands for `uv sync`, Docker, Infisical, OmniRoute,
-  LightRAG seeding, graph export, and checks.
+  ApeRAG seeding, embedding endpoint, and checks.
 - Include expected paths, environment variables, and validation commands.
 - Keep this separate from Windows PowerShell commands or provide equivalent `.sh` wrappers.
 
@@ -104,7 +104,7 @@ Follow-up:
 - Keep manual/assistant-run seed scripts as the default.
 - Consider a local scheduled workflow or post-commit helper only after seed runs are stable
   and bounded.
-- Use `scripts/check_lightrag_memory_fresh.ps1` before agent-facing memory work.
+- Use `scripts/check_aperag_knowledge.ps1` before agent-facing memory work.
 
 Related tasks: 11.1, 11.2.
 
@@ -112,12 +112,12 @@ Related tasks: 11.1, 11.2.
 
 Status: open
 
-Why deferred: Large Kiro specs are intentionally not seeded directly into LightRAG.
+Why deferred: Large Kiro specs are intentionally not seeded directly into ApeRAG.
 
 Follow-up:
 - Run the shard suggestion workflow after major `.kiro` planning changes.
 - Update `docs/knowledge/*.md` when architecture or requirements materially change.
-- Re-seed curated LightRAG memory after shard updates.
+- Re-seed curated ApeRAG memory after shard updates.
 
 Related tasks: 11.1, 19.3.
 
@@ -250,21 +250,36 @@ Follow-up:
 
 Related tasks: 18.1, 18.4.
 
-### TD-0017: Write data-quality validation failures to LightRAG through Memory Agent
+### TD-0017: Write data-quality validation failures to ApeRAG through Memory Agent
 
 Status: open
 
 Why deferred: Dataset registry persistence now stores passed quality reports and JSON
 sidecars, but failed validation summaries should be written through the Memory Agent
-boundary rather than coupling storage helpers directly to LightRAG.
+boundary rather than coupling storage helpers directly to ApeRAG.
 
 Follow-up:
-- Route `DataQualityFailureSummary` through the Memory Agent when that agent owns LightRAG
+- Route `DataQualityFailureSummary` through the Memory Agent when that agent owns ApeRAG
   writes.
 - Keep structured numeric metrics and report IDs in the registry; store only concise
-  lessons, rejection reasons, and links in LightRAG.
+  lessons, rejection reasons, and links in ApeRAG.
 
 Related tasks: 4.9, 11.1, 11.4.
+
+### TD-0018: Validate ApeRAG graph parity before removing LightRAG
+
+Status: open
+
+Why deferred: ApeRAG now has working vector and full-text indexing for curated project
+memory, but graph extraction through OmniRoute has not been enabled and benchmarked yet.
+
+Follow-up:
+- Enable ApeRAG knowledge graph extraction for the curated collection.
+- Run a bounded graph build on `docs/knowledge/*.md` and verify graph labels/export/search.
+- Delete LightRAG code, scripts, runtime assumptions, and viewer only after ApeRAG graph
+  parity is proven or explicitly rejected.
+
+Related tasks: 11.1, 11.2, memory backend migration.
 
 ## Closed
 
