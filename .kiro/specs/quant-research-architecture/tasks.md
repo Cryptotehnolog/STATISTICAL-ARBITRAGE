@@ -134,7 +134,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Build Statistical Testing Agent
-  - [ ] 6.1 Implement Engle-Granger cointegration test (Python)
+  - [x] 6.1 Implement Engle-Granger cointegration test (Python)
     - Create cointegration test function using statsmodels
     - Calculate test statistic and p-value
     - Apply multiple testing correction (Bonferroni or Benjamini-Hochberg)

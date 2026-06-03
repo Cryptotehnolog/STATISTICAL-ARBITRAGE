@@ -12,6 +12,8 @@ regular memory updates do not reprocess one oversized document.
   local-first infrastructure constraints.
 - `docs/knowledge/decisions_data_pipeline.md`: domain contracts, CCXT ingestion, OHLCV
   validation, registry persistence, resampling.
+- `docs/knowledge/decisions_statistical_testing.md`: Engle-Granger cointegration,
+  multiple-testing correction, and Statistical Testing Agent boundaries.
 
 ## Operating Rule
 
