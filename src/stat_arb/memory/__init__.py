@@ -16,6 +16,12 @@ from stat_arb.memory.aperag_client import (
 )
 from stat_arb.memory.config import ApeRAGConfig, LightRAGConfig
 from stat_arb.memory.lightrag_client import LightRAGClient
+from stat_arb.memory.policy import (
+    MemoryAgentPolicy,
+    MemoryAgentService,
+    MemoryPolicyViolation,
+    MemoryWriteResult,
+)
 
 __all__ = [
     "ApeRAGCollection",
@@ -28,5 +34,9 @@ __all__ = [
     "LightRAGClient",
     "LightRAGConfig",
     "MemoryRecordType",
+    "MemoryAgentPolicy",
+    "MemoryAgentService",
+    "MemoryPolicyViolation",
     "MemoryWriteRequest",
+    "MemoryWriteResult",
 ]

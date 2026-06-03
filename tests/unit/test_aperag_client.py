@@ -168,6 +168,51 @@ def test_get_graph_summary_counts_labels_nodes_and_edges() -> None:
     assert summary.is_non_empty is True
 
 
+def test_write_markdown_document_uploads_and_confirms_document() -> None:
+    """Client write hook should upload Markdown and confirm returned document IDs."""
+    seen_paths: list[str] = []
+    seen_upload_body = b""
+    seen_confirm_payload = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal seen_upload_body, seen_confirm_payload
+        seen_paths.append(request.url.path)
+        if request.url.path == "/api/v1/collections":
+            return httpx.Response(
+                200,
+                json={"items": [{"id": "agent-col", "title": "stat-arb-agent-memory"}]},
+            )
+        if request.url.path == "/api/v1/collections/agent-col":
+            return httpx.Response(
+                200,
+                json={"id": "agent-col", "title": "stat-arb-agent-memory", "config": {}},
+            )
+        if request.url.path == "/api/v1/collections/agent-col/documents":
+            seen_upload_body = request.content
+            assert "multipart/form-data" in request.headers["Content-Type"]
+            return httpx.Response(200, json={"items": [{"id": "doc-1"}]})
+        if request.url.path == "/api/v1/collections/agent-col/documents/confirm":
+            seen_confirm_payload = json.loads(request.content)
+            return httpx.Response(200, json={"ok": True})
+        return httpx.Response(404)
+
+    client = make_client(httpx.MockTransport(handler))
+
+    document_ids = client.write_markdown_document(
+        filename="lesson-1.md",
+        content="# Lesson\n\nUse ApeRAG safely.",
+    )
+
+    assert document_ids == ["doc-1"]
+    assert seen_paths[-2:] == [
+        "/api/v1/collections/agent-col/documents",
+        "/api/v1/collections/agent-col/documents/confirm",
+    ]
+    assert b"lesson-1.md" in seen_upload_body
+    assert b"Use ApeRAG safely." in seen_upload_body
+    assert seen_confirm_payload == {"document_ids": ["doc-1"]}
+
+
 def test_http_errors_are_wrapped_without_api_key() -> None:
     """Client errors should not leak the bearer token."""
 

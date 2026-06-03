@@ -29,6 +29,10 @@ class ApeRAGConfig(BaseSettings):
         default="stat-arb-project-knowledge",
         description="Default ApeRAG collection used for project memory",
     )
+    agent_collection_title: str = Field(
+        default="stat-arb-agent-memory",
+        description="ApeRAG collection used for operational agent memory writes",
+    )
     timeout_seconds: float = Field(
         default=60.0,
         description="HTTP timeout in seconds for ApeRAG requests",

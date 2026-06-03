@@ -71,3 +71,5 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   returned non-empty labels, nodes, and edges.
 - ApeRAG client boundary exists in `ApeRAGMemoryClient` with typed search/readiness/graph
   contracts and `MemoryWriteRequest` for future Memory Agent writes.
+- Memory Agent policy layer exists in `MemoryAgentService`; future agents must write
+  operational memory through policy checks, not directly through `ApeRAGMemoryClient`.

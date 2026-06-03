@@ -183,6 +183,30 @@ class ApeRAGMemoryClient:
             raise ApeRAGError(f"ApeRAG returned non-object JSON: {path}")
         return data
 
+    def _request_files(
+        self,
+        method: str,
+        path: str,
+        *,
+        files: dict[str, tuple[str, bytes, str]],
+    ) -> dict[str, Any]:
+        """Send a multipart request to ApeRAG and wrap failures."""
+        url = f"{self.config.normalized_api_base_url}{path}"
+        headers = {}
+        if self.config.api_key:
+            headers["Authorization"] = f"Bearer {self.config.api_key}"
+        try:
+            response = self._client.request(method, url, headers=headers, files=files)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPStatusError as exc:
+            raise ApeRAGError(f"ApeRAG HTTP {exc.response.status_code}: {path}") from exc
+        except httpx.HTTPError as exc:
+            raise ApeRAGError(f"ApeRAG request failed: {path}") from exc
+        if not isinstance(data, dict):
+            raise ApeRAGError(f"ApeRAG returned non-object JSON: {path}")
+        return data
+
     def health_check(self) -> dict[str, Any]:
         """Return ApeRAG API health payload."""
         return self._request("GET", "/api/v1/health")
@@ -269,6 +293,37 @@ class ApeRAGMemoryClient:
             nodes=len(graph.get("nodes") or []),
             edges=len(graph.get("edges") or []),
         )
+
+    def write_markdown_document(
+        self,
+        *,
+        filename: str,
+        content: str,
+        collection_title: str | None = None,
+        collection_id: str | None = None,
+    ) -> list[str]:
+        """Upload and confirm one Markdown document through ApeRAG.
+
+        Agent code should not call this directly. Use the Memory Agent policy layer so
+        writes are screened before they reach long-term memory.
+        """
+        resolved_collection_id = collection_id or self.get_collection(
+            collection_title or self.config.agent_collection_title
+        ).id
+        upload = self._request_files(
+            "POST",
+            f"/api/v1/collections/{resolved_collection_id}/documents",
+            files={"files": (filename, content.encode("utf-8"), "text/markdown")},
+        )
+        document_ids = [str(item["id"]) for item in upload.get("items", []) if item.get("id")]
+        if not document_ids:
+            raise ApeRAGError(f"ApeRAG did not return document IDs for {filename}")
+        self._request(
+            "POST",
+            f"/api/v1/collections/{resolved_collection_id}/documents/confirm",
+            json_body={"document_ids": document_ids},
+        )
+        return document_ids
 
     @staticmethod
     def _parse_search_result(item: dict[str, Any]) -> ApeRAGSearchResult:

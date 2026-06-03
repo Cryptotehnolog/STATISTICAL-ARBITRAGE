@@ -73,10 +73,16 @@ The Memory Agent owns ApeRAG read/write operations. It reads registry records fo
 references but does not write registry rows. It supports topic, entity, and relationship
 queries for other agents.
 
-The code boundary is `ApeRAGMemoryClient`: use it for health checks, collection discovery,
+Memory has two layers. Curated project knowledge is the development/architecture memory
+seeded from `docs/knowledge/*.md`. Operational agent memory is a separate write layer for
+runtime lessons, hypotheses, validation failures, critic reviews, and report summaries.
+Agents may read curated project knowledge, but agent writes must target operational memory
+through policy-controlled contracts.
+
+The read boundary is `ApeRAGMemoryClient`: use it for health checks, collection discovery,
 document readiness, search, and graph summaries. Runtime writes must pass through
-`MemoryWriteRequest` or a richer Memory Agent policy layer; agents must not write raw logs,
-secrets, prompts, or metric-heavy payloads directly to ApeRAG.
+`MemoryAgentService` with `MemoryWriteRequest`; agents must not write raw logs, secrets,
+prompts, or metric-heavy payloads directly to ApeRAG.
 
 ## Source References
 
