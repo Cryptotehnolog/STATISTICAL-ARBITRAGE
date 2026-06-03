@@ -44,8 +44,9 @@ $bannedPatterns = @(
 function Test-IsExcluded {
     param([string]$RelativePath)
 
+    $normalized = $RelativePath -replace "/", "\"
     foreach ($part in $excludedPathParts) {
-        if ($RelativePath.StartsWith($part, [System.StringComparison]::OrdinalIgnoreCase)) {
+        if ($normalized.StartsWith($part, [System.StringComparison]::OrdinalIgnoreCase)) {
             return $true
         }
     }
