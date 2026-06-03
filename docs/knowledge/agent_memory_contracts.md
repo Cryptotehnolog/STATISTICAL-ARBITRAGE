@@ -73,6 +73,11 @@ The Memory Agent owns ApeRAG read/write operations. It reads registry records fo
 references but does not write registry rows. It supports topic, entity, and relationship
 queries for other agents.
 
+The code boundary is `ApeRAGMemoryClient`: use it for health checks, collection discovery,
+document readiness, search, and graph summaries. Runtime writes must pass through
+`MemoryWriteRequest` or a richer Memory Agent policy layer; agents must not write raw logs,
+secrets, prompts, or metric-heavy payloads directly to ApeRAG.
+
 ## Source References
 
 - `.kiro/specs/quant-research-architecture/requirements.md`

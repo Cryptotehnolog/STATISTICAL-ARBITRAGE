@@ -49,7 +49,7 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - OmniRoute benchmarking: re-run model ordering benchmark when provider behavior changes.
 - Data ingestion CLI: add user-facing ingestion command only after quality report generation
   and dataset provenance are wired to the registry.
-- Data-quality failure memory: route `DataQualityFailureSummary` to LightRAG through the
+- Data-quality failure memory: route `DataQualityFailureSummary` to ApeRAG through the
   future Memory Agent boundary, while keeping numeric report details in the registry.
 - ApeRAG human graph view: decide whether to build a local ApeRAG graph viewer or use ApeRAG UI
   before deleting the legacy LightRAG viewer workflow.
@@ -69,3 +69,5 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - ApeRAG graph parity is proven for the main curated collection. `stat-arb-project-knowledge`
   has vector, full-text, and graph indexes active for all 10 curated shards, and graph endpoints
   returned non-empty labels, nodes, and edges.
+- ApeRAG client boundary exists in `ApeRAGMemoryClient` with typed search/readiness/graph
+  contracts and `MemoryWriteRequest` for future Memory Agent writes.
