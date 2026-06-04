@@ -1,7 +1,9 @@
 param(
     [string]$EnvFile = "data\aperag\.env",
     [string]$CollectionTitle = "stat-arb-project-knowledge",
-    [string]$Query = "What are the current memory backend decisions for the Statistical Arbitrage project?"
+    [string]$Query = "What are the current memory backend decisions for the Statistical Arbitrage project?",
+    [string[]]$Keywords = @(),
+    [string[]]$ExpectedText = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,6 +42,22 @@ function Invoke-ApeRagJson {
     return Invoke-RestMethod -Method $Method -Uri $uri -Headers $headers -Body $json -TimeoutSec 60
 }
 
+function Get-SearchKeywords {
+    param([string]$Text)
+
+    $stopWords = @(
+        "about", "after", "and", "are", "because", "before", "current", "for",
+        "from", "how", "into", "project", "statistical", "the", "this", "what",
+        "when", "where", "which", "why", "with"
+    )
+    $tokens = [regex]::Matches($Text.ToLowerInvariant(), "[a-z0-9][a-z0-9_-]{2,}") |
+        ForEach-Object { $_.Value } |
+        Where-Object { $stopWords -notcontains $_ } |
+        Select-Object -Unique
+
+    return @($tokens | Select-Object -First 8)
+}
+
 Write-Output "Проверка ApeRAG knowledge..."
 
 $collections = Invoke-ApeRagJson -Method "GET" -Path "/api/v1/collections?page=1&page_size=100"
@@ -70,6 +88,14 @@ if ($badDocs.Count -gt 0) {
     Write-Error "ApeRAG documents имеют неготовые индексы: $($badDocs.Count)"
 }
 
+$resolvedKeywords = @($Keywords | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() })
+if ($resolvedKeywords.Count -eq 0) {
+    $resolvedKeywords = @(Get-SearchKeywords -Text $Query)
+}
+if ($resolvedKeywords.Count -eq 0) {
+    Write-Error "ApeRAG search keywords пусты. Передайте -Keywords или более содержательный -Query."
+}
+
 $search = Invoke-ApeRagJson -Method "POST" -Path "/api/v1/collections/$($collection.id)/searches" -Body @{
     query = $Query
     vector_search = @{
@@ -78,7 +104,7 @@ $search = Invoke-ApeRagJson -Method "POST" -Path "/api/v1/collections/$($collect
     }
     fulltext_search = @{
         topk = 5
-        keywords = @("ApeRAG", "memory", "backend")
+        keywords = $resolvedKeywords
     }
     save_to_history = $false
     rerank = $false
@@ -88,4 +114,20 @@ if (-not $search.items -or $search.items.Count -eq 0) {
     Write-Error "ApeRAG smoke search не вернул results."
 }
 
-Write-Output "ApeRAG knowledge OK: docs=$($docs.items.Count), search_results=$($search.items.Count)"
+$combinedText = (($search.items | ForEach-Object {
+    $titles = ""
+    if ($_.metadata -and $_.metadata.titles) {
+        $titles = ($_.metadata.titles -join " ")
+    }
+    "$($_.content) $($_.text) $($_.source) $($_.metadata.title) $titles"
+}) -join "`n")
+$missingExpected = @(
+    $ExpectedText | Where-Object {
+        $_ -and $combinedText -notmatch [regex]::Escape($_)
+    }
+)
+if ($missingExpected.Count -gt 0) {
+    Write-Error "ApeRAG search results не содержат expected text: $($missingExpected -join ', ')"
+}
+
+Write-Output "ApeRAG knowledge OK: docs=$($docs.items.Count), search_results=$($search.items.Count), keywords=$($resolvedKeywords -join ', ')"
