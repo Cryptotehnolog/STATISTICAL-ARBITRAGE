@@ -227,8 +227,8 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - **Validates: Requirements 5.9**
     - Verify turnover formula correctness
   
-  - [ ] 7.6 Implement walk-forward validation for backtests
-    - Use rolling train/test windows (60 days train, 30 days test)
+  - [x] 7.6 Implement walk-forward validation for backtests
+    - Use explicit rolling train/test window configuration
     - Non-overlapping test windows
     - Minimum 3 windows required
     - _Requirements: 5.2_

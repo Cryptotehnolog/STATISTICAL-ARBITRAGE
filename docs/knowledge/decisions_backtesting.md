@@ -75,3 +75,25 @@ capital constant; defer turnover until a full portfolio accounting service exist
 Risks: Early tests need to pass a synthetic capital assumption. That is acceptable in unit
 tests, but production backtests must persist the actual capital assumption or portfolio
 value source alongside the result.
+
+## DEC-0042: Backtest walk-forward windows require explicit period counts
+
+Status: accepted
+
+Decision: Backtest walk-forward validation uses an explicit `BacktestWalkForwardConfig`
+with `train_size`, `test_size`, `step_size`, and `min_folds` expressed in observation
+periods. The backtest core does not default to historical planning examples such as 60
+training days and 30 testing days.
+
+Rationale: Day-based windows depend on timeframe, calendar, exchange sessions, and missing
+data. If the core silently converts days to bars, it can hide assumptions about 15-minute
+bars, 24/7 crypto trading, or session calendars. Service and CLI layers may translate
+human-readable windows into period counts, but the reusable backtest boundary must receive
+the exact counts it will use.
+
+Alternatives considered: Hard-code 60/30 day windows from the planning spec; use the
+statistical helper default step behavior; defer walk-forward until the full agent service.
+
+Risks: Operators must choose window sizes explicitly. This is intentional: future Backtest
+Agent and Critic Agent checks should evaluate the selected windows rather than inherit
+invisible defaults.

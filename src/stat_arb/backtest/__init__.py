@@ -15,12 +15,21 @@ from stat_arb.backtest.costs import (
     calculate_pair_pnl,
     calculate_turnover,
 )
+from stat_arb.backtest.walk_forward import (
+    BacktestWalkForwardConfig,
+    BacktestWalkForwardFold,
+    BacktestWalkForwardResult,
+    run_walk_forward_backtest_core,
+)
 
 __all__ = [
     "BacktestAction",
     "BacktestCoreResult",
     "BacktestCostConfig",
     "BacktestStep",
+    "BacktestWalkForwardConfig",
+    "BacktestWalkForwardFold",
+    "BacktestWalkForwardResult",
     "CostAssumptionStatus",
     "CostAttribution",
     "PnLAttributionResult",
@@ -28,4 +37,5 @@ __all__ = [
     "calculate_pair_pnl",
     "calculate_turnover",
     "run_pair_backtest_core",
+    "run_walk_forward_backtest_core",
 ]
