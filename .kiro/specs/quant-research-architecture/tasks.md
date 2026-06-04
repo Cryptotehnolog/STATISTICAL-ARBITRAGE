@@ -222,7 +222,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Compute turnover = traded_value / (period * avg_portfolio_value)
     - _Requirements: 5.9_
   
-  - [ ]* 7.5 Write property test for turnover calculation
+  - [x]* 7.5 Write property test for turnover calculation
     - **Property 12: Turnover Calculation Consistency**
     - **Validates: Requirements 5.9**
     - Verify turnover formula correctness

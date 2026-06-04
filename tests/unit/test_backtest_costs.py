@@ -281,6 +281,38 @@ def test_pair_pnl_conservation_property(
     assert result.net_pnl + result.costs.total_cost == pytest.approx(result.gross_pnl)
 
 
+@pytest.mark.property
+@settings(max_examples=80, deadline=None)
+@given(
+    traded_value=st.floats(min_value=0.0, max_value=10_000_000.0, allow_nan=False, allow_infinity=False),
+    periods=st.integers(min_value=1, max_value=10_000),
+    periods_per_day=st.floats(min_value=1.0, max_value=1440.0, allow_nan=False, allow_infinity=False),
+    average_portfolio_value=st.floats(
+        min_value=1.0,
+        max_value=100_000_000.0,
+        allow_nan=False,
+        allow_infinity=False,
+    ),
+)
+def test_turnover_formula_property(
+    traded_value: float,
+    periods: int,
+    periods_per_day: float,
+    average_portfolio_value: float,
+) -> None:
+    """Property 12: turnover should match traded value normalized by days and capital."""
+    turnover = calculate_turnover(
+        traded_value=traded_value,
+        periods=periods,
+        periods_per_day=periods_per_day,
+        average_portfolio_value=average_portfolio_value,
+    )
+
+    elapsed_days = periods / periods_per_day
+    assert turnover == pytest.approx(traded_value / (elapsed_days * average_portfolio_value))
+    assert turnover >= 0.0
+
+
 def _verified_cost_config() -> BacktestCostConfig:
     return BacktestCostConfig(
         commission_rate=0.001,
