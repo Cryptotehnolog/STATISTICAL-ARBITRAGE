@@ -212,7 +212,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Calculate net PnL = gross PnL - all costs
     - _Requirements: 5.3-5.8_
   
-  - [ ]* 7.3 Write property test for PnL conservation
+  - [x]* 7.3 Write property test for PnL conservation
     - **Property 11: Backtest PnL Conservation**
     - **Validates: Requirements 5.3-5.8**
     - Verify net_pnl + all_costs = gross_pnl within 0.01% tolerance

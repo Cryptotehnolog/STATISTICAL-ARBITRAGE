@@ -1,9 +1,11 @@
 """Unit tests for pair backtest PnL and cost attribution."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from stat_arb.backtest import (
     BacktestCostConfig,
@@ -120,6 +122,83 @@ def test_backtest_costs_do_not_expose_legacy_planning_defaults() -> None:
     assert "borrow_cost: float = Field(default=0.0" not in domain_models
     assert "funding_cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)" not in storage_models
     assert "borrow_cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)" not in storage_models
+
+
+@pytest.mark.property
+@settings(max_examples=50, deadline=None)
+@given(
+    prices_a=st.lists(
+        st.floats(min_value=1.0, max_value=1000.0, allow_nan=False, allow_infinity=False),
+        min_size=3,
+        max_size=40,
+    ),
+    prices_b=st.lists(
+        st.floats(min_value=1.0, max_value=1000.0, allow_nan=False, allow_infinity=False),
+        min_size=3,
+        max_size=40,
+    ),
+    z_scores=st.lists(
+        st.floats(min_value=-4.0, max_value=4.0, allow_nan=False, allow_infinity=False),
+        min_size=3,
+        max_size=40,
+    ),
+    hedge_ratio=st.floats(min_value=0.1, max_value=5.0, allow_nan=False, allow_infinity=False),
+    commission_rate=st.floats(min_value=0.0, max_value=0.01, allow_nan=False, allow_infinity=False),
+    spread_cost_rate=st.floats(min_value=0.0, max_value=0.01, allow_nan=False, allow_infinity=False),
+    slippage_rate=st.floats(min_value=0.0, max_value=0.01, allow_nan=False, allow_infinity=False),
+    funding_rate_daily=st.floats(min_value=0.0, max_value=0.01, allow_nan=False, allow_infinity=False),
+    borrow_rate_annual=st.floats(min_value=0.0, max_value=0.20, allow_nan=False, allow_infinity=False),
+)
+def test_pair_pnl_conservation_property(
+    prices_a: list[float],
+    prices_b: list[float],
+    z_scores: list[float],
+    hedge_ratio: float,
+    commission_rate: float,
+    spread_cost_rate: float,
+    slippage_rate: float,
+    funding_rate_daily: float,
+    borrow_rate_annual: float,
+) -> None:
+    """Property 11: net PnL plus all costs should equal gross PnL."""
+    observations = min(len(prices_a), len(prices_b), len(z_scores))
+    prices_a = prices_a[:observations]
+    prices_b = prices_b[:observations]
+    z_scores = z_scores[:observations]
+    core = run_pair_backtest_core(
+        prices_a=prices_a,
+        prices_b=prices_b,
+        z_scores=z_scores,
+        aligned_timestamps=[
+            datetime(2024, 1, 1, tzinfo=UTC) + timedelta(hours=index)
+            for index in range(observations)
+        ],
+        hedge_ratio=hedge_ratio,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
+    )
+    cost_config = BacktestCostConfig(
+        commission_rate=commission_rate,
+        spread_cost_rate=spread_cost_rate,
+        slippage_rate=slippage_rate,
+        funding_rate_daily=funding_rate_daily,
+        borrow_rate_annual=borrow_rate_annual,
+        status=CostAssumptionStatus.VERIFIED,
+        source="hypothesis-generated explicit test config",
+        verified_at=datetime(2024, 1, 1, tzinfo=UTC),
+        venue="property-test",
+        market_type="synthetic",
+    )
+
+    result = calculate_pair_pnl(core, cost_config=cost_config, periods_per_day=24.0)
+
+    assert result.costs.commission_cost >= 0.0
+    assert result.costs.spread_cost >= 0.0
+    assert result.costs.slippage_cost >= 0.0
+    assert result.costs.funding_cost >= 0.0
+    assert result.costs.borrow_cost >= 0.0
+    assert result.traded_value >= 0.0
+    assert result.net_pnl + result.costs.total_cost == pytest.approx(result.gross_pnl)
 
 
 def _verified_cost_config() -> BacktestCostConfig:
