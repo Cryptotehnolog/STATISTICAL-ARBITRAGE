@@ -50,6 +50,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - One-bar data quality reports: decide whether a single OHLCV bar should be invalid input
   or a valid diagnostic `DataQualityReport`; current domain validation rejects equal
   `start_date` and `end_date`.
+- Cost Assumption Agent: collect, verify, store, and refresh exchange/account-specific cost
+  snapshots; Backtest Agent must not use old planning percentages as trusted market data.
 - Agent RAG answer-quality evaluation: add an eval script only after the first agent
   generates answers from ApeRAG context; current checks validate retrieval readiness, not
   final answer quality.

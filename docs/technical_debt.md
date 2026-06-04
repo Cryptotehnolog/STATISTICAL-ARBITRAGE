@@ -8,6 +8,26 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0020: Add Cost Assumption Agent for verified market costs
+
+Status: open
+
+Why deferred: Task 7.2 implements the math boundary for PnL and cost attribution. Fetching,
+verifying, storing, and refreshing real exchange/account cost snapshots is a separate data
+acquisition and provenance workflow.
+
+Follow-up:
+- Add a Cost Assumption Agent or service that collects exchange fee schedules, funding
+  assumptions, borrow assumptions, and liquidity/slippage estimates.
+- Store cost snapshots in the registry with source, verification time, venue, market type,
+  status, and confidence.
+- Prevent Backtest Agent from using stale, rejected, or unverified cost snapshots unless a
+  human explicitly approves a manual assumption.
+- Keep old Kiro planning percentages out of runtime defaults and agent memory as trusted
+  market data.
+
+Related tasks: 7.2, 7.8, 10.5, 11.1, 15.6.
+
 ### TD-0019: Add agent RAG answer-quality evaluation
 
 Status: open

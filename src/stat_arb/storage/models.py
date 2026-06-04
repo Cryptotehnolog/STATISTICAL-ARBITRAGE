@@ -282,8 +282,8 @@ class BacktestResult(Base):
     commission_cost: Mapped[float] = mapped_column(Float, nullable=False)
     spread_cost: Mapped[float] = mapped_column(Float, nullable=False)
     slippage_cost: Mapped[float] = mapped_column(Float, nullable=False)
-    funding_cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    borrow_cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    funding_cost: Mapped[float] = mapped_column(Float, nullable=False)
+    borrow_cost: Mapped[float] = mapped_column(Float, nullable=False)
 
     # Trade statistics
     num_trades: Mapped[int] = mapped_column(Integer, nullable=False)

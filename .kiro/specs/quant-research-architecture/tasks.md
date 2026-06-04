@@ -202,13 +202,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Entry/exit logic based on thresholds
     - _Requirements: 5.1-5.2_
 
-  - [ ] 7.2 Implement PnL calculation with cost attribution
+  - [x] 7.2 Implement PnL calculation with cost attribution
     - Calculate gross PnL from position changes
-    - Calculate commissions (0.1% default)
-    - Calculate spread costs (0.05% default)
-    - Calculate slippage (0.02% default)
-    - Calculate funding rates for perpetual futures (0.01% per day)
-    - Calculate borrow costs for short positions (0.5% annualized)
+    - Calculate commissions from explicit verified/manual-approved cost config
+    - Calculate spread costs from explicit verified/manual-approved cost config
+    - Calculate slippage from explicit verified/manual-approved cost config
+    - Calculate funding rates for perpetual futures from explicit verified/manual-approved cost config
+    - Calculate borrow costs for short positions from explicit verified/manual-approved cost config
     - Calculate net PnL = gross PnL - all costs
     - _Requirements: 5.3-5.8_
   

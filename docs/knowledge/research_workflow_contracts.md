@@ -37,6 +37,10 @@ The Backtest Agent uses validated data and tested hypotheses. It tracks signals,
 gross PnL, net PnL, commissions, spread cost, slippage, funding cost, borrow cost, turnover,
 equity curve, drawdown, and report artifacts.
 
+Cost inputs must come from explicit `verified` or `manual_approved` cost snapshots with
+provenance. Historical planning percentages are not trusted cost assumptions and must not
+be used as runtime defaults.
+
 The registry stores the numbers and artifact references. ApeRAG stores conclusions,
 lessons learned, and notable regime/cost observations.
 

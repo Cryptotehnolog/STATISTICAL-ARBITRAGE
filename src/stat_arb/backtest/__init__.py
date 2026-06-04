@@ -7,11 +7,23 @@ from stat_arb.backtest.core import (
     SpreadPosition,
     run_pair_backtest_core,
 )
+from stat_arb.backtest.costs import (
+    BacktestCostConfig,
+    CostAssumptionStatus,
+    CostAttribution,
+    PnLAttributionResult,
+    calculate_pair_pnl,
+)
 
 __all__ = [
     "BacktestAction",
     "BacktestCoreResult",
+    "BacktestCostConfig",
     "BacktestStep",
+    "CostAssumptionStatus",
+    "CostAttribution",
+    "PnLAttributionResult",
     "SpreadPosition",
+    "calculate_pair_pnl",
     "run_pair_backtest_core",
 ]
