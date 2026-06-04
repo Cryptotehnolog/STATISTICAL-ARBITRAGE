@@ -13,6 +13,7 @@ from stat_arb.backtest.costs import (
     CostAttribution,
     PnLAttributionResult,
     calculate_pair_pnl,
+    calculate_turnover,
 )
 
 __all__ = [
@@ -25,5 +26,6 @@ __all__ = [
     "PnLAttributionResult",
     "SpreadPosition",
     "calculate_pair_pnl",
+    "calculate_turnover",
     "run_pair_backtest_core",
 ]

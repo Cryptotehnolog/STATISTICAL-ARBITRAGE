@@ -11,6 +11,7 @@ from stat_arb.backtest import (
     BacktestCostConfig,
     CostAssumptionStatus,
     calculate_pair_pnl,
+    calculate_turnover,
     run_pair_backtest_core,
 )
 
@@ -36,10 +37,16 @@ def test_calculate_pair_pnl_attributes_costs_and_preserves_net_formula() -> None
         exit_threshold=0.5,
     )
 
-    result = calculate_pair_pnl(core, cost_config=_verified_cost_config(), periods_per_day=96.0)
+    result = calculate_pair_pnl(
+        core,
+        cost_config=_verified_cost_config(),
+        periods_per_day=96.0,
+        average_portfolio_value=10_000.0,
+    )
 
     assert result.gross_pnl == pytest.approx(-1.0)
     assert result.traded_value == pytest.approx(401.0)
+    assert result.turnover == pytest.approx(401.0 / ((3 / 96.0) * 10_000.0))
     assert result.costs.commission_cost == pytest.approx(0.401)
     assert result.costs.spread_cost == pytest.approx(0.2005)
     assert result.costs.slippage_cost == pytest.approx(0.0802)
@@ -107,6 +114,73 @@ def test_calculate_pair_pnl_rejects_invalid_periods_per_day() -> None:
 
     with pytest.raises(ValueError, match="periods_per_day"):
         calculate_pair_pnl(core, cost_config=_verified_cost_config(), periods_per_day=0.0)
+
+
+def test_calculate_pair_pnl_requires_portfolio_value_for_positive_turnover() -> None:
+    """Positive traded value should not be normalized by an implicit capital assumption."""
+    core = run_pair_backtest_core(
+        prices_a=[100.0, 101.0],
+        prices_b=[100.0, 100.0],
+        z_scores=[2.1, 0.0],
+        aligned_timestamps=[
+            datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
+            datetime(2024, 1, 1, 0, 15, tzinfo=UTC),
+        ],
+        hedge_ratio=1.0,
+    )
+
+    with pytest.raises(ValueError, match="average_portfolio_value"):
+        calculate_pair_pnl(core, cost_config=_verified_cost_config(), periods_per_day=96.0)
+
+
+def test_calculate_turnover_uses_elapsed_days_and_average_portfolio_value() -> None:
+    """Turnover should equal traded value divided by elapsed days and portfolio value."""
+    turnover = calculate_turnover(
+        traded_value=50_000.0,
+        periods=48,
+        periods_per_day=96.0,
+        average_portfolio_value=100_000.0,
+    )
+
+    assert turnover == pytest.approx(1.0)
+
+
+def test_calculate_turnover_allows_zero_without_portfolio_value() -> None:
+    """No trading implies zero turnover even before capital is known."""
+    assert (
+        calculate_turnover(
+            traded_value=0.0,
+            periods=10,
+            periods_per_day=96.0,
+            average_portfolio_value=None,
+        )
+        == 0.0
+    )
+
+
+def test_calculate_turnover_rejects_invalid_inputs() -> None:
+    """Turnover should reject invalid traded value, period, and capital inputs."""
+    with pytest.raises(ValueError, match="traded_value"):
+        calculate_turnover(
+            traded_value=-1.0,
+            periods=10,
+            periods_per_day=96.0,
+            average_portfolio_value=100_000.0,
+        )
+    with pytest.raises(ValueError, match="periods"):
+        calculate_turnover(
+            traded_value=1.0,
+            periods=0,
+            periods_per_day=96.0,
+            average_portfolio_value=100_000.0,
+        )
+    with pytest.raises(ValueError, match="average_portfolio_value"):
+        calculate_turnover(
+            traded_value=1.0,
+            periods=10,
+            periods_per_day=96.0,
+            average_portfolio_value=0.0,
+        )
 
 
 def test_backtest_costs_do_not_expose_legacy_planning_defaults() -> None:
@@ -190,7 +264,12 @@ def test_pair_pnl_conservation_property(
         market_type="synthetic",
     )
 
-    result = calculate_pair_pnl(core, cost_config=cost_config, periods_per_day=24.0)
+    result = calculate_pair_pnl(
+        core,
+        cost_config=cost_config,
+        periods_per_day=24.0,
+        average_portfolio_value=max(prices_a[0] + hedge_ratio * prices_b[0], 1.0),
+    )
 
     assert result.costs.commission_cost >= 0.0
     assert result.costs.spread_cost >= 0.0
@@ -198,6 +277,7 @@ def test_pair_pnl_conservation_property(
     assert result.costs.funding_cost >= 0.0
     assert result.costs.borrow_cost >= 0.0
     assert result.traded_value >= 0.0
+    assert result.turnover >= 0.0
     assert result.net_pnl + result.costs.total_cost == pytest.approx(result.gross_pnl)
 
 

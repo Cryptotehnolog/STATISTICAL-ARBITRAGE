@@ -217,7 +217,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - **Validates: Requirements 5.3-5.8**
     - Verify net_pnl + all_costs = gross_pnl within 0.01% tolerance
   
-  - [ ] 7.4 Implement turnover calculation
+  - [x] 7.4 Implement turnover calculation
     - Calculate total traded value per period
     - Compute turnover = traded_value / (period * avg_portfolio_value)
     - _Requirements: 5.9_

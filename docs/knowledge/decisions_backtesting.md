@@ -54,3 +54,24 @@ Risks: Requiring explicit costs makes early tests more verbose, but it prevents 
 mistaking stale planning text for real exchange fees. A future Cost Assumption Agent should
 collect, verify, store, and refresh exchange-specific cost snapshots before production
 backtests.
+
+## DEC-0041: Turnover requires explicit portfolio value
+
+Status: accepted
+
+Decision: Daily turnover is calculated as `traded_value / (elapsed_days *
+average_portfolio_value)`. Backtest helpers may return zero turnover when no value is
+traded, but they must reject positive traded value unless `average_portfolio_value` is
+provided explicitly.
+
+Rationale: Turnover normalizes trading activity by capital. If the engine silently assumes
+portfolio value, the same trades can look harmless or excessive depending on an invisible
+capital number. Requiring an explicit average portfolio value keeps turnover reproducible
+and makes later Critic Agent checks on excessive turnover meaningful.
+
+Alternatives considered: Use gross exposure as implicit portfolio value; use a fixed MVP
+capital constant; defer turnover until a full portfolio accounting service exists.
+
+Risks: Early tests need to pass a synthetic capital assumption. That is acceptable in unit
+tests, but production backtests must persist the actual capital assumption or portfolio
+value source alongside the result.

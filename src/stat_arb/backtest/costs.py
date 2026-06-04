@@ -96,6 +96,7 @@ class PnLAttributionResult:
     net_pnl: float
     costs: CostAttribution
     traded_value: float
+    turnover: float
     observations: int
     num_trades: int
 
@@ -105,12 +106,17 @@ def calculate_pair_pnl(
     *,
     cost_config: BacktestCostConfig,
     periods_per_day: float,
+    average_portfolio_value: float | None = None,
 ) -> PnLAttributionResult:
     """Calculate pair backtest gross PnL, net PnL, and cost attribution."""
     if periods_per_day <= 0.0 or not np.isfinite(periods_per_day):
         raise ValueError("periods_per_day must be finite and positive")
     if core_result.observations < 2:
         raise ValueError("PnL calculation requires at least 2 observations")
+    if average_portfolio_value is not None and (
+        average_portfolio_value <= 0.0 or not np.isfinite(average_portfolio_value)
+    ):
+        raise ValueError("average_portfolio_value must be finite and positive")
 
     gross_pnl = 0.0
     traded_value = 0.0
@@ -151,9 +157,45 @@ def calculate_pair_pnl(
         net_pnl=float(gross_pnl - costs.total_cost),
         costs=costs,
         traded_value=float(traded_value),
+        turnover=calculate_turnover(
+            traded_value=traded_value,
+            periods=core_result.observations - 1,
+            periods_per_day=periods_per_day,
+            average_portfolio_value=average_portfolio_value,
+        ),
         observations=core_result.observations,
         num_trades=sum(1 for step in core_result.trades if step.action != BacktestAction.HOLD),
     )
+
+
+def calculate_turnover(
+    *,
+    traded_value: float,
+    periods: int,
+    periods_per_day: float,
+    average_portfolio_value: float | None,
+) -> float:
+    """Calculate daily turnover from traded value and average portfolio value.
+
+    Turnover is annualization-free: total traded value divided by elapsed days and average
+    portfolio value. If no portfolio value is provided, return 0 only when no value traded;
+    otherwise fail so callers cannot silently invent capital assumptions.
+    """
+    if not np.isfinite(traded_value) or traded_value < 0.0:
+        raise ValueError("traded_value must be finite and non-negative")
+    if isinstance(periods, bool) or not isinstance(periods, int) or periods < 1:
+        raise ValueError("periods must be a positive integer")
+    if not np.isfinite(periods_per_day) or periods_per_day <= 0.0:
+        raise ValueError("periods_per_day must be finite and positive")
+    if average_portfolio_value is None:
+        if traded_value == 0.0:
+            return 0.0
+        raise ValueError("average_portfolio_value is required when traded_value is positive")
+    if not np.isfinite(average_portfolio_value) or average_portfolio_value <= 0.0:
+        raise ValueError("average_portfolio_value must be finite and positive")
+
+    elapsed_days = periods / periods_per_day
+    return float(traded_value / (elapsed_days * average_portfolio_value))
 
 
 def _interval_gross_pnl(previous_step: BacktestStep, current_step: BacktestStep) -> float:
