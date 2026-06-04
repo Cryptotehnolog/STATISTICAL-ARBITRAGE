@@ -8,6 +8,24 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0019: Add agent RAG answer-quality evaluation
+
+Status: open
+
+Why deferred: ApeRAG retrieval checks now validate indexed documents, topic-specific
+keywords, graph readiness, and expected retrieved markers. A full answer-quality evaluation
+requires a real agent boundary that asks ApeRAG and generates a final answer, which does
+not exist yet.
+
+Follow-up:
+- Add a small eval script after the first agent produces answers from ApeRAG context.
+- Use fixed project questions with required facts, forbidden hallucinations, and expected
+  decision IDs.
+- Keep retrieval readiness checks separate from answer-quality checks so backend health and
+  agent reasoning failures are easy to distinguish.
+
+Related tasks: 11.2, 11.4, 13.4.
+
 ### TD-0018: Decide one-bar DataQualityReport contract
 
 Status: open

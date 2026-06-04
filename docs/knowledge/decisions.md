@@ -14,6 +14,8 @@ regular memory updates do not reprocess one oversized document.
   validation, registry persistence, resampling.
 - `docs/knowledge/decisions_statistical_testing.md`: Engle-Granger cointegration,
   multiple-testing correction, and Statistical Testing Agent boundaries.
+- `docs/knowledge/decisions_backtesting.md`: Backtest Agent signal generation, position
+  tracking, cost attribution, performance metrics, and reproducibility boundaries.
 
 ## Operating Rule
 

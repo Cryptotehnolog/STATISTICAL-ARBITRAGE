@@ -162,4 +162,8 @@ $manifest = [ordered]@{
 }
 $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestFile -Encoding UTF8
 
+if ($EnableGraph) {
+    .\scripts\enable_aperag_curated_graph.ps1 -EnvFile $EnvFile -CollectionTitle $CollectionTitle | Write-Output
+}
+
 Write-Output "ApeRAG curated seed завершен: collection=$($collection.id), shards=$($files.Count)"

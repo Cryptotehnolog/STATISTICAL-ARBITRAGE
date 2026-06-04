@@ -196,7 +196,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 4.1, 4.10, 4.11_
 
 - [ ] 7. Build Backtest Agent with cost attribution
-  - [ ] 7.1 Implement backtest engine core (Python)
+  - [x] 7.1 Implement backtest engine core (Python)
     - Signal generation from Z-scores
     - Position tracking with hedge ratio
     - Entry/exit logic based on thresholds

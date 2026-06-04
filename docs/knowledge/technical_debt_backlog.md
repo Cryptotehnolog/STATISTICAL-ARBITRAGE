@@ -50,6 +50,9 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - One-bar data quality reports: decide whether a single OHLCV bar should be invalid input
   or a valid diagnostic `DataQualityReport`; current domain validation rejects equal
   `start_date` and `end_date`.
+- Agent RAG answer-quality evaluation: add an eval script only after the first agent
+  generates answers from ApeRAG context; current checks validate retrieval readiness, not
+  final answer quality.
 - ApeRAG human graph view: ApeRAG UI is the default inspection path; build a local viewer only
   if the UI proves insufficient.
 
