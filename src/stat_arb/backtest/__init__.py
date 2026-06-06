@@ -22,6 +22,12 @@ from stat_arb.backtest.metrics import (
     PerformanceMetricsResult,
     calculate_performance_metrics,
 )
+from stat_arb.backtest.sensitivity import (
+    CostSensitivityAnalysisResult,
+    CostSensitivityScenario,
+    CostSensitivityScenarioResult,
+    run_cost_sensitivity_analysis,
+)
 from stat_arb.backtest.walk_forward import (
     BacktestWalkForwardConfig,
     BacktestWalkForwardFold,
@@ -39,6 +45,9 @@ __all__ = [
     "BacktestWalkForwardResult",
     "CostAssumptionStatus",
     "CostAttribution",
+    "CostSensitivityAnalysisResult",
+    "CostSensitivityScenario",
+    "CostSensitivityScenarioResult",
     "ExposureByAssetAndSide",
     "HoldingTimeMetrics",
     "PnLAttributionResult",
@@ -49,5 +58,6 @@ __all__ = [
     "calculate_performance_metrics",
     "calculate_turnover",
     "run_pair_backtest_core",
+    "run_cost_sensitivity_analysis",
     "run_walk_forward_backtest_core",
 ]

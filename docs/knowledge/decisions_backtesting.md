@@ -119,3 +119,23 @@ risk-free rate by default; defer metrics until registry persistence exists.
 
 Risks: Early tests need synthetic explicit configs. That verbosity is acceptable because it
 prevents future agents from treating examples as production assumptions.
+
+## DEC-0044: Cost sensitivity scenarios are explicit inputs
+
+Status: accepted
+
+Decision: Backtest cost sensitivity analysis runs through explicit
+`CostSensitivityScenario` inputs. The common 2x-cost and 0.5x-cost checks from the task
+plan are useful required scenarios for MVP validation, but they are not hidden runtime
+defaults inside the helper.
+
+Rationale: Sensitivity analysis is a comparison boundary, not a source of market truth.
+Future agents should choose and persist the exact stress scenarios used for a backtest,
+including scenario names and multipliers. Keeping scenarios explicit prevents reports from
+silently changing when a helper default changes.
+
+Alternatives considered: Hard-code 2x and 0.5x scenarios in the function; run only one
+manual stress case; defer sensitivity analysis until the reporting layer.
+
+Risks: Callers must pass scenario tuples even for standard MVP checks. That is intentional:
+experiment config and registry persistence should record the scenarios actually used.

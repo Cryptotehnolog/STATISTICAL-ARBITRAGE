@@ -241,7 +241,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Exposure by asset and side
     - _Requirements: 6.8_
 
-  - [ ] 7.8 Implement sensitivity analysis
+  - [x] 7.8 Implement sensitivity analysis
     - Test backtest with 2x costs and 0.5x costs
     - Compare net PnL under different cost assumptions
     - _Requirements: 6.10_
