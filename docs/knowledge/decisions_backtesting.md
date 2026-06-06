@@ -162,3 +162,27 @@ configuration.
 
 Risks: Baseline calls are more verbose. This is acceptable because agents must not inherit
 planning examples or convenient hidden values when assessing strategy quality.
+
+## DEC-0046: Reproducibility manifests hash all research assumptions
+
+Status: accepted
+
+Decision: Backtest experiment reproducibility uses an immutable manifest with git commit
+hash, stable config hash, dataset IDs, optional random seed, execution command, run
+timestamp, and dependency lock file hash. The config hash is calculated from explicit
+configuration components supplied by the caller, so baseline config, metric config, cost
+config, sensitivity scenarios, and future research assumptions can all be included in one
+canonical SHA-256 hash.
+
+Rationale: Recording only a top-level config name or a partial parameter subset would let a
+rerun be "almost the same" while silently changing baseline, cost, risk, or sensitivity
+assumptions. A canonical config hash makes those changes visible and gives the registry a
+compact reproducibility key.
+
+Alternatives considered: Store only git commit and dataset IDs; hash a raw YAML file
+without normalizing structured Python configs; defer reproducibility until registry
+integration.
+
+Risks: Callers must assemble the complete config component mapping. This is intentional:
+the future Backtest Agent service should own that assembly before writing to the registry
+or ApeRAG.

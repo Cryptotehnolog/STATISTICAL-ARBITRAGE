@@ -32,6 +32,12 @@ from stat_arb.backtest.metrics import (
     PerformanceMetricsResult,
     calculate_performance_metrics,
 )
+from stat_arb.backtest.reproducibility import (
+    ReproducibilityManifest,
+    calculate_config_hash,
+    create_reproducibility_manifest,
+    hash_file,
+)
 from stat_arb.backtest.sensitivity import (
     CostSensitivityAnalysisResult,
     CostSensitivityScenario,
@@ -69,12 +75,16 @@ __all__ = [
     "PerformanceMetricConfig",
     "PerformanceMetricsResult",
     "RandomSpreadBaselineConfig",
+    "ReproducibilityManifest",
     "SpreadPosition",
+    "calculate_config_hash",
     "calculate_pair_pnl",
     "calculate_performance_metrics",
     "calculate_turnover",
     "compare_to_buy_and_hold_baseline",
     "compare_to_random_spread_baseline",
+    "create_reproducibility_manifest",
+    "hash_file",
     "run_pair_backtest_core",
     "run_cost_sensitivity_analysis",
     "run_walk_forward_backtest_core",
