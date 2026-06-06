@@ -44,6 +44,21 @@ be used as runtime defaults.
 The registry stores the numbers and artifact references. ApeRAG stores conclusions,
 lessons learned, and notable regime/cost observations.
 
+## Defaults Policy
+
+Hidden research defaults are not allowed when a value changes statistical conclusions,
+backtest results, risk interpretation, costs, capital normalization, calendar assumptions,
+baseline behavior, or agent decisions. Those values must be explicit, verified, or selected
+through a named persisted preset that is included in the experiment config hash.
+
+Technical defaults are allowed when they do not change research conclusions. Examples
+include dry-run behavior, local cache paths, page sizes, UI sort order, log verbosity,
+timeouts, and bounded retry counts.
+
+Presets are allowed only when they have a clear name, are visible to the operator, are
+persisted with the experiment, and are treated as configuration rather than market truth.
+Agents must not treat old planning examples as verified parameters.
+
 ## Critic Flow
 
 The Critic Agent must check for lookahead bias, future information in signals, overlapping
