@@ -97,3 +97,25 @@ statistical helper default step behavior; defer walk-forward until the full agen
 Risks: Operators must choose window sizes explicitly. This is intentional: future Backtest
 Agent and Critic Agent checks should evaluate the selected windows rather than inherit
 invisible defaults.
+
+## DEC-0043: Performance metrics require explicit annualization assumptions
+
+Status: accepted
+
+Decision: Backtest performance metrics are calculated through a pure
+`PerformanceMetricConfig` that requires `periods_per_year`, `risk_free_rate_per_period`,
+`var_confidence`, and `cvar_confidence`. The metrics helper does not default to common
+calendar examples such as 252 equity sessions, 365 days, or zero risk-free rate.
+
+Rationale: Sharpe, Sortino, volatility, VaR, and CVaR are sensitive to calendar convention,
+bar frequency, and risk-free assumptions. The project supports crypto and future equity
+workflows, so the core backtest boundary must not guess whether periods represent 24/7
+crypto bars, exchange sessions, or another calendar. Services and agents may derive these
+assumptions from verified experiment configuration, but the pure metrics helper receives
+the exact values used.
+
+Alternatives considered: Hard-code annualization constants in the helper; use zero
+risk-free rate by default; defer metrics until registry persistence exists.
+
+Risks: Early tests need synthetic explicit configs. That verbosity is acceptable because it
+prevents future agents from treating examples as production assumptions.

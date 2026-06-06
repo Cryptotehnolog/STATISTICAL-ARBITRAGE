@@ -52,6 +52,7 @@ def test_run_statistical_testing_persists_registry_result_and_memory(session: Se
             prices_a=prices_a,
             prices_b=prices_b,
             aligned_timestamps=timestamps,
+            train_fraction=0.7,
             periods_per_day=96.0,
         ),
         session=session,
@@ -85,6 +86,7 @@ def test_run_statistical_testing_requires_passed_quality_reports(session: Sessio
                 prices_a=prices_a,
                 prices_b=prices_b,
                 aligned_timestamps=timestamps,
+                train_fraction=0.7,
             ),
             session=session,
         )
@@ -108,6 +110,7 @@ def test_run_statistical_testing_validates_chronological_inputs(session: Session
                 prices_a=prices_a,
                 prices_b=prices_b,
                 aligned_timestamps=timestamps,
+                train_fraction=0.7,
             ),
             session=session,
         )

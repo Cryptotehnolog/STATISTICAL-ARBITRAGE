@@ -47,7 +47,7 @@ class StatisticalTestingInput:
     prices_a: ArrayLike
     prices_b: ArrayLike
     aligned_timestamps: Sequence[datetime]
-    train_fraction: float = 0.7
+    train_fraction: float
     alpha: float = 0.05
     periods_per_day: float = 1.0
     regime_window: int = 60

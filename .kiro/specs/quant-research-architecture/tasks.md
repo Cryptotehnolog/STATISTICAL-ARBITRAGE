@@ -184,7 +184,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 4.9_
   
   - [x] 6.10 Implement train/test split and walk-forward validation
-    - Create train/test split utilities (70/30 default)
+    - Create train/test split utilities with explicit train/test configuration
     - Implement rolling window logic for walk-forward
     - Prevent lookahead bias by using only past data
     - _Requirements: 4.2, 4.12_
@@ -233,7 +233,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Minimum 3 windows required
     - _Requirements: 5.2_
   
-  - [ ] 7.7 Implement performance metrics calculation
+  - [x] 7.7 Implement performance metrics calculation
     - Sharpe ratio, Sortino ratio, volatility
     - Max drawdown, win rate, profit factor
     - Tail-risk metrics (VaR, CVaR)

@@ -11,15 +11,21 @@ from stat_arb.statistical import (
 )
 
 
-def test_chronological_train_test_split_uses_default_70_30_boundary() -> None:
-    """Train/test split should preserve chronological order and default to 70/30."""
-    split = chronological_train_test_split(100)
+def test_chronological_train_test_split_uses_explicit_fraction() -> None:
+    """Train/test split should preserve chronological order for an explicit fraction."""
+    split = chronological_train_test_split(100, train_fraction=0.7)
 
     assert split.train == IndexWindow(start=0, end=70)
     assert split.test == IndexWindow(start=70, end=100)
     assert split.train.length == 70
     assert split.test.length == 30
     assert split.train.end == split.test.start
+
+
+def test_chronological_train_test_split_requires_explicit_fraction() -> None:
+    """Historical 70/30 planning values should not become runtime defaults."""
+    with pytest.raises(TypeError):
+        chronological_train_test_split(100)  # type: ignore[call-arg]
 
 
 def test_chronological_train_test_split_respects_minimum_sizes() -> None:
@@ -90,13 +96,13 @@ def test_assert_no_lookahead_rejects_bad_windows() -> None:
 def test_validation_windows_reject_invalid_parameters() -> None:
     """Split helpers should reject invalid sizes and ratios."""
     with pytest.raises(TypeError, match="integer"):
-        chronological_train_test_split(10.5)  # type: ignore[arg-type]
+        chronological_train_test_split(10.5, train_fraction=0.7)  # type: ignore[arg-type]
 
     with pytest.raises(ValueError, match="between 0 and 1"):
         chronological_train_test_split(10, train_fraction=1.0)
 
     with pytest.raises(ValueError, match="minimum"):
-        chronological_train_test_split(3, min_train_size=2, min_test_size=2)
+        chronological_train_test_split(3, train_fraction=0.7, min_train_size=2, min_test_size=2)
 
     with pytest.raises(ValueError, match="fit one"):
         generate_walk_forward_windows(10, train_size=8, test_size=3)

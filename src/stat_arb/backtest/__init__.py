@@ -15,6 +15,13 @@ from stat_arb.backtest.costs import (
     calculate_pair_pnl,
     calculate_turnover,
 )
+from stat_arb.backtest.metrics import (
+    ExposureByAssetAndSide,
+    HoldingTimeMetrics,
+    PerformanceMetricConfig,
+    PerformanceMetricsResult,
+    calculate_performance_metrics,
+)
 from stat_arb.backtest.walk_forward import (
     BacktestWalkForwardConfig,
     BacktestWalkForwardFold,
@@ -32,9 +39,14 @@ __all__ = [
     "BacktestWalkForwardResult",
     "CostAssumptionStatus",
     "CostAttribution",
+    "ExposureByAssetAndSide",
+    "HoldingTimeMetrics",
     "PnLAttributionResult",
+    "PerformanceMetricConfig",
+    "PerformanceMetricsResult",
     "SpreadPosition",
     "calculate_pair_pnl",
+    "calculate_performance_metrics",
     "calculate_turnover",
     "run_pair_backtest_core",
     "run_walk_forward_backtest_core",

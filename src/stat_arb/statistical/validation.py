@@ -40,7 +40,7 @@ class WalkForwardWindow:
 def chronological_train_test_split(
     observations: int,
     *,
-    train_fraction: float = 0.7,
+    train_fraction: float,
     min_train_size: int = 1,
     min_test_size: int = 1,
 ) -> TrainTestSplit:

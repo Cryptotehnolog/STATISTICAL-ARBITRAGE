@@ -424,8 +424,8 @@ Statistical tests:
 uv run stat-arb test statistical \
   --asset-a BTC/USDT \
   --asset-b ETH/USDT \
-  --train-window 60 \
-  --test-window 30
+  --train-window-periods <explicit_period_count> \
+  --test-window-periods <explicit_period_count>
 ```
 
 Backtest и report:

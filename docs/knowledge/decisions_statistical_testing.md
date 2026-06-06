@@ -163,9 +163,9 @@ or model-based tests when pair testing workflows are mature.
 Status: accepted
 
 Decision: Implement train/test split and walk-forward validation under
-`stat_arb.statistical` as pure index-window helpers. Splits are chronological, default
-train/test is 70/30, and walk-forward folds validate that train data always ends before the
-test window starts.
+`stat_arb.statistical` as pure index-window helpers. Splits are chronological and require
+an explicit train fraction; walk-forward folds validate that train data always ends before
+the test window starts.
 
 Rationale: Statistical pair validation and later backtests must not shuffle time-series
 data or learn from future observations. A small typed window contract gives the Statistical
@@ -174,6 +174,9 @@ and PnL logic exist.
 
 Alternatives considered: Use scikit-learn random train/test split; let every agent build
 its own split logic; defer walk-forward windows until the backtest engine.
+
+Update: The earlier 70/30 split example is no longer a runtime default. Service and CLI
+layers must pass the intended train fraction explicitly and persist the exact windows used.
 
 Risks: These helpers operate on integer observation indices, not timestamps. Service layers
 must map them back to aligned timestamped datasets and persist the exact windows used.
