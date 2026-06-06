@@ -16,6 +16,7 @@ from stat_arb.backtest import (
     BaselineSide,
     BuyAndHoldBaselineConfig,
     CostAssumptionStatus,
+    CostSensitivityAnalysisResult,
     CostSensitivityScenario,
     PerformanceMetricConfig,
     calculate_performance_metrics,
@@ -117,6 +118,39 @@ def test_backtest_agent_requires_passed_statistical_test(session: Session, tmp_p
             _agent_input(tmp_path, hypothesis_id, test_id, dataset_a_id, dataset_b_id),
             session=session,
         )
+
+    assert session.query(BacktestResult).count() == 0
+
+
+def test_backtest_agent_rejects_missing_required_sensitivity_scenarios(
+    session: Session,
+    tmp_path: Path,
+) -> None:
+    """Registry persistence requires the explicit MVP cost sensitivity scenarios."""
+    hypothesis_id, test_id, dataset_a_id, dataset_b_id = _seed_prerequisites(
+        session,
+        with_quality=True,
+        passed_test=True,
+    )
+    request = _agent_input(tmp_path, hypothesis_id, test_id, dataset_a_id, dataset_b_id)
+    incomplete_request = BacktestAgentInput(
+        hypothesis_id=request.hypothesis_id,
+        test_id=request.test_id,
+        dataset_a_id=request.dataset_a_id,
+        dataset_b_id=request.dataset_b_id,
+        core_result=request.core_result,
+        pnl=request.pnl,
+        metrics=request.metrics,
+        baseline=request.baseline,
+        sensitivity=CostSensitivityAnalysisResult(base=request.pnl, scenarios=()),
+        reproducibility=request.reproducibility,
+        train_window_days=request.train_window_days,
+        test_window_days=request.test_window_days,
+        num_windows=request.num_windows,
+    )
+
+    with pytest.raises(ValueError, match="double_costs and half_costs"):
+        run_backtest_agent_persistence(incomplete_request, session=session)
 
     assert session.query(BacktestResult).count() == 0
 

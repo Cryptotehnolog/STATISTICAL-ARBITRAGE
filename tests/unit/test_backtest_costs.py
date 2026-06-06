@@ -133,6 +133,105 @@ def test_calculate_pair_pnl_requires_portfolio_value_for_positive_turnover() -> 
         calculate_pair_pnl(core, cost_config=_verified_cost_config(), periods_per_day=96.0)
 
 
+def test_calculate_pair_pnl_handles_empty_trade_sequence_without_fake_activity() -> None:
+    """Always-flat positions should produce no trades, no traded value, and zero PnL."""
+    core = run_pair_backtest_core(
+        prices_a=[100.0, 101.0, 102.0],
+        prices_b=[100.0, 100.0, 100.0],
+        z_scores=[0.0, 0.1, -0.1],
+        aligned_timestamps=[
+            datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
+            datetime(2024, 1, 1, 0, 15, tzinfo=UTC),
+            datetime(2024, 1, 1, 0, 30, tzinfo=UTC),
+        ],
+        hedge_ratio=1.0,
+    )
+
+    result = calculate_pair_pnl(
+        core,
+        cost_config=_verified_cost_config(),
+        periods_per_day=96.0,
+        average_portfolio_value=None,
+    )
+
+    assert result.gross_pnl == 0.0
+    assert result.net_pnl == 0.0
+    assert result.costs.total_cost == 0.0
+    assert result.traded_value == 0.0
+    assert result.turnover == 0.0
+    assert result.num_trades == 0
+
+
+def test_calculate_pair_pnl_handles_single_open_trade_without_exit() -> None:
+    """A single entry without exit should still attribute interval PnL and entry costs."""
+    core = run_pair_backtest_core(
+        prices_a=[100.0, 103.0, 104.0],
+        prices_b=[100.0, 100.0, 100.0],
+        z_scores=[2.2, 1.4, 1.1],
+        aligned_timestamps=[
+            datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
+            datetime(2024, 1, 1, 0, 15, tzinfo=UTC),
+            datetime(2024, 1, 1, 0, 30, tzinfo=UTC),
+        ],
+        hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
+    )
+
+    result = calculate_pair_pnl(
+        core,
+        cost_config=_verified_cost_config(),
+        periods_per_day=96.0,
+        average_portfolio_value=10_000.0,
+    )
+
+    assert result.num_trades == 1
+    assert result.gross_pnl == pytest.approx(-4.0)
+    assert result.traded_value == pytest.approx(200.0)
+    assert result.costs.total_cost > 0.0
+    assert result.net_pnl + result.costs.total_cost == pytest.approx(result.gross_pnl)
+
+
+def test_calculate_pair_pnl_extreme_costs_remain_explicit_and_conserved() -> None:
+    """Very expensive explicit cost snapshots should not break PnL conservation."""
+    core = run_pair_backtest_core(
+        prices_a=[100.0, 103.0, 101.0],
+        prices_b=[100.0, 100.0, 100.0],
+        z_scores=[2.2, 1.2, 0.2],
+        aligned_timestamps=[
+            datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
+            datetime(2024, 1, 1, 0, 15, tzinfo=UTC),
+            datetime(2024, 1, 1, 0, 30, tzinfo=UTC),
+        ],
+        hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
+    )
+    cost_config = BacktestCostConfig(
+        commission_rate=0.5,
+        spread_cost_rate=0.25,
+        slippage_rate=0.25,
+        funding_rate_daily=0.10,
+        borrow_rate_annual=1.0,
+        status=CostAssumptionStatus.MANUAL_APPROVED,
+        source="unit-test extreme explicit costs",
+        verified_at=datetime(2024, 1, 1, tzinfo=UTC),
+        venue="stress-test",
+        market_type="synthetic",
+    )
+
+    result = calculate_pair_pnl(
+        core,
+        cost_config=cost_config,
+        periods_per_day=96.0,
+        average_portfolio_value=10_000.0,
+    )
+
+    assert result.costs.total_cost > abs(result.gross_pnl)
+    assert result.net_pnl < result.gross_pnl
+    assert result.net_pnl + result.costs.total_cost == pytest.approx(result.gross_pnl)
+
+
 def test_calculate_turnover_uses_elapsed_days_and_average_portfolio_value() -> None:
     """Turnover should equal traded value divided by elapsed days and portfolio value."""
     turnover = calculate_turnover(

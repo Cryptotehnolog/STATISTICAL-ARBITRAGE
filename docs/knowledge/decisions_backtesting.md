@@ -208,3 +208,25 @@ agent.
 
 Risks: The boundary currently persists completed results produced by earlier pure helpers;
 future orchestration still needs to assemble those inputs and handle failed backtests.
+
+## DEC-0048: Backtest edge cases are checkpoint blockers despite optional task marker
+
+Status: accepted
+
+Decision: Backtest edge-case tests cover always-flat empty trade sequences, single open
+trades, extreme explicit cost snapshots, and missing required sensitivity scenarios. A
+manual `scripts/check_backtest_pipeline.ps1` command runs the core, PnL, metrics, baseline,
+sensitivity, reproducibility, and Backtest Agent boundary tests together.
+
+Rationale: Task 7.12 is marked optional in the planning file, but after registry and memory
+integration it is cheap and valuable to prove edge behavior before checkpoint 8. These
+tests protect against fake activity in no-trade backtests, broken accounting for open
+positions, cost-conservation failures under stress assumptions, and reports missing the
+required MVP sensitivity comparison.
+
+Alternatives considered: Skip optional edge tests until the reporting layer; rely only on
+property tests; test the whole pipeline only through the future CLI.
+
+Risks: The check script is still a test aggregation command, not a production backtest CLI.
+The future CLI must add real dataset loading, config parsing, registry IDs, and operator
+output.
