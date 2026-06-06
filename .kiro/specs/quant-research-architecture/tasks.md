@@ -6,7 +6,8 @@ This implementation plan breaks down the multi-agent quantitative research syste
 
 **Key Implementation Principles:**
 - Python-first approach with optional Rust optimization
-- Minimal infrastructure (SQLite + embedded vector store, no Docker required for MVP)
+- SQLite remains the structured registry; ApeRAG is the active memory backend.
+- Docker-supported local runtime is allowed for ApeRAG, Infisical, and OmniRoute.
 - Constrained hardware (i5-1335U with 32GB RAM, Oracle Cloud Always Free ARM)
 - Focus on correctness, reproducibility, and data quality over speed
 - Property-based testing for statistical functions and data validation
@@ -21,7 +22,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
 - Task 23: Final review and handoff
 
 **Deferred (NOT in first MVP pass):**
-- Task 20: Docker Compose (optional, deferred to post-MVP or v2)
+- Task 20: General production-like Docker Compose packaging (optional, deferred to post-MVP or v2)
 - Task 21: Risk management implementation (deferred to v2, only documentation in v1)
 
 **Optional sub-tasks marked with `*` can be skipped for faster MVP iteration but are recommended for production quality.**
@@ -49,15 +50,16 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - **Validates: Requirements 10.9**
     - Test that identical experiment data produces identical database records
   
-  - [x] 2.3 Initialize ApeRAG with embedded vector store
-    - Configure ApeRAG with FAISS or Chroma embedded backend
-    - Set up sentence-transformers/all-MiniLM-L6-v2 embedding model
-    - Create ApeRAG initialization script
-    - Configure chunk size (512 tokens) and overlap (50 tokens)
+  - [x] 2.3 Initialize ApeRAG as active memory backend
+    - Configure ApeRAG as the project memory backend
+    - Configure project knowledge and operational agent memory collections
+    - Configure bounded curated seeding and graph extraction checks
+    - Keep previous local memory backend removed from active runtime paths
     - _Requirements: 8.1-8.12, 27.5_
   
   - [x] 2.4 Implement Infisical secrets management integration
-    - Set up Infisical client for Python
+    - Run Infisical through isolated Docker-supported local runtime
+    - Use Universal Auth through Python REST utilities
     - Create secrets loading utilities
     - Document required secrets in `.env.example`
     - _Requirements: 16.1-16.10_
@@ -122,7 +124,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - [x] 4.9 Implement data quality report generation
     - Generate comprehensive quality reports with all validation results
     - Store reports in SQLite registry with dataset IDs
-    - Write validation failures to ApeRAG
+    - Route concise validation failure summaries through Memory Agent policy boundary
     - _Requirements: 2.7-2.9_
   
   - [x] 4.10 Implement dataset provenance tracking
@@ -191,11 +193,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
   
   - [x] 6.11 Integrate Statistical Testing Agent with registry and ApeRAG
     - Write structured test results to SQLite registry
-    - Write summary lessons to ApeRAG
+    - Write summary lessons through Memory Agent policy boundary
     - Verify data quality reports exist before testing
     - _Requirements: 4.1, 4.10, 4.11_
 
-- [ ] 7. Build Backtest Agent with cost attribution
+- [x] 7. Build Backtest Agent with cost attribution
   - [x] 7.1 Implement backtest engine core (Python)
     - Signal generation from Z-scores
     - Position tracking with hedge ratio
@@ -259,7 +261,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
   
   - [x] 7.11 Integrate Backtest Agent with registry and ApeRAG
     - Write structured performance metrics to SQLite registry
-    - Write summary conclusions to ApeRAG
+    - Write summary conclusions through Memory Agent policy boundary
     - Verify data quality reports exist before backtesting
     - _Requirements: 5.1, 5.12, 5.13_
   
@@ -286,12 +288,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 3.2, 3.3_
   
   - [ ] 9.3 Implement hypothesis linking
-    - Create graph edges in ApeRAG between similar hypotheses
+    - Request graph links between similar hypotheses through Memory Agent policy boundary
     - Flag retests of previously rejected hypotheses
     - _Requirements: 3.6, 3.7_
   
   - [ ] 9.4 Integrate Hypothesis Agent with registry and ApeRAG
-    - Write generated hypotheses with rationale to ApeRAG
+    - Write generated hypotheses with rationale through Memory Agent policy boundary
     - Write hypothesis records to SQLite registry
     - _Requirements: 3.4, 3.5_
   
@@ -315,22 +317,22 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 7.3_
   
   - [ ] 10.3 Implement weak assumption detection
-    - Check cointegration p-value proximity to threshold
-    - Check half-life bounds (1-30 days)
+    - Check cointegration p-value proximity to explicit critic policy threshold
+    - Check half-life bounds from explicit critic policy configuration
     - Check for unaddressed regime changes
-    - Check hedge ratio R² threshold
+    - Check hedge ratio R² against explicit critic policy configuration
     - _Requirements: 7.4_
 
   - [ ] 10.4 Implement insufficient testing detection
-    - Check minimum walk-forward windows (< 3)
-    - Check test period length (< 30 days)
+    - Check minimum walk-forward windows from explicit critic policy configuration
+    - Check test period length from explicit critic policy configuration
     - Check for missing sensitivity analysis
     - _Requirements: 7.5_
   
   - [ ] 10.5 Implement cost realism checks
     - Detect negative net PnL after costs
-    - Detect excessive turnover (> 10x daily)
-    - Check slippage assumption realism
+    - Detect excessive turnover against explicit critic policy configuration
+    - Check slippage assumption realism against verified/manual-approved cost snapshots
     - _Requirements: 7.6, 7.7_
   
   - [ ] 10.6 Implement decision logic
@@ -340,7 +342,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 7.10_
   
   - [ ] 10.7 Integrate Critic Agent with registry and ApeRAG
-    - Write objections and detected risks to ApeRAG
+    - Write objections and detected risks through Memory Agent policy boundary
     - Write final review status to SQLite registry
     - _Requirements: 7.8, 7.9_
   
@@ -350,29 +352,33 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Test decision logic for various scenarios
     - _Requirements: 18.8_
 
-- [ ] 11. Build Memory Agent
-  - [ ] 11.1 Implement ApeRAG write operations
+- [ ] 11. Build full Memory Agent on top of the existing ApeRAG boundary
+  - [ ] 11.1 Complete policy-controlled ApeRAG write operations
     - Store market knowledge (sectors, relationships)
     - Store development knowledge (architecture decisions)
     - Store agent decisions (hypotheses, test summaries, backtest conclusions)
     - Store manual notes from users
+    - Require all agent writes to pass through Memory Agent policy rules
     - _Requirements: 8.2-8.10_
 
-  - [ ] 11.2 Implement ApeRAG query operations
+  - [ ] 11.2 Complete ApeRAG query operations
     - Query by topic (retrieve relevant context)
     - Query by entity (find all info about asset/hypothesis/experiment)
     - Query by relationship (traverse graph for related hypotheses)
+    - Keep project knowledge and operational agent memory as separate collections
     - _Requirements: 8.2-8.10_
   
-  - [ ] 11.3 Implement memory filtering rules
+  - [ ] 11.3 Harden memory filtering rules
     - Prevent storing raw logs, prompts, large datasets, secrets
     - Reference registry IDs instead of duplicating numeric metrics
+    - Prevent direct agent-facing ApeRAG writes that bypass policy boundary
     - _Requirements: 8.11, 8.12_
   
   - [ ]* 11.4 Write integration tests for Memory Agent
     - Test write and query operations
     - Test memory filtering rules
     - Test graph traversal
+    - Test that agent-facing modules use Memory Agent policy instead of direct ApeRAG writes
     - _Requirements: 18.8_
 
 - [ ] 12. Build Report Agent
@@ -396,7 +402,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
   
   - [ ] 12.4 Integrate Report Agent with registry and ApeRAG
     - Write report artifact links to SQLite registry
-    - Write human-readable summaries to ApeRAG
+    - Write human-readable summaries through Memory Agent policy boundary
     - _Requirements: 11.10, 11.11_
 
   - [ ]* 12.5 Write unit tests for report generation
@@ -424,7 +430,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 12.8, 12.9_
   
   - [ ] 13.4 Integrate Coordinator Agent with registry and ApeRAG
-    - Write task lifecycle events to ApeRAG
+    - Write task lifecycle events through Memory Agent policy boundary
     - Write final decisions to SQLite registry
     - Write rejection/promotion reasons to both stores
     - _Requirements: 12.3-12.7_
@@ -631,11 +637,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Document audit log requirements
     - _Requirements: 26.1-26.10_
 
-- [ ] 20. **[OPTIONAL/DEFERRED]** Implement Docker Compose for production-like testing
-  - **NOTE: This task is OPTIONAL and should NOT block MVP. Defer to post-MVP or v2.**
+- [ ] 20. **[OPTIONAL/DEFERRED]** Implement general Docker Compose packaging for production-like testing
+  - **NOTE: This task is OPTIONAL and should NOT block MVP. Local Docker-supported runtimes for ApeRAG, Infisical, and OmniRoute already exist and remain separate from this packaging task.**
   - [ ] 20.1 Create docker-compose.yml with profiles
     - Optional Postgres service (profile: postgres)
-    - Optional Chroma server (profile: chroma)
+    - Optional memory/backend services only if they are not already covered by ApeRAG runtime scripts
     - Services only start when explicitly requested
     - _Requirements: 19.1-19.12_
   
@@ -646,7 +652,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
   
   - [ ] 20.3 Document Docker Compose usage
     - When to use Docker (production-like testing, cloud deployment)
-    - When NOT to use Docker (local MVP development)
+    - Which local runtime services already use Docker-supported scripts
     - Startup commands and profiles
     - _Requirements: 19.10, 19.11_
   
@@ -707,7 +713,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 22.1-22.14_
   
   - [ ] 22.4 Verify MVP non-functional criteria
-    - System runs on local PC without Docker ✓
+    - Python core runs locally with uv; ApeRAG, Infisical, and OmniRoute use Docker-supported runtime ✓
     - System runs on Oracle Cloud Always Free ARM ✓
     - Memory usage < 8GB during operation ✓
     - Disk usage < 20GB for MVP dataset ✓
@@ -738,7 +744,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
 - Property tests validate universal correctness properties (14 properties total)
 - Unit tests validate specific examples and edge cases
 - Python is used for all implementations (Rust optimization is optional and not required for MVP)
-- System must run without Docker using uv, SQLite, Parquet, and embedded ApeRAG/vector storage
+- Python core must run with uv, SQLite, and Parquet; ApeRAG, Infisical, and OmniRoute are Docker-supported local services
 - Focus on correctness, reproducibility, and data quality over speed
 - GitHub repository already exists at https://github.com/Cryptotehnolog/STATISTICAL-ARBITRAGE
 
