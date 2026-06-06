@@ -246,7 +246,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Compare net PnL under different cost assumptions
     - _Requirements: 6.10_
   
-  - [ ] 7.9 Implement baseline comparison
+  - [x] 7.9 Implement baseline comparison
     - Create naive baseline (buy-and-hold or random entry)
     - Compare strategy Sharpe ratio against baseline
     - _Requirements: 6.9_

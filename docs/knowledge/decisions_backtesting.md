@@ -139,3 +139,26 @@ manual stress case; defer sensitivity analysis until the reporting layer.
 
 Risks: Callers must pass scenario tuples even for standard MVP checks. That is intentional:
 experiment config and registry persistence should record the scenarios actually used.
+
+## DEC-0045: Baseline comparisons require explicit baseline contracts
+
+Status: accepted
+
+Decision: Backtest baseline comparison is implemented through explicit baseline config
+objects. Buy-and-hold baselines require a name, selected asset, side, units, and initial
+capital. Random spread-entry baselines require a name, hedge ratio, seed, entry
+probability, and initial capital. The comparison result persists baseline identity,
+baseline kind, generated baseline returns, generated positions, strategy Sharpe, baseline
+Sharpe, and Sharpe delta.
+
+Rationale: Baselines affect whether a strategy appears to generate alpha. A hidden asset,
+side, seed, capital assumption, or entry probability can make an agent compare against a
+weak or irreproducible reference strategy. Keeping the baseline contract explicit lets
+future reports and registry records show exactly what the strategy was compared against.
+
+Alternatives considered: Hard-code a long asset-A buy-and-hold baseline; use a random
+baseline with an internal seed; compare only raw returns without storing baseline
+configuration.
+
+Risks: Baseline calls are more verbose. This is acceptable because agents must not inherit
+planning examples or convenient hidden values when assessing strategy quality.
