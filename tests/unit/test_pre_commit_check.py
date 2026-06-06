@@ -21,3 +21,12 @@ def test_pre_commit_check_includes_legacy_backend_import_guard() -> None:
     assert "check_no_legacy_memory_backend_imports.ps1" in script
     assert "$legacyMemoryBackendImportsCheckScript" in script
     assert "& $legacyMemoryBackendImportsCheckScript" in script
+
+
+def test_pre_commit_check_includes_backtest_agent_boundary_guard() -> None:
+    """Fast pre-commit should block Backtest Agent registry and memory boundary regressions."""
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "check_backtest_agent_boundaries.ps1" in script
+    assert "$backtestAgentBoundaryCheckScript" in script
+    assert "& $backtestAgentBoundaryCheckScript" in script

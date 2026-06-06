@@ -186,3 +186,25 @@ integration.
 Risks: Callers must assemble the complete config component mapping. This is intentional:
 the future Backtest Agent service should own that assembly before writing to the registry
 or ApeRAG.
+
+## DEC-0047: Backtest Agent writes registry first and memory through policy
+
+Status: accepted
+
+Decision: The first Backtest Agent integration boundary persists completed backtest
+outputs to the Structured Registry and writes only a concise report summary through a
+`MemoryAgentService`-compatible writer. The agent boundary verifies passed data-quality
+reports and a passed statistical test before persistence. It does not import
+`ApeRAGMemoryClient` and does not write directly to ApeRAG.
+
+Rationale: Numeric performance metrics, cost attribution, baseline Sharpe, and
+reproducibility hashes belong in the registry as the source of truth. ApeRAG should receive
+short lessons and summaries only through Memory Agent policy checks, so agents cannot
+accidentally store raw metrics, logs, prompts, or secrets in long-term memory.
+
+Alternatives considered: Let Backtest Agent write directly to ApeRAG; defer registry writes
+until reporting; combine full backtest execution, persistence, and reporting in one large
+agent.
+
+Risks: The boundary currently persists completed results produced by earlier pure helpers;
+future orchestration still needs to assemble those inputs and handle failed backtests.

@@ -257,7 +257,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Store dependency lock file hash
     - _Requirements: 10.1-10.8, 5.11_
   
-  - [ ] 7.11 Integrate Backtest Agent with registry and ApeRAG
+  - [x] 7.11 Integrate Backtest Agent with registry and ApeRAG
     - Write structured performance metrics to SQLite registry
     - Write summary conclusions to ApeRAG
     - Verify data quality reports exist before backtesting
