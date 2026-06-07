@@ -48,6 +48,10 @@ jobs:
         shell: pwsh
         run: ./scripts/check_pair_alignment_boundary.ps1
 
+      - name: Check Hypothesis Agent boundaries
+        shell: pwsh
+        run: ./scripts/check_hypothesis_agent_boundaries.ps1
+
       - name: Check Backtest Agent boundaries
         shell: pwsh
         run: ./scripts/check_backtest_agent_boundaries.ps1

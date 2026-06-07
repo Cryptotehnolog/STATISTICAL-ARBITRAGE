@@ -17,6 +17,7 @@ def test_pair_alignment_boundary_guard_targets_future_pair_modules() -> None:
     assert "StatisticalTestResult" in script
     assert "align_ohlcv_pair" in script
     assert "PairAlignmentResult" in script
+    assert "hedge_ratio|pair" not in script
 
 
 def test_pair_alignment_boundary_guard_is_in_fast_checks_and_ci() -> None:

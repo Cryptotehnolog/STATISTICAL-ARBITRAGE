@@ -5,6 +5,12 @@ from stat_arb.agents.backtest import (
     BacktestAgentRunResult,
     run_backtest_agent_persistence,
 )
+from stat_arb.agents.hypothesis import (
+    HypothesisGenerationConfig,
+    HypothesisGenerationResult,
+    HypothesisUniverseAsset,
+    generate_rule_based_hypotheses,
+)
 from stat_arb.agents.statistical_testing import (
     StatisticalTestingInput,
     StatisticalTestingRunResult,
@@ -14,8 +20,12 @@ from stat_arb.agents.statistical_testing import (
 __all__ = [
     "BacktestAgentInput",
     "BacktestAgentRunResult",
+    "HypothesisGenerationConfig",
+    "HypothesisGenerationResult",
+    "HypothesisUniverseAsset",
     "StatisticalTestingInput",
     "StatisticalTestingRunResult",
+    "generate_rule_based_hypotheses",
     "run_backtest_agent_persistence",
     "run_statistical_testing",
 ]

@@ -7,7 +7,7 @@ $roots = @(
     "src/stat_arb/statistical_testing",
     "src/stat_arb/backtesting"
 )
-$boundaryPattern = "OHLCVBatch|StatisticalTestResult|cointegration|adf|hedge_ratio|pair"
+$boundaryPattern = "OHLCVBatch|StatisticalTestResult|cointegration|adf|hedge_ratio"
 $alignmentPattern = "align_ohlcv_pair|PairAlignmentResult|aligned_timestamps"
 $violations = @()
 

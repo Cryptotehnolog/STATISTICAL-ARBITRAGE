@@ -278,11 +278,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - Confirmed tasks 9-10 are not implemented yet and must stay open.
 
 - [ ] 9. Build Hypothesis Agent
-  - [ ] 9.1 Implement rule-based pair generation
+  - [x] 9.1 Implement rule-based pair generation
     - Sector-based screening (same sector pairs)
     - Correlation-based screening (high correlation pairs)
     - Market cap filtering
     - Batch candidate screening must pass p-values through explicit multiple-testing correction before approval or persistence
+    - Implemented deterministic `generate_rule_based_hypotheses` with explicit `HypothesisGenerationConfig`
     - _Requirements: 3.1_
 
   - [ ] 9.2 Implement novelty checking
@@ -296,9 +297,10 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Flag retests of previously rejected hypotheses
     - _Requirements: 3.6, 3.7_
   
-  - [ ] 9.4 Integrate Hypothesis Agent with registry and ApeRAG
+  - [x] 9.4 Integrate Hypothesis Agent with registry and ApeRAG
     - Write generated hypotheses with rationale through Memory Agent policy boundary
     - Write hypothesis records to SQLite registry
+    - Added Hypothesis Agent boundary guard and `scripts/check_hypothesis_pipeline.ps1`
     - _Requirements: 3.4, 3.5_
   
   - [ ]* 9.5 Write unit tests for hypothesis generation
