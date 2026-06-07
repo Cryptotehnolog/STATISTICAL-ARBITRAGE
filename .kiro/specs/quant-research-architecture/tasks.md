@@ -277,7 +277,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - Verified active ApeRAG memory health with `scripts/check_memory_health.ps1`
   - Confirmed tasks 9-10 are not implemented yet and must stay open.
 
-- [ ] 9. Build Hypothesis Agent
+- [x] 9. Build Hypothesis Agent
   - [x] 9.1 Implement rule-based pair generation
     - Sector-based screening (same sector pairs)
     - Correlation-based screening (high correlation pairs)
@@ -305,10 +305,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Added Hypothesis Agent boundary guard and `scripts/check_hypothesis_pipeline.ps1`
     - _Requirements: 3.4, 3.5_
   
-  - [ ]* 9.5 Write unit tests for hypothesis generation
+  - [x]* 9.5 Write unit tests for hypothesis generation
     - Test sector-based screening logic
     - Test novelty checking with mock data
     - Test hypothesis linking
+    - Added edge-case coverage for reverse rejected pairs, duplicate memory refs, novelty floor, and no-link behavior
     - _Requirements: 18.8_
 
 - [ ] 10. Build Critic Agent

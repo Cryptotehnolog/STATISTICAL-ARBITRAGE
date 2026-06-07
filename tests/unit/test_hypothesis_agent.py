@@ -201,6 +201,120 @@ def test_hypothesis_agent_links_similar_hypotheses_and_flags_retests() -> None:
     assert "final decision is deferred" in link_request.body
 
 
+def test_hypothesis_agent_matches_rejected_reverse_pair_case_insensitively() -> None:
+    """Rejected BBB/AAA should flag a generated AAA/BBB candidate as a retest."""
+    session = _session()
+    rejected = Hypothesis(
+        asset_a="bbb",
+        asset_b="aaa",
+        rationale="Rejected reverse lowercase pair",
+        source="unit-test",
+        novelty_score=0.1,
+        status="rejected",
+        created_by="pytest",
+    )
+    session.add(rejected)
+    session.flush()
+
+    result = generate_rule_based_hypotheses(
+        assets=(
+            HypothesisUniverseAsset(symbol="AAA", sector="Banks", market_cap=100_000_000_000),
+            HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
+        ),
+        correlations={("BBB", "AAA"): 0.93},
+        config=_generation_config(),
+        novelty_config=_novelty_config(),
+        linking_config=HypothesisLinkingConfig(
+            retest_status="retest",
+            memory_link_tag="hypothesis-link",
+        ),
+        memory_searcher=FakeHypothesisMemorySearcher([]),
+        session=session,
+    )
+
+    stored = result.hypotheses[0]
+    assert stored.status == "retest"
+    assert stored.novelty_score == 0.3
+    assert stored.similar_hypotheses == [rejected.hypothesis_id]
+
+
+def test_hypothesis_agent_deduplicates_memory_refs_and_floors_novelty() -> None:
+    """Duplicate memory refs should be stored once and novelty should not become negative."""
+    session = _session()
+    searcher = FakeHypothesisMemorySearcher(
+        [
+            HypothesisMemorySearchResult(
+                text="Duplicate one",
+                score=0.95,
+                source="memory-doc-a",
+                metadata={"hypothesis_id": "memory-dup"},
+            ),
+            HypothesisMemorySearchResult(
+                text="Duplicate two",
+                score=0.94,
+                source="memory-doc-b",
+                metadata={"hypothesis_id": "memory-dup"},
+            ),
+            HypothesisMemorySearchResult(
+                text="Unique source fallback",
+                score=0.93,
+                source="memory-source-only",
+                metadata={},
+            ),
+        ]
+    )
+
+    result = generate_rule_based_hypotheses(
+        assets=(
+            HypothesisUniverseAsset(symbol="AAA", sector="Banks", market_cap=100_000_000_000),
+            HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
+        ),
+        correlations={("AAA", "BBB"): 0.93},
+        config=_generation_config(),
+        novelty_config=HypothesisNoveltyConfig(
+            memory_top_k=5,
+            memory_similarity_threshold=0.8,
+            memory_match_penalty=0.8,
+            registry_rejection_penalty=0.7,
+        ),
+        memory_searcher=searcher,
+        session=session,
+    )
+
+    stored = result.hypotheses[0]
+    assert stored.novelty_score == 0.0
+    assert stored.similar_hypotheses == ["memory-dup", "memory-source-only"]
+
+
+def test_hypothesis_agent_does_not_write_link_memory_without_similar_hypotheses() -> None:
+    """Linking config alone should not create link memory when there are no links."""
+    session = _session()
+    memory = FakeMemoryService()
+
+    result = generate_rule_based_hypotheses(
+        assets=(
+            HypothesisUniverseAsset(symbol="AAA", sector="Banks", market_cap=100_000_000_000),
+            HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
+        ),
+        correlations={("AAA", "BBB"): 0.93},
+        config=_generation_config(),
+        novelty_config=_novelty_config(),
+        linking_config=HypothesisLinkingConfig(
+            retest_status="retest",
+            memory_link_tag="hypothesis-link",
+        ),
+        memory_searcher=FakeHypothesisMemorySearcher([]),
+        memory_service=memory,
+        session=session,
+    )
+
+    stored = result.hypotheses[0]
+    assert stored.status == "new"
+    assert stored.similar_hypotheses is None
+    assert len(memory.requests) == 1
+    assert memory.requests[0].tags == ["hypothesis", "rule-based"]
+
+
 def test_hypothesis_agent_requires_novelty_for_linking_config() -> None:
     """Linking should not run without novelty evidence."""
     session = _session()

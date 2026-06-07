@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from itertools import combinations
 from typing import Protocol
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
@@ -314,8 +315,8 @@ def _rejected_registry_matches(
         .filter(
             Hypothesis.status == "rejected",
             (
-                ((Hypothesis.asset_a == first) & (Hypothesis.asset_b == second))
-                | ((Hypothesis.asset_a == second) & (Hypothesis.asset_b == first))
+                ((func.upper(Hypothesis.asset_a) == first) & (func.upper(Hypothesis.asset_b) == second))
+                | ((func.upper(Hypothesis.asset_a) == second) & (func.upper(Hypothesis.asset_b) == first))
             ),
         )
         .all()

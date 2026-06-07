@@ -89,3 +89,24 @@ ApeRAG; store links only in memory without registry references.
 Risks: The current link request is represented as a memory document, not a low-level graph
 edge mutation. Keep the Memory Agent policy boundary active and add richer graph APIs only
 if ApeRAG exposes a safe first-class relationship-write endpoint.
+
+## DEC-0045: Treat Hypothesis Agent edge cases as regression boundaries
+
+Status: accepted
+
+Decision: Keep explicit unit coverage for reverse/case-insensitive rejected pair matching,
+duplicate ApeRAG memory references, novelty score floor at zero, and no-link behavior when
+there are no similar hypotheses. Exact rejected pair matching uses case-insensitive symbol
+comparison in both pair orientations.
+
+Rationale: Hypothesis Agent output feeds later statistical testing and critic review.
+Small linking or novelty regressions can quietly create duplicate experiments, missed
+retests, or noisy memory. These edge cases are cheap to test now and expensive to debug
+after Coordinator Agent orchestration exists.
+
+Alternatives considered: Leave these as manual review cases; rely only on broad pipeline
+checks; move them to slow property tests.
+
+Risks: The tests cover deterministic boundaries, not semantic quality of ApeRAG retrieval.
+Future answer-quality or retrieval-quality evaluation should stay separate from these
+unit tests.
