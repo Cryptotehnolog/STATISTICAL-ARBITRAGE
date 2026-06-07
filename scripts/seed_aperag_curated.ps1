@@ -63,6 +63,10 @@ function Get-Collection {
 
 .\scripts\configure_aperag.ps1 -EnvFile $EnvFile | Write-Output
 
+if ($Force) {
+    .\scripts\recalculate_aperag_quota.ps1 -EnvFile $EnvFile | Write-Output
+}
+
 $collection = Get-Collection
 if ($collection -and $Force) {
     Invoke-ApeRagJson -Method "DELETE" -Path "/api/v1/collections/$($collection.id)" | Out-Null
