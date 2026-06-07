@@ -271,14 +271,18 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Test extreme cost scenarios
     - _Requirements: 18.8_
 
-- [ ] 8. Checkpoint - Ensure statistical testing and backtesting works
-  - Ensure all tests pass, ask the user if questions arise.
+- [x] 8. Checkpoint - Ensure statistical testing and backtesting works
+  - Verified statistical testing pipeline with `scripts/check_statistical_pipeline.ps1`
+  - Verified backtest pipeline with `scripts/check_backtest_pipeline.ps1`
+  - Verified active ApeRAG memory health with `scripts/check_memory_health.ps1`
+  - Confirmed tasks 9-10 are not implemented yet and must stay open.
 
 - [ ] 9. Build Hypothesis Agent
   - [ ] 9.1 Implement rule-based pair generation
     - Sector-based screening (same sector pairs)
     - Correlation-based screening (high correlation pairs)
     - Market cap filtering
+    - Batch candidate screening must pass p-values through explicit multiple-testing correction before approval or persistence
     - _Requirements: 3.1_
 
   - [ ] 9.2 Implement novelty checking

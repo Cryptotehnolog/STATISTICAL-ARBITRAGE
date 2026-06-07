@@ -15,5 +15,6 @@ def test_check_backtest_pipeline_runs_all_backtest_boundary_tests() -> None:
     assert "test_backtest_baseline.py" in script
     assert "test_backtest_sensitivity.py" in script
     assert "test_backtest_reproducibility.py" in script
+    assert "test_backtest_walk_forward.py" in script
     assert "test_backtest_agent.py" in script
     assert "--no-cov" in script
