@@ -5,6 +5,12 @@ from stat_arb.agents.backtest import (
     BacktestAgentRunResult,
     run_backtest_agent_persistence,
 )
+from stat_arb.agents.critic import (
+    CriticLookaheadAssessment,
+    CriticLookaheadEvidence,
+    CriticLookaheadPolicy,
+    detect_lookahead_bias,
+)
 from stat_arb.agents.hypothesis import (
     HypothesisGenerationConfig,
     HypothesisGenerationResult,
@@ -24,6 +30,9 @@ from stat_arb.agents.statistical_testing import (
 __all__ = [
     "BacktestAgentInput",
     "BacktestAgentRunResult",
+    "CriticLookaheadAssessment",
+    "CriticLookaheadEvidence",
+    "CriticLookaheadPolicy",
     "HypothesisGenerationConfig",
     "HypothesisGenerationResult",
     "HypothesisLinkingConfig",
@@ -33,6 +42,7 @@ __all__ = [
     "HypothesisUniverseAsset",
     "StatisticalTestingInput",
     "StatisticalTestingRunResult",
+    "detect_lookahead_bias",
     "generate_rule_based_hypotheses",
     "run_backtest_agent_persistence",
     "run_statistical_testing",

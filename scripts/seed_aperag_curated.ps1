@@ -61,6 +61,30 @@ function Get-Collection {
     return $collections.items | Where-Object { $_.title -eq $CollectionTitle } | Select-Object -First 1
 }
 
+function Upload-CuratedShard {
+    param(
+        [object]$Collection,
+        [System.IO.FileInfo]$File
+    )
+
+    $response = curl.exe -sS `
+        -H "Authorization: Bearer $env:APERAG_API_KEY" `
+        -F "files=@$($File.FullName)" `
+        "$env:APERAG_API_BASE_URL/api/v1/collections/$($Collection.id)/documents"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Upload failed: $($File.Name)"
+    }
+    $uploaded = $response | ConvertFrom-Json
+    $documentIds = @($uploaded.items | ForEach-Object { $_.id })
+    if (-not $documentIds) {
+        Write-Error "ApeRAG не вернул document id для $($File.Name): $response"
+    }
+    Invoke-ApeRagJson -Method "POST" -Path "/api/v1/collections/$($Collection.id)/documents/confirm" -Body @{
+        document_ids = $documentIds
+    } | Out-Null
+    Write-Output "Uploaded: $($File.Name)"
+}
+
 .\scripts\configure_aperag.ps1 -EnvFile $EnvFile | Write-Output
 
 if ($Force) {
@@ -123,27 +147,47 @@ if (-not $files) {
 }
 
 $existing = Invoke-ApeRagJson -Method "GET" -Path "/api/v1/collections/$($collection.id)/documents?page=1&page_size=100"
-if ($existing.items.Count -gt 0 -and -not $Force) {
-    Write-Output "Документы уже есть: $($existing.items.Count). Для полной пересборки используйте -Force."
+$existingDocumentsByName = @{}
+foreach ($document in @($existing.items)) {
+    if ($document.name) {
+        $existingDocumentsByName[$document.name] = $document
+    }
+}
+
+$previousHashesByName = @{}
+if (Test-Path -LiteralPath $manifestFile) {
+    $previousManifest = Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
+    foreach ($document in @($previousManifest.documents)) {
+        if ($document.name -and $document.sha256) {
+            $previousHashesByName[$document.name] = $document.sha256
+        }
+    }
+}
+
+$filesToUpload = @()
+foreach ($file in $files) {
+    $currentHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash.ToLowerInvariant()
+    $previousHash = $previousHashesByName[$file.Name]
+    if (-not $existingDocumentsByName.ContainsKey($file.Name) -or $previousHash -ne $currentHash) {
+        $filesToUpload += $file
+    }
+}
+
+if ($existing.items.Count -gt 0 -and -not $Force -and $filesToUpload.Count -eq 0) {
+    Write-Output "Документы уже актуальны: $($existing.items.Count). Для полной пересборки используйте -Force."
 }
 else {
-    foreach ($file in $files) {
-        $response = curl.exe -sS `
-            -H "Authorization: Bearer $env:APERAG_API_KEY" `
-            -F "files=@$($file.FullName)" `
-            "$env:APERAG_API_BASE_URL/api/v1/collections/$($collection.id)/documents"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Upload failed: $($file.Name)"
+    if (-not $Force) {
+        Write-Output "Измененные или отсутствующие curated shards: $($filesToUpload.Count)"
+    }
+    $uploadSet = if ($Force -or $existing.items.Count -eq 0) { $files } else { $filesToUpload }
+    foreach ($file in $uploadSet) {
+        if (-not $Force -and $existingDocumentsByName.ContainsKey($file.Name)) {
+            $oldDocument = $existingDocumentsByName[$file.Name]
+            Invoke-ApeRagJson -Method "DELETE" -Path "/api/v1/collections/$($collection.id)/documents/$($oldDocument.id)" | Out-Null
+            Write-Output "Deleted stale shard: $($file.Name)"
         }
-        $uploaded = $response | ConvertFrom-Json
-        $documentIds = @($uploaded.items | ForEach-Object { $_.id })
-        if (-not $documentIds) {
-            Write-Error "ApeRAG не вернул document id для $($file.Name): $response"
-        }
-        Invoke-ApeRagJson -Method "POST" -Path "/api/v1/collections/$($collection.id)/documents/confirm" -Body @{
-            document_ids = $documentIds
-        } | Out-Null
-        Write-Output "Uploaded: $($file.Name)"
+        Upload-CuratedShard -Collection $collection -File $file
     }
 }
 

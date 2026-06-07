@@ -313,10 +313,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 18.8_
 
 - [ ] 10. Build Critic Agent
-  - [ ] 10.1 Implement lookahead bias detection
+  - [x] 10.1 Implement lookahead bias detection
     - Check that signals use only past data
     - Verify no future information in position sizing
     - Confirm walk-forward windows don't overlap
+    - Implemented explicit `CriticLookaheadPolicy` and evidence-based detector without hidden thresholds
+    - Added `scripts/check_critic_pipeline.ps1` for the first Critic Agent checkpoint
     - _Requirements: 7.2_
   
   - [ ] 10.2 Implement overfitting detection

@@ -16,6 +16,8 @@ regular memory updates do not reprocess one oversized document.
   multiple-testing correction, and Statistical Testing Agent boundaries.
 - `docs/knowledge/decisions_backtesting.md`: Backtest Agent signal generation, position
   tracking, cost attribution, performance metrics, and reproducibility boundaries.
+- `docs/knowledge/decisions_critic_agent.md`: Critic Agent policies and review
+  boundaries.
 
 ## Operating Rule
 
