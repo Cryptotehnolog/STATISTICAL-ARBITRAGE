@@ -24,3 +24,24 @@ walk-forward validation; add a broad Critic Agent service with all checks at onc
 Risks: This first boundary detects chronology and future-information violations, not every
 form of research leakage. Future Critic tasks must add overfitting, weak-assumption,
 insufficient-testing, and cost-realism checks with explicit policy contracts.
+
+## DEC-0050: Detect overfitting with explicit performance evidence
+
+Status: accepted
+
+Decision: Implement Critic Agent overfitting detection through `CriticOverfittingPolicy`,
+`CriticOverfittingEvidence`, and `detect_overfitting`. The policy explicitly controls
+maximum in-sample/out-of-sample Sharpe degradation, maximum parameter-to-data ratio, and
+near-perfect in-sample Sharpe criteria. The evidence contract carries the Sharpe values,
+parameter count, data point count, and optional in-sample trade count.
+
+Rationale: Overfitting checks are research-impacting and must not inherit convenient
+thresholds from planning notes or code defaults. The Critic Agent should return transparent
+indicators that later decision logic can convert into reject/quarantine/approve outcomes.
+
+Alternatives considered: Hard-code common thresholds in the detector; fold overfitting into
+lookahead detection; wait until final Critic decision logic exists.
+
+Risks: The first detector uses summary evidence, not full train/test distributions or
+parameter search history. Future Critic tasks may add richer evidence, but they should keep
+the same explicit-policy discipline.

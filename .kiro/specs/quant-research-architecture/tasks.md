@@ -321,10 +321,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Added `scripts/check_critic_pipeline.ps1` for the first Critic Agent checkpoint
     - _Requirements: 7.2_
   
-  - [ ] 10.2 Implement overfitting detection
+  - [x] 10.2 Implement overfitting detection
     - Check in-sample vs out-of-sample Sharpe ratio divergence
     - Check parameter count vs data points ratio
     - Detect perfect or near-perfect in-sample results
+    - Implemented explicit `CriticOverfittingPolicy` and evidence-based indicators without hidden thresholds
     - _Requirements: 7.3_
   
   - [ ] 10.3 Implement weak assumption detection
