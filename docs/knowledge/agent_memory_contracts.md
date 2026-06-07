@@ -1,7 +1,8 @@
 # Agent Memory Contracts
 
-This shard defines what each agent should write to ApeRAG and what belongs in the
-structured registry. It is curated from the Kiro requirements and design docs.
+This shard defines what each agent should persist to operational memory through the
+Memory Agent policy boundary and what belongs in the structured registry. It is curated
+from the Kiro requirements and design docs.
 
 ## Shared Rule
 
@@ -17,7 +18,8 @@ decisions.
 
 The Coordinator Agent manages the task queue and experiment lifecycle. It writes lifecycle
 events, final decisions, rejection reasons, promotion reasons, and registry links to
-ApeRAG. It reads experiment status and metrics from the registry.
+operational memory through `MemoryAgentService`. It reads experiment status and metrics
+from the registry.
 
 The expected lifecycle is:
 
@@ -29,7 +31,7 @@ NEW -> DATA_VALIDATION -> STATISTICAL_TESTING -> BACKTESTING -> CRITIC_REVIEW ->
 
 The Data Agent ingests OHLCV data, validates quality, writes datasets to Parquet, and writes
 dataset IDs and quality reports to the registry. It writes validation failures and quarantine
-decisions to ApeRAG.
+decisions to operational memory through `MemoryAgentService`.
 
 Data quality validation must cover UTC timestamp normalization, duplicate timestamps,
 missing bars, impossible candles, abnormal volume spikes, deterministic resampling, pair
@@ -38,34 +40,39 @@ alignment, provenance, and quality thresholds.
 ## Hypothesis Agent
 
 The Hypothesis Agent reads market knowledge and past hypotheses from ApeRAG, checks
-rejected pairs in the registry, generates candidate pairs with rationale, and writes
-hypotheses to both ApeRAG and the registry.
+rejected pairs in the registry, generates candidate pairs with rationale, writes
+hypotheses to the registry, and writes only concise rationale summaries to operational
+memory through `MemoryAgentService`.
 
-It should link similar hypotheses in ApeRAG and flag retests of previously rejected ideas.
-LLM-generated hypotheses require critic review and budget limits.
+It should request policy-controlled links for similar hypotheses and flag retests of
+previously rejected ideas. LLM-generated hypotheses require critic review and budget limits.
 
 ## Statistical Testing Agent
 
 The Statistical Testing Agent requires validated datasets before testing. It writes
 structured p-values, test statistics, hedge ratios, and related metrics to the registry. It
-writes summary lessons and interpretation to ApeRAG.
+writes summary lessons and interpretation to operational memory through
+`MemoryAgentService`.
 
 ## Backtest Agent
 
 The Backtest Agent writes structured performance metrics, gross PnL, net PnL, turnover,
 cost attribution, and artifact references to the registry. It writes concise conclusions,
-lessons learned, and regime observations to ApeRAG.
+lessons learned, and regime observations to operational memory through
+`MemoryAgentService`.
 
 ## Critic Agent
 
 The Critic Agent reviews leakage risk, overfitting, weak assumptions, insufficient testing,
-unrealistic costs, and decision quality. It writes objections, detected risks, review status,
-and recommendations to ApeRAG and the registry.
+unrealistic costs, and decision quality. It writes structured review status to the registry
+and policy-safe objections, detected risks, and recommendations to operational memory
+through `MemoryAgentService`.
 
 ## Report Agent
 
 The Report Agent writes report artifact links and structured report metadata to the
-registry. It writes human-readable summaries and manual review notes to ApeRAG.
+registry. It writes human-readable summaries and manual review notes to operational memory
+through `MemoryAgentService`.
 
 ## Memory Agent
 
