@@ -1,7 +1,9 @@
 param(
     [string]$EnvFile = "data\aperag\.env",
     [string]$CollectionTitle = "stat-arb-project-knowledge",
-    [int]$TimeoutSeconds = 900
+    [int]$TimeoutSeconds = 900,
+    [int]$MaxRetries = 2,
+    [int]$RetryDelaySeconds = 30
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,6 +62,54 @@ function ConvertTo-PlainObject {
     return $Value
 }
 
+function Test-TransientGraphFailure {
+    param(
+        [object[]]$FailedDocuments,
+        [datetime]$GraphRebuildStartedAt
+    )
+
+    $knownTransientPatterns = @(
+        "ALL_ACCOUNTS_INACTIVE",
+        "ServiceUnavailable",
+        "service_unavailable",
+        "temporarily unavailable",
+        "rate limit",
+        "Too Many Requests"
+    )
+
+    $logs = ""
+    if (Get-Command docker -ErrorAction SilentlyContinue) {
+        try {
+            $since = $GraphRebuildStartedAt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            $logs = docker logs aperag-celeryworker --since $since --tail 300 2>&1
+        }
+        catch {
+            $logs = ""
+        }
+    }
+
+    foreach ($pattern in $knownTransientPatterns) {
+        if ($logs -match [regex]::Escape($pattern)) {
+            $names = ($FailedDocuments | ForEach-Object { $_.name }) -join ", "
+            Write-Output "Transient ApeRAG graph failure detected ($pattern): $names"
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Invoke-GraphRebuild {
+    param([object[]]$Documents)
+
+    foreach ($doc in ($Documents | Sort-Object name)) {
+        Invoke-ApeRagJson -Method "POST" -Path "/api/v1/collections/$($collection.id)/documents/$($doc.id)/rebuild_indexes" -Body @{
+            index_types = @("GRAPH")
+        } | Out-Null
+        Write-Output "GRAPH rebuild requested: $($doc.name)"
+    }
+}
+
 Write-Output "Включение ApeRAG graph для curated memory..."
 
 .\scripts\configure_aperag.ps1 -EnvFile $EnvFile | Write-Output
@@ -96,32 +146,46 @@ if (-not $docs.items -or $docs.items.Count -eq 0) {
     Write-Error "ApeRAG collection пуста: $($collection.id)"
 }
 
-foreach ($doc in ($docs.items | Sort-Object name)) {
-    Invoke-ApeRagJson -Method "POST" -Path "/api/v1/collections/$($collection.id)/documents/$($doc.id)/rebuild_indexes" -Body @{
-        index_types = @("GRAPH")
-    } | Out-Null
-    Write-Output "GRAPH rebuild requested: $($doc.name)"
-}
+$graphRebuildStartedAt = Get-Date
+Invoke-GraphRebuild -Documents @($docs.items)
 
-$deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-do {
-    Start-Sleep -Seconds 10
-    $docs = Invoke-ApeRagJson -Method "GET" -Path "/api/v1/collections/$($collection.id)/documents?page=1&page_size=100"
-    $groups = $docs.items | Group-Object graph_index_status | Sort-Object Name
-    $summary = ($groups | ForEach-Object { "$($_.Name)=$($_.Count)" }) -join ", "
-    Write-Output "Graph status: $summary"
+$attempt = 0
+while ($true) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        Start-Sleep -Seconds 10
+        $docs = Invoke-ApeRagJson -Method "GET" -Path "/api/v1/collections/$($collection.id)/documents?page=1&page_size=100"
+        $groups = $docs.items | Group-Object graph_index_status | Sort-Object Name
+        $summary = ($groups | ForEach-Object { "$($_.Name)=$($_.Count)" }) -join ", "
+        Write-Output "Graph status: $summary"
+
+        $failed = @($docs.items | Where-Object { $_.graph_index_status -eq "FAILED" })
+        if ($failed.Count -gt 0) {
+            if ($attempt -lt $MaxRetries -and (Test-TransientGraphFailure -FailedDocuments $failed -GraphRebuildStartedAt $graphRebuildStartedAt)) {
+                $attempt += 1
+                Write-Output "Повтор ApeRAG graph rebuild: attempt=$attempt/$MaxRetries через $RetryDelaySeconds секунд."
+                Start-Sleep -Seconds $RetryDelaySeconds
+                $graphRebuildStartedAt = Get-Date
+                Invoke-GraphRebuild -Documents $failed
+                break
+            }
+
+            $failed | Select-Object name,status,graph_index_status | Format-Table -AutoSize
+            Write-Error "ApeRAG graph rebuild failed for $($failed.Count) document(s)."
+        }
+
+        $ready = @($docs.items | Where-Object { $_.graph_index_status -eq "ACTIVE" })
+        if ($ready.Count -eq $docs.items.Count) {
+            break
+        }
+    } while ((Get-Date) -lt $deadline)
 
     $failed = @($docs.items | Where-Object { $_.graph_index_status -eq "FAILED" })
-    if ($failed.Count -gt 0) {
-        $failed | Select-Object name,status,graph_index_status | Format-Table -AutoSize
-        Write-Error "ApeRAG graph rebuild failed for $($failed.Count) document(s)."
-    }
-
     $ready = @($docs.items | Where-Object { $_.graph_index_status -eq "ACTIVE" })
-    if ($ready.Count -eq $docs.items.Count) {
+    if ($failed.Count -eq 0 -or $ready.Count -eq $docs.items.Count) {
         break
     }
-} while ((Get-Date) -lt $deadline)
+}
 
 $notReady = @($docs.items | Where-Object { $_.graph_index_status -ne "ACTIVE" })
 if ($notReady.Count -gt 0) {
