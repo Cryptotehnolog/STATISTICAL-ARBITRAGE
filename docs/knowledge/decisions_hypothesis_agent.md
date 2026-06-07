@@ -44,3 +44,26 @@ full Memory Agent exists; storing every correlation and rejected candidate in me
 Risks: If future novelty/linking code bypasses this policy, agent memory can become noisy
 or unsafe. Keep `scripts/check_hypothesis_agent_boundaries.ps1` active in pre-commit and
 CI.
+
+## DEC-0043: Make novelty scoring deterministic before LLM ranking
+
+Status: accepted
+
+Decision: Implement the first novelty check as a deterministic score. The Hypothesis Agent
+queries SQLite for exact rejected pair matches and queries ApeRAG through an injected
+search protocol for similar past hypotheses. `HypothesisNoveltyConfig` explicitly controls
+memory search depth, similarity threshold, memory-match penalty, and registry-rejection
+penalty. Generated hypotheses persist `novelty_score` and `similar_hypotheses` in the
+registry.
+
+Rationale: Novelty is a research signal, not a truth oracle. A transparent deterministic
+score is easier to test, audit, and reproduce than an immediate LLM judgment. Future
+LLM/rerank behavior can build on the same evidence boundary after baseline behavior is
+stable.
+
+Alternatives considered: Ask an LLM to judge novelty immediately; treat any registry match
+as automatic rejection; skip novelty until full Memory Agent.
+
+Risks: The current score only handles exact rejected registry pairs and high-similarity
+ApeRAG hits. Task 9.3 must add explicit graph/linking behavior for retests and related
+hypotheses without converting novelty into hidden decision logic.

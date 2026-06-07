@@ -286,10 +286,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Implemented deterministic `generate_rule_based_hypotheses` with explicit `HypothesisGenerationConfig`
     - _Requirements: 3.1_
 
-  - [ ] 9.2 Implement novelty checking
+  - [x] 9.2 Implement novelty checking
     - Query ApeRAG for similar past hypotheses using embedding similarity
     - Query SQLite registry for rejected pairs
     - Calculate novelty score (0.0-1.0)
+    - Implemented deterministic novelty scoring with explicit `HypothesisNoveltyConfig`
     - _Requirements: 3.2, 3.3_
   
   - [ ] 9.3 Implement hypothesis linking

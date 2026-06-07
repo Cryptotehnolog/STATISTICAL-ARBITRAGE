@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.agents import (
     HypothesisGenerationConfig,
+    HypothesisMemorySearchResult,
+    HypothesisNoveltyConfig,
     HypothesisUniverseAsset,
     generate_rule_based_hypotheses,
 )
@@ -23,6 +25,18 @@ class FakeMemoryService:
     def write(self, request: MemoryWriteRequest) -> object:
         self.requests.append(request)
         return object()
+
+
+class FakeHypothesisMemorySearcher:
+    """Fake ApeRAG-compatible searcher for novelty tests."""
+
+    def __init__(self, results: list[HypothesisMemorySearchResult]) -> None:
+        self.results = results
+        self.queries: list[tuple[str, list[str], int]] = []
+
+    def search(self, query: str, *, keywords: list[str] | None = None, top_k: int | None = None) -> list[HypothesisMemorySearchResult]:
+        self.queries.append((query, keywords or [], top_k or 0))
+        return self.results
 
 
 def test_hypothesis_agent_generates_registry_records_and_memory_summaries() -> None:
@@ -74,6 +88,88 @@ def test_hypothesis_agent_generates_registry_records_and_memory_summaries() -> N
     assert "Generated rule-based pair hypothesis" in memory.requests[0].body
 
 
+def test_hypothesis_agent_calculates_novelty_from_registry_and_aperag() -> None:
+    """Novelty should combine exact rejected registry pairs and similar ApeRAG hits."""
+    session = _session()
+    rejected = Hypothesis(
+        asset_a="AAA",
+        asset_b="BBB",
+        rationale="Rejected earlier",
+        source="unit-test",
+        novelty_score=0.1,
+        status="rejected",
+        created_by="pytest",
+    )
+    session.add(rejected)
+    session.flush()
+    searcher = FakeHypothesisMemorySearcher(
+        [
+            HypothesisMemorySearchResult(
+                text="Past hypothesis for AAA/BBB failed because regime changed.",
+                score=0.92,
+                source="memory-doc",
+                metadata={"hypothesis_id": "memory-hypothesis-1"},
+            ),
+            HypothesisMemorySearchResult(
+                text="Weak low-score result",
+                score=0.2,
+                source="ignored",
+                metadata={},
+            ),
+        ]
+    )
+
+    result = generate_rule_based_hypotheses(
+        assets=(
+            HypothesisUniverseAsset(symbol="AAA", sector="Banks", market_cap=100_000_000_000),
+            HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
+        ),
+        correlations={("AAA", "BBB"): 0.93},
+        config=_generation_config(),
+        novelty_config=HypothesisNoveltyConfig(
+            memory_top_k=5,
+            memory_similarity_threshold=0.8,
+            memory_match_penalty=0.25,
+            registry_rejection_penalty=0.7,
+        ),
+        memory_searcher=searcher,
+        session=session,
+    )
+
+    stored = result.hypotheses[0]
+    assert stored.novelty_score == 0.05
+    assert stored.similar_hypotheses == [rejected.hypothesis_id, "memory-hypothesis-1"]
+    assert searcher.queries == [
+        ("pair hypothesis AAA BBB statistical arbitrage", ["aaa", "bbb", "hypothesis"], 5)
+    ]
+
+
+def test_hypothesis_agent_requires_memory_searcher_for_novelty_config() -> None:
+    """Novelty config should not silently skip ApeRAG search."""
+    session = _session()
+
+    try:
+        generate_rule_based_hypotheses(
+            assets=(
+                HypothesisUniverseAsset(symbol="AAA", sector="Banks", market_cap=100_000_000_000),
+                HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
+            ),
+            correlations={("AAA", "BBB"): 0.93},
+            config=_generation_config(),
+            novelty_config=HypothesisNoveltyConfig(
+                memory_top_k=5,
+                memory_similarity_threshold=0.8,
+                memory_match_penalty=0.25,
+                registry_rejection_penalty=0.7,
+            ),
+            session=session,
+        )
+    except ValueError as exc:
+        assert "memory_searcher" in str(exc)
+    else:
+        raise AssertionError("novelty_config without memory_searcher should fail")
+
+
 def test_hypothesis_agent_rejects_invalid_generation_config() -> None:
     """Research-impacting screening settings must be explicit and valid."""
     session = _session()
@@ -121,3 +217,17 @@ def _session() -> Session:
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine)
     return session_factory()
+
+
+def _generation_config() -> HypothesisGenerationConfig:
+    return HypothesisGenerationConfig(
+        require_same_sector=True,
+        min_abs_correlation=0.85,
+        min_market_cap=50_000_000_000,
+        max_market_cap=150_000_000_000,
+        max_pairs=5,
+        initial_novelty_score=1.0,
+        initial_status="new",
+        source="rule_based",
+        created_by="hypothesis_agent",
+    )

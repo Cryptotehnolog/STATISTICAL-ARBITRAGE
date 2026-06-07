@@ -21,6 +21,29 @@ class MemoryWriter(Protocol):
 
 
 @dataclass(frozen=True)
+class HypothesisMemorySearchResult:
+    """Stable subset of ApeRAG search results used for novelty checks."""
+
+    text: str
+    score: float | None
+    source: str | None
+    metadata: dict[str, str]
+
+
+class HypothesisMemorySearcher(Protocol):
+    """Minimal ApeRAG-compatible search protocol for novelty checks."""
+
+    def search(
+        self,
+        query: str,
+        *,
+        keywords: list[str] | None = None,
+        top_k: int | None = None,
+    ) -> Sequence[HypothesisMemorySearchResult]:
+        """Search project memory for similar past hypotheses."""
+
+
+@dataclass(frozen=True)
 class HypothesisUniverseAsset:
     """Tradable asset metadata used by rule-based pair screening."""
 
@@ -45,6 +68,26 @@ class HypothesisGenerationConfig:
 
 
 @dataclass(frozen=True)
+class HypothesisNoveltyConfig:
+    """Explicit novelty scoring configuration for Hypothesis Agent."""
+
+    memory_top_k: int
+    memory_similarity_threshold: float
+    memory_match_penalty: float
+    registry_rejection_penalty: float
+
+
+@dataclass(frozen=True)
+class HypothesisNoveltyAssessment:
+    """Novelty evidence for one candidate pair."""
+
+    novelty_score: float
+    similar_hypothesis_refs: tuple[str, ...]
+    registry_rejected_count: int
+    memory_match_count: int
+
+
+@dataclass(frozen=True)
 class HypothesisGenerationResult:
     """Result of a registry-backed hypothesis generation run."""
 
@@ -61,9 +104,15 @@ def generate_rule_based_hypotheses(
     config: HypothesisGenerationConfig,
     session: Session,
     memory_service: MemoryWriter | None = None,
+    novelty_config: HypothesisNoveltyConfig | None = None,
+    memory_searcher: HypothesisMemorySearcher | None = None,
 ) -> HypothesisGenerationResult:
     """Generate deterministic pair hypotheses, persist them, and write memory summaries."""
     _validate_config(config)
+    if novelty_config is not None:
+        _validate_novelty_config(novelty_config)
+        if memory_searcher is None:
+            raise ValueError("memory_searcher is required when novelty_config is provided")
     normalized_assets = tuple(_normalize_asset(asset) for asset in assets)
     normalized_correlations = _normalize_correlations(correlations)
 
@@ -82,12 +131,21 @@ def generate_rule_based_hypotheses(
 
     stored: list[Hypothesis] = []
     for asset_a, asset_b, correlation in selected:
+        novelty = _assess_novelty(
+            asset_a,
+            asset_b,
+            session=session,
+            config=novelty_config,
+            memory_searcher=memory_searcher,
+            initial_novelty_score=config.initial_novelty_score,
+        )
         hypothesis = Hypothesis(
             asset_a=asset_a.symbol,
             asset_b=asset_b.symbol,
             rationale=_rationale_for(asset_a, asset_b, correlation),
             source=config.source,
-            novelty_score=config.initial_novelty_score,
+            similar_hypotheses=list(novelty.similar_hypothesis_refs) or None,
+            novelty_score=novelty.novelty_score,
             status=config.initial_status,
             created_by=config.created_by,
         )
@@ -122,6 +180,17 @@ def _validate_config(config: HypothesisGenerationConfig) -> None:
         raise ValueError("source must be non-empty")
     if not config.created_by.strip():
         raise ValueError("created_by must be non-empty")
+
+
+def _validate_novelty_config(config: HypothesisNoveltyConfig) -> None:
+    if config.memory_top_k <= 0:
+        raise ValueError("memory_top_k must be positive")
+    if not 0.0 <= config.memory_similarity_threshold <= 1.0:
+        raise ValueError("memory_similarity_threshold must be between 0.0 and 1.0")
+    if not 0.0 <= config.memory_match_penalty <= 1.0:
+        raise ValueError("memory_match_penalty must be between 0.0 and 1.0")
+    if not 0.0 <= config.registry_rejection_penalty <= 1.0:
+        raise ValueError("registry_rejection_penalty must be between 0.0 and 1.0")
 
 
 def _normalize_asset(asset: HypothesisUniverseAsset) -> HypothesisUniverseAsset:
@@ -172,6 +241,80 @@ def _passes_filters(
         if config.max_market_cap is not None and asset.market_cap > config.max_market_cap:
             return False
     return True
+
+
+def _assess_novelty(
+    asset_a: HypothesisUniverseAsset,
+    asset_b: HypothesisUniverseAsset,
+    *,
+    session: Session,
+    config: HypothesisNoveltyConfig | None,
+    memory_searcher: HypothesisMemorySearcher | None,
+    initial_novelty_score: float,
+) -> HypothesisNoveltyAssessment:
+    if config is None:
+        return HypothesisNoveltyAssessment(
+            novelty_score=initial_novelty_score,
+            similar_hypothesis_refs=(),
+            registry_rejected_count=0,
+            memory_match_count=0,
+        )
+
+    rejected = _rejected_registry_matches(session, asset_a.symbol, asset_b.symbol)
+    memory_matches = _memory_matches(asset_a, asset_b, config=config, memory_searcher=memory_searcher)
+    penalty = 0.0
+    if rejected:
+        penalty += config.registry_rejection_penalty
+    penalty += min(1.0, len(memory_matches) * config.memory_match_penalty)
+    score = max(0.0, min(1.0, initial_novelty_score - penalty))
+    refs = tuple(dict.fromkeys([*(item.hypothesis_id for item in rejected), *memory_matches]))
+    return HypothesisNoveltyAssessment(
+        novelty_score=round(score, 6),
+        similar_hypothesis_refs=refs,
+        registry_rejected_count=len(rejected),
+        memory_match_count=len(memory_matches),
+    )
+
+
+def _rejected_registry_matches(
+    session: Session,
+    symbol_a: str,
+    symbol_b: str,
+) -> list[Hypothesis]:
+    first, second = _pair_key(symbol_a, symbol_b)
+    return (
+        session.query(Hypothesis)
+        .filter(
+            Hypothesis.status == "rejected",
+            (
+                ((Hypothesis.asset_a == first) & (Hypothesis.asset_b == second))
+                | ((Hypothesis.asset_a == second) & (Hypothesis.asset_b == first))
+            ),
+        )
+        .all()
+    )
+
+
+def _memory_matches(
+    asset_a: HypothesisUniverseAsset,
+    asset_b: HypothesisUniverseAsset,
+    *,
+    config: HypothesisNoveltyConfig,
+    memory_searcher: HypothesisMemorySearcher | None,
+) -> tuple[str, ...]:
+    if memory_searcher is None:
+        return ()
+    query = f"pair hypothesis {asset_a.symbol} {asset_b.symbol} statistical arbitrage"
+    keywords = [asset_a.symbol.lower(), asset_b.symbol.lower(), "hypothesis"]
+    results = memory_searcher.search(query, keywords=keywords, top_k=config.memory_top_k)
+    refs: list[str] = []
+    for result in results:
+        if result.score is None or result.score < config.memory_similarity_threshold:
+            continue
+        ref = result.metadata.get("hypothesis_id") or result.source
+        if ref:
+            refs.append(str(ref))
+    return tuple(dict.fromkeys(refs))
 
 
 def _rationale_for(

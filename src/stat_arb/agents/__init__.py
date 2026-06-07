@@ -8,6 +8,9 @@ from stat_arb.agents.backtest import (
 from stat_arb.agents.hypothesis import (
     HypothesisGenerationConfig,
     HypothesisGenerationResult,
+    HypothesisMemorySearchResult,
+    HypothesisNoveltyAssessment,
+    HypothesisNoveltyConfig,
     HypothesisUniverseAsset,
     generate_rule_based_hypotheses,
 )
@@ -22,6 +25,9 @@ __all__ = [
     "BacktestAgentRunResult",
     "HypothesisGenerationConfig",
     "HypothesisGenerationResult",
+    "HypothesisMemorySearchResult",
+    "HypothesisNoveltyAssessment",
+    "HypothesisNoveltyConfig",
     "HypothesisUniverseAsset",
     "StatisticalTestingInput",
     "StatisticalTestingRunResult",
