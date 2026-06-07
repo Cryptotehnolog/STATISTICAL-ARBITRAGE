@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
+from stat_arb.data_quality import OHLCVQualityConfig
 from stat_arb.ingestion import CCXTOHLCVSource, OHLCVQualityError, fetch_validate_write_ohlcv
 from stat_arb.storage import (
     Base,
@@ -18,6 +19,14 @@ from stat_arb.storage import (
     Dataset,
     persist_ohlcv_ingestion_result,
 )
+
+
+def _strict_quality_config() -> OHLCVQualityConfig:
+    return OHLCVQualityConfig(
+        max_missing_bar_ratio=0.0,
+        max_abnormal_volume_ratio=0.0,
+        volume_spike_multiplier=10.0,
+    )
 
 
 class FakeExchange:
@@ -90,6 +99,7 @@ def test_persist_ohlcv_ingestion_result_writes_registry_and_sidecars(session: Se
             symbol="BTC/USDT",
             timeframe="5m",
             output_root=output_root,
+            quality_config=_strict_quality_config(),
         )
         stored = persist_ohlcv_ingestion_result(
             session,
@@ -151,6 +161,7 @@ def test_persist_ohlcv_ingestion_result_requires_passing_quality(session: Sessio
                 symbol="ETH/USDT",
                 timeframe="5m",
                 output_root=output_root,
+                quality_config=_strict_quality_config(),
             )
 
         assert session.query(Dataset).count() == 0

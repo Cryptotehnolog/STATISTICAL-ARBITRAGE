@@ -37,9 +37,9 @@ def engle_granger_cointegration_test(
     asset_a: ArrayLike,
     asset_b: ArrayLike,
     *,
-    alpha: float = 0.05,
+    alpha: float,
+    multiple_testing_method: MultipleTestingMethod,
     corrected_p_value: float | None = None,
-    multiple_testing_method: MultipleTestingMethod = MultipleTestingMethod.NONE,
 ) -> CointegrationTestResult:
     """Run the Engle-Granger two-step cointegration test on aligned price series."""
     series_a = _as_1d_finite_array(asset_a, name="asset_a")
@@ -75,7 +75,7 @@ def engle_granger_cointegration_test(
 def adjust_p_values(
     p_values: Iterable[float],
     *,
-    method: MultipleTestingMethod = MultipleTestingMethod.BENJAMINI_HOCHBERG,
+    method: MultipleTestingMethod,
 ) -> tuple[float, ...]:
     """Apply a multiple-testing correction to p-values."""
     values = np.asarray(tuple(p_values), dtype=float)

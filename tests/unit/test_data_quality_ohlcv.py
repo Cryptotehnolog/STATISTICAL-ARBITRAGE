@@ -20,6 +20,14 @@ from stat_arb.domain import (
 )
 
 
+def _strict_quality_config() -> OHLCVQualityConfig:
+    return OHLCVQualityConfig(
+        max_missing_bar_ratio=0.0,
+        max_abnormal_volume_ratio=0.0,
+        volume_spike_multiplier=10.0,
+    )
+
+
 def _bar(index: int, *, volume: float = 10.0) -> OHLCVBar:
     timestamp = datetime(2024, 1, 1, tzinfo=UTC) + timedelta(minutes=5 * index)
     return OHLCVBar(
@@ -47,7 +55,7 @@ def test_validate_ohlcv_batch_passes_complete_series() -> None:
         exchange="binance",
     )
 
-    report = validate_ohlcv_batch(batch)
+    report = validate_ohlcv_batch(batch, config=_strict_quality_config())
 
     assert report.passed is True
     assert report.bar_count == 3
@@ -60,7 +68,7 @@ def test_validate_ohlcv_batch_passes_complete_series() -> None:
 
 def test_validate_ohlcv_batch_detects_missing_bars() -> None:
     """Missing timestamps should be counted and fail strict validation."""
-    report = validate_ohlcv_batch([_bar(0), _bar(2)])
+    report = validate_ohlcv_batch([_bar(0), _bar(2)], config=_strict_quality_config())
 
     assert report.passed is False
     assert report.expected_bar_count == 3
@@ -77,7 +85,7 @@ def test_validate_ohlcv_batch_missing_bar_count_is_complete(indexes: set[int]) -
     """Property 2: missing-bar count should equal gaps in the timestamp sequence."""
     ordered_indexes = sorted(indexes)
 
-    report = validate_ohlcv_batch([_bar(index) for index in ordered_indexes])
+    report = validate_ohlcv_batch([_bar(index) for index in ordered_indexes], config=_strict_quality_config())
 
     expected_bar_count = ordered_indexes[-1] - ordered_indexes[0] + 1
     assert report.expected_bar_count == expected_bar_count
@@ -86,7 +94,11 @@ def test_validate_ohlcv_batch_missing_bar_count_is_complete(indexes: set[int]) -
 
 def test_validate_ohlcv_batch_allows_missing_bars_within_threshold() -> None:
     """Configured thresholds should downgrade small missing gaps to warnings."""
-    config = OHLCVQualityConfig(max_missing_bar_ratio=0.5)
+    config = OHLCVQualityConfig(
+        max_missing_bar_ratio=0.5,
+        max_abnormal_volume_ratio=0.0,
+        volume_spike_multiplier=10.0,
+    )
 
     report = validate_ohlcv_batch([_bar(0), _bar(2)], config=config)
 
@@ -99,7 +111,7 @@ def test_validate_ohlcv_batch_detects_duplicate_raw_timestamps() -> None:
     """Raw bar sequences should catch duplicates before OHLCVBatch construction."""
     duplicate = _bar(1).model_copy(update={"close": 101.25})
 
-    report = validate_ohlcv_batch([_bar(0), _bar(1), duplicate, _bar(2)])
+    report = validate_ohlcv_batch([_bar(0), _bar(1), duplicate, _bar(2)], config=_strict_quality_config())
 
     assert report.passed is False
     assert report.bar_count == 3
@@ -122,7 +134,7 @@ def test_validate_ohlcv_batch_duplicate_count_is_complete(
     bars = [_bar(index) for index in range(10)]
     bars.extend(_bar(duplicate_index).model_copy(update={"close": 101.25}) for _ in range(duplicate_count))
 
-    report = validate_ohlcv_batch(bars)
+    report = validate_ohlcv_batch(bars, config=_strict_quality_config())
 
     assert report.duplicate_timestamps == duplicate_count
     assert any(issue.code == "duplicate_timestamps" for issue in report.issues)
@@ -131,7 +143,10 @@ def test_validate_ohlcv_batch_duplicate_count_is_complete(
 
 def test_validate_ohlcv_batch_detects_abnormal_volume_spikes() -> None:
     """Volume spikes should be warning-level unless they exceed the configured ratio."""
-    report = validate_ohlcv_batch([_bar(0), _bar(1), _bar(2, volume=500.0), _bar(3)])
+    report = validate_ohlcv_batch(
+        [_bar(0), _bar(1), _bar(2, volume=500.0), _bar(3)],
+        config=_strict_quality_config(),
+    )
 
     assert report.passed is False
     assert report.abnormal_volume_count == 1
@@ -154,7 +169,7 @@ def test_validate_ohlcv_batch_volume_spike_detection_is_sensitive(
     bars = [_bar(index) for index in range(bar_count)]
     bars[spike_index] = _bar(spike_index, volume=500.0)
 
-    report = validate_ohlcv_batch(bars)
+    report = validate_ohlcv_batch(bars, config=_strict_quality_config())
 
     assert report.abnormal_volume_count == 1
     assert any(issue.code == "abnormal_volume" for issue in report.issues)
@@ -163,16 +178,16 @@ def test_validate_ohlcv_batch_volume_spike_detection_is_sensitive(
 def test_validate_ohlcv_batch_rejects_empty_or_mixed_series() -> None:
     """Validation input must represent one non-empty OHLCV series."""
     with pytest.raises(ValueError, match="at least one bar"):
-        validate_ohlcv_batch([])
+        validate_ohlcv_batch([], config=_strict_quality_config())
 
     wrong_symbol = _bar(1).model_copy(update={"symbol": "ETH/USDT"})
     with pytest.raises(ValueError, match="first bar symbol"):
-        validate_ohlcv_batch([_bar(0), wrong_symbol])
+        validate_ohlcv_batch([_bar(0), wrong_symbol], config=_strict_quality_config())
 
 
 def test_summarize_data_quality_failure_builds_memory_safe_contract() -> None:
     """Failed reports should produce concise summaries for future Memory Agent writes."""
-    report = validate_ohlcv_batch([_bar(0), _bar(2)])
+    report = validate_ohlcv_batch([_bar(0), _bar(2)], config=_strict_quality_config())
 
     summary = summarize_data_quality_failure(report)
 
@@ -190,7 +205,7 @@ def test_summarize_data_quality_failure_builds_memory_safe_contract() -> None:
 
 def test_summarize_data_quality_failure_rejects_passing_reports() -> None:
     """Passing reports should not be written to failure memory."""
-    report = validate_ohlcv_batch([_bar(0), _bar(1), _bar(2)])
+    report = validate_ohlcv_batch([_bar(0), _bar(1), _bar(2)], config=_strict_quality_config())
 
     with pytest.raises(ValueError, match="Only failed data quality reports"):
         summarize_data_quality_failure(report)

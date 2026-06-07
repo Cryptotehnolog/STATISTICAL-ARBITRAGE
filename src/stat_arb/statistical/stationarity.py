@@ -26,9 +26,9 @@ class ADFTestResult:
 def adf_stationarity_test(
     residuals: ArrayLike,
     *,
-    alpha: float = 0.05,
-    regression: str = "c",
-    autolag: str | None = "AIC",
+    alpha: float,
+    regression: str,
+    autolag: str | None,
 ) -> ADFTestResult:
     """Run an ADF test on spread residuals."""
     series = _as_1d_finite_array(residuals, name="residuals")

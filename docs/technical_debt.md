@@ -174,20 +174,6 @@ Follow-up:
 
 Related tasks: 2.4, 19.1, 22.4.
 
-### TD-0009: Audit and remove obsolete `.kiro/skills` once Codex skill installation is stable
-
-Status: open
-
-Why deferred: Rust skills were installed into Codex, but the source `.kiro/skills` folder
-may still exist as local planning material.
-
-Follow-up:
-- Verify Codex can see and use the installed `rust-skills` skill without `.kiro/skills`.
-- If the folder is no longer needed, delete it instead of keeping duplicate skill source in
-  the project.
-
-Related tasks: Rust optimization path, 22.5.
-
 ### TD-0010: Keep Rust as an optimization path, not an early rewrite
 
 Status: open
@@ -361,3 +347,13 @@ viewer is no longer a prerequisite for removing the old local viewer workflow; a
 task only if ApeRAG UI proves insufficient.
 
 Closed by: ApeRAG migration cleanup.
+
+### TD-CLOSED-0009: Remove obsolete `.kiro/skills` after Codex skill installation
+
+Status: closed
+
+Resolution: Selected Rust skills from `actionbook/rust-skills` were installed into
+`C:\Users\Victor\.codex\skills`, the current Codex session can see them, and duplicate
+`.kiro/skills` source is absent from the project.
+
+Closed by: Codex skills installation audit.

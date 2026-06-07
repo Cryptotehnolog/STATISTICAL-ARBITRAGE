@@ -5,6 +5,8 @@ import pytest
 
 from stat_arb.statistical import adf_stationarity_test
 
+_ADF_KWARGS = {"alpha": 0.05, "regression": "c", "autolag": "AIC"}
+
 
 def _ar1_series(*, phi: float, size: int, seed: int) -> np.ndarray:
     rng = np.random.default_rng(seed)
@@ -19,7 +21,7 @@ def test_adf_accepts_stationary_residuals() -> None:
     """ADF should reject the unit-root null for stationary residuals."""
     residuals = _ar1_series(phi=0.45, size=300, seed=21)
 
-    result = adf_stationarity_test(residuals)
+    result = adf_stationarity_test(residuals, **_ADF_KWARGS)
 
     assert result.passed is True
     assert result.p_value < 0.05
@@ -33,7 +35,7 @@ def test_adf_rejects_non_stationary_random_walk() -> None:
     rng = np.random.default_rng(84)
     residuals = np.cumsum(rng.normal(size=300))
 
-    result = adf_stationarity_test(residuals)
+    result = adf_stationarity_test(residuals, **_ADF_KWARGS)
 
     assert result.passed is False
     assert result.p_value > 0.05
@@ -42,16 +44,16 @@ def test_adf_rejects_non_stationary_random_walk() -> None:
 def test_adf_rejects_invalid_inputs() -> None:
     """ADF boundary should validate shape, finiteness, sample size, and alpha."""
     with pytest.raises(ValueError, match="one-dimensional"):
-        adf_stationarity_test([[1.0, 2.0], [3.0, 4.0]])
+        adf_stationarity_test([[1.0, 2.0], [3.0, 4.0]], **_ADF_KWARGS)
 
     with pytest.raises(ValueError, match="finite"):
-        adf_stationarity_test([1.0, np.nan] * 20)
+        adf_stationarity_test([1.0, np.nan] * 20, **_ADF_KWARGS)
 
     with pytest.raises(ValueError, match="at least 20"):
-        adf_stationarity_test([1.0, 2.0, 3.0])
+        adf_stationarity_test([1.0, 2.0, 3.0], **_ADF_KWARGS)
 
     with pytest.raises(ValueError, match="non-constant"):
-        adf_stationarity_test([1.0] * 30)
+        adf_stationarity_test([1.0] * 30, **_ADF_KWARGS)
 
     with pytest.raises(ValueError, match="alpha"):
-        adf_stationarity_test(np.arange(30), alpha=1.5)
+        adf_stationarity_test(np.arange(30), alpha=1.5, regression="c", autolag="AIC")

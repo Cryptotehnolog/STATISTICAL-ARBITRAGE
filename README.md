@@ -30,7 +30,7 @@
 4. **Память с первого дня**: ApeRAG хранит долгосрочную память, knowledge search и graph.
 5. **Human in the loop**: критичные решения проходят через approval gates.
 6. **Python-first, Rust только по профилированию**: Rust добавляется только там, где Python реально стал узким местом.
-7. **Минимальная инфраструктура для v1**: SQLite + embedded vector store (FAISS/NanoVectorDB).
+7. **Минимальная инфраструктура для v1**: SQLite и Parquet локально; ApeRAG, Infisical и OmniRoute как Docker-supported runtime.
 
 ### Agent architecture
 

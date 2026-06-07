@@ -24,7 +24,7 @@ class HalfLifeResult:
 def estimate_half_life(
     residuals: ArrayLike,
     *,
-    periods_per_day: float = 1.0,
+    periods_per_day: float,
 ) -> HalfLifeResult:
     """Estimate mean-reversion half-life from spread residuals."""
     series = _as_1d_finite_array(residuals, name="residuals")

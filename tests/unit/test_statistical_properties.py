@@ -6,6 +6,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from stat_arb.statistical import (
+    MultipleTestingMethod,
     adf_stationarity_test,
     construct_rolling_zscore,
     engle_granger_cointegration_test,
@@ -26,7 +27,12 @@ def test_cointegration_detects_synthetic_cointegrated_pairs(seed: int, beta: flo
     asset_a = np.cumsum(rng.normal(size=220)) + 100.0
     asset_b = beta * asset_a + rng.normal(scale=noise_scale, size=220)
 
-    result = engle_granger_cointegration_test(asset_a, asset_b)
+    result = engle_granger_cointegration_test(
+        asset_a,
+        asset_b,
+        alpha=0.05,
+        multiple_testing_method=MultipleTestingMethod.NONE,
+    )
 
     assert result.passed is True
     assert result.p_value < 0.05
@@ -46,7 +52,7 @@ def test_adf_detects_stationary_ar1_residuals(seed: int, phi: float) -> None:
     for index in range(1, residuals.size):
         residuals[index] = phi * residuals[index - 1] + shocks[index]
 
-    result = adf_stationarity_test(residuals)
+    result = adf_stationarity_test(residuals, alpha=0.05, regression="c", autolag="AIC")
 
     assert result.passed is True
     assert result.p_value < 0.05
@@ -62,7 +68,7 @@ def test_half_life_estimation_tracks_synthetic_mean_reversion(half_life: float) 
     phi = float(np.exp(-np.log(2.0) / half_life))
     residuals = phi ** np.arange(500)
 
-    result = estimate_half_life(residuals)
+    result = estimate_half_life(residuals, periods_per_day=1.0)
 
     assert result.half_life_periods == pytest.approx(half_life, rel=0.2)
 

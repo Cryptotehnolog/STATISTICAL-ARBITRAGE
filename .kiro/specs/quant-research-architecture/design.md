@@ -16,7 +16,7 @@ The system serves as a reproducible research platform with proper data quality c
 4. **Memory from day one**: ApeRAG provides long-term memory and knowledge graph from v1
 5. **Human in the loop**: Mandatory approval gates for critical decisions
 6. **Python-first with optional Rust optimization**: Start with Python implementations, add Rust only when profiling proves it necessary
-7. **Minimal infrastructure for v1**: SQLite + embedded vector store (FAISS/Chroma) for local development, with clear upgrade path
+7. **Pragmatic infrastructure for v1**: SQLite and Parquet stay local; ApeRAG, Infisical, and OmniRoute run as Docker-supported runtime services
 
 ### Hardware Constraints
 
@@ -31,7 +31,7 @@ The system serves as a reproducible research platform with proper data quality c
 - Intraday OHLCV data ingestion with quality validation
 - Hypothesis generation and statistical testing
 - Reproducible backtesting with cost attribution
-- ApeRAG long-term memory with minimal infrastructure (SQLite + embedded vector store)
+- ApeRAG long-term memory through the Docker-supported ApeRAG service
 - Dashboard for experiment monitoring and report review
 - 15-minute bars as primary timeframe, 5-minute as secondary
 - Small universe (50-200 liquid assets), 1-2 asset classes
@@ -50,23 +50,15 @@ The system serves as a reproducible research platform with proper data quality c
 
 ### Infrastructure Strategy for v1 MVP
 
-**CRITICAL: Docker is NOT required for v1 MVP local development.**
+**Current v1 local development path**:
+- **Registry**: SQLite (single local file, zero database server management)
+- **Dataset storage**: Parquet files on local disk
+- **Memory**: ApeRAG service managed through Docker-supported runtime scripts
+- **Secrets**: Infisical service managed through Docker-supported runtime scripts
+- **LLM routing**: OmniRoute service managed through Docker-supported runtime scripts
+- **Execution**: Python components run through `uv` and call external runtime services through explicit clients
 
-**v1 Local Development (No Docker Required)**:
-- **Database**: SQLite (single file, zero configuration)
-- **Vector Store**: FAISS or Chroma embedded (local directory)
-- **ApeRAG**: Embedded backends (no separate servers)
-- **Execution**: All components run as Python processes via `uv run`
-- **Setup Time**: < 5 minutes (just `uv sync` and init scripts)
-
-**Docker Compose (Optional, for Production-like Testing)**:
-- **Purpose**: Test production deployment, prepare for Oracle Cloud
-- **When to Use**: Multi-developer shared infrastructure, Postgres concurrency testing, cloud deployment preparation
-- **When NOT to Use**: Local single-developer MVP work, quick iteration, limited resources
-- **Services**: Optional Postgres (instead of SQLite), optional Chroma server (instead of embedded)
-- **Profiles**: Services use Docker Compose profiles and only start when explicitly requested
-
-**Key Principle**: v1 MVP must run without Docker using uv, SQLite, Parquet, and embedded ApeRAG/vector storage. Docker Compose is provided as an optional production-like infrastructure path for testing and future Oracle Cloud deployment, but must NOT block the local MVP.
+**Key Principle**: core research code must remain portable and testable without hidden service calls, but memory, secrets, and LLM routing are active Docker-supported services. Fast unit checks may use fakes; integration checks verify the real runtime services separately.
 
 
 ## Architecture
@@ -101,7 +93,7 @@ graph TB
     end
     
     subgraph "Storage Layer (Minimal v1)"
-        ApeRAG[(ApeRAG<br/>Embedded Vector Store)]
+        ApeRAG[(ApeRAG<br/>Docker-supported Memory)]
         Registry[(SQLite Registry<br/>Local File)]
         DataStore[(Data Store<br/>Parquet Files)]
         Secrets[Infisical<br/>Secrets Management]
@@ -156,7 +148,7 @@ graph TB
 - **Dual-layer retrieval**: Combines vector similarity and graph traversal for context-aware queries
 - **Agent memory**: Enables agents to learn from past decisions and avoid repeated mistakes
 - **Development knowledge**: Stores architecture decisions, code references, and lessons learned
-- **Minimal infrastructure**: Can run with embedded vector store (FAISS/Chroma) and SQLite, no Neo4j required for v1
+- **Operational memory backend**: ApeRAG runs as the active external memory service while structured research data stays in SQLite and Parquet
 
 **Why Python-first with optional Rust?**
 - **Rapid development**: Python enables faster iteration and prototyping
@@ -165,17 +157,16 @@ graph TB
 - **Clear API boundaries**: Design Rust interfaces in v1, implement incrementally
 - **Fallback path**: Pure Python implementations ensure v1 can be completed without Rust
 
-**Why SQLite + embedded vector store for v1?**
-- **Minimal setup**: No Docker required for basic development
-- **Low resource usage**: Runs comfortably on i5-1335U with 32GB RAM
-- **Zero configuration**: Works out of the box, no server management
-- **Clear upgrade path**: Can migrate to Postgres + Neo4j + Chroma when needed
-- **Sufficient for MVP**: Handles 50-200 assets and hundreds of experiments
+**Why SQLite + ApeRAG service for v1?**
+- **Clear ownership**: SQLite owns structured experiment records; ApeRAG owns semantic memory and graph retrieval
+- **Low coupling**: agents write memory only through policy boundaries, not direct backend calls
+- **Operational realism**: Docker-supported ApeRAG, Infisical, and OmniRoute match the current local runtime and future server deployment path
+- **Sufficient for MVP**: SQLite and Parquet handle structured research artifacts while ApeRAG stores curated summaries, lessons, and graph context
 
 **Rejected alternatives:**
 - **Mandatory Rust from day one**: Slows development, blocks MVP if team lacks Rust expertise
 - **Neo4j required for v1**: Adds infrastructure complexity, ApeRAG can use simpler backends
-- **Docker Compose required for development**: Adds friction, not needed for SQLite + embedded stores
+- **Embedding memory directly inside the Python package**: Hides operational state and makes backend migration harder
 - **Pure Python backtesting**: May be too slow, but worth trying before adding Rust complexity
 
 
@@ -197,7 +188,7 @@ graph TB
 
 **Tool Permissions:**
 - Read/write to structured registry
-- Write lifecycle events to ApeRAG
+- Request lifecycle memory writes through the Memory Agent policy boundary
 - Invoke other agents via task queue
 - Read experiment status and metrics
 
@@ -620,9 +611,9 @@ result = run_backtest(
 - Duplicate information already in registry
 
 **ApeRAG Configuration:**
-- Embedding model: sentence-transformers/all-MiniLM-L6-v2 (local, 384 dimensions)
-- Graph database: Neo4j or built-in ApeRAG graph
-- Vector store: FAISS or Chroma (local)
+- Backend: ApeRAG Docker-supported service
+- Graph: ApeRAG knowledge graph enabled for curated project and agent collections
+- Embedding and storage: owned by ApeRAG runtime configuration, not hidden inside Python package defaults
 - Chunk size: 512 tokens
 - Overlap: 50 tokens
 
@@ -1574,7 +1565,7 @@ quant-research-system/
 │   ├── raw/                          # Raw downloaded data
 │   ├── processed/                    # Validated Parquet files
 │   ├── quant_research.db             # SQLite database
-│   ├── vector_store/                 # Embedded vector store (FAISS/Chroma)
+│   ├── registry/                     # Registry sidecars and provenance
 │   └── cache/                        # Temporary cache
 ├── configs/
 │   ├── agents/                       # Agent configurations
@@ -1582,7 +1573,7 @@ quant-research-system/
 │   │   ├── data_agent.yaml
 │   │   └── ...
 │   ├── data_sources.yaml             # Data source configurations
-│   ├── backtest_defaults.yaml        # Default backtest parameters
+│   ├── backtest_presets.yaml         # Named, explicit backtest presets
 │   └── costs.yaml                    # Cost assumptions
 ├── tests/
 │   ├── unit/
@@ -1627,7 +1618,7 @@ quant-research-system/
 
 ### Initial Setup
 
-**Minimal Setup (No Docker)**:
+**Core Python Setup**:
 ```bash
 # Clone repository
 git clone https://github.com/your-org/quant-research-system.git
@@ -1642,98 +1633,76 @@ uv sync
 # Initialize SQLite database
 uv run python -m src.registry.database init
 
-# Initialize ApeRAG with embedded vector store
-uv run python -m src.memory.aperag_client init
-
 # Verify setup
 uv run pytest tests/integration/test_setup.py
 ```
 
-**Optional Docker Setup (for production-like environment)**:
+**Docker-supported Runtime Setup**:
 ```bash
-# After minimal setup above, optionally start Docker services
-docker-compose up -d
+# Start required local runtime services through project scripts
+./scripts/start_aperag.ps1
+./scripts/start_infisical.ps1
 
 # Wait for services to be healthy
-docker-compose ps
+docker ps
 
-# Run tests with Docker services
-uv run pytest tests/integration/
+# Run runtime health checks
+./scripts/check_memory_health.ps1
+./scripts/check_infisical_auth.ps1
+./scripts/check_omniroute.ps1
 ```
 
-**Note**: v1 MVP can be completed entirely without Docker. Use Docker only if:
-- Testing production deployment
-- Need Postgres concurrency features
-- Sharing infrastructure with team
-- Deploying to cloud
+**Note**: fast unit tests may run without runtime services by using fakes. Real memory,
+secrets, and LLM readiness require Docker-supported services. OmniRoute is currently
+validated by `scripts/check_omniroute.ps1`; add a dedicated start wrapper only if container
+creation becomes a repeated manual step.
 
-### Docker Compose Configuration (Optional for v1)
+### Docker-supported Runtime Configuration
 
-**v1 Minimal Setup (No Docker Required)**:
+**v1 Local Runtime**:
 - SQLite for structured registry (local file)
-- FAISS or Chroma embedded for vector store (local directory)
-- No separate database server needed
-- No Neo4j required (ApeRAG can use simpler backends)
+- Parquet for validated datasets
+- ApeRAG service for project and agent memory
+- Infisical service for secrets
+- OmniRoute service for OpenAI-compatible LLM routing
 
-**v1 Docker Setup (Optional, for production-like environment)**:
+**Example Docker-supported services**:
 ```yaml
 # docker-compose.yml
 version: '3.8'
 
 services:
-  # Optional: Use Postgres instead of SQLite for better concurrency
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: quant_research
-      POSTGRES_USER: quant
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  aperag:
+    image: apecloud/aperag:latest
     ports:
-      - "5432:5432"
+      - "8001:8001"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U quant"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    profiles: ["postgres"]  # Only start if explicitly requested
+      - aperag_data:/data
 
-  # Optional: Use Chroma server instead of embedded
-  chroma:
-    image: chromadb/chroma:latest
+  infisical:
+    image: infisical/infisical:latest-postgres
     ports:
-      - "8000:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/heartbeat || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    profiles: ["chroma-server"]  # Only start if explicitly requested
+      - "8080:8080"
+
+  omniroute:
+    image: diegosouzapw/omniroute:latest
+    ports:
+      - "20128:20128"
 
 volumes:
-  postgres_data:
-  chroma_data:
+  aperag_data:
 ```
 
-**Note**: Neo4j is NOT required for v1. ApeRAG can use:
-- Embedded vector store (FAISS/Chroma) for similarity search
-- SQLite for graph relationships (if needed)
-- NetworkX for in-memory graph operations
-
 **When to use Docker Compose**:
+- Running ApeRAG memory, Infisical secrets, and OmniRoute LLM routing
 - Testing production-like deployment
-- Multiple developers sharing infrastructure
-- Cloud deployment (Oracle Cloud)
-- Need for Postgres concurrency features
+- Preparing Oracle Cloud deployment
 
-**When NOT to use Docker Compose**:
-- Local development on single machine
-- Quick prototyping and iteration
-- Limited system resources
-- Docker installation issues
+**When NOT to require runtime services**:
+- Fast unit tests that use fakes
+- Pure domain/model work with no memory, secrets, or LLM dependency
+- Quick prototyping that does not need persistent ApeRAG or Infisical state
+- Debugging local resource pressure before restarting heavy services
 
 
 ### Common Development Commands
@@ -1779,30 +1748,18 @@ uv run python research/scripts/test_cointegration.py --pair AAPL,MSFT
 ```bash
 # .env.example
 
-# Database (SQLite by default, Postgres optional)
-DATABASE_TYPE=sqlite  # or "postgres"
+# Database
+DATABASE_TYPE=sqlite
 SQLITE_PATH=./data/quant_research.db
 
-# Optional Postgres configuration (only if using Docker)
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=quant_research
-POSTGRES_USER=quant
-POSTGRES_PASSWORD=changeme
-
 # ApeRAG Configuration
-APERAG_BACKEND=embedded  # or "neo4j" for advanced setup
-VECTOR_STORE=faiss  # or "chroma"
-VECTOR_STORE_PATH=./data/vector_store
+APERAG_BASE_URL=http://127.0.0.1:8001
+APERAG_PROJECT_COLLECTION=stat-arb-project-knowledge
+APERAG_AGENT_COLLECTION=stat-arb-agent-memory
 
-# Optional Neo4j (only if using advanced ApeRAG features)
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=changeme
-
-# Optional Chroma server (only if using Docker)
-CHROMA_HOST=localhost
-CHROMA_PORT=8000
+# OmniRoute
+OMNIROUTE_BASE_URL=http://127.0.0.1:20128/v1
+OMNIROUTE_MODEL=my-ai
 
 # Infisical (secrets management)
 INFISICAL_CLIENT_ID=your_client_id
@@ -1842,53 +1799,41 @@ LOG_LEVEL=INFO
 
 ### Infrastructure Strategy
 
-**v1 MVP (Local Development - No Docker Required)**:
-- SQLite for structured registry (single file database)
-- FAISS or Chroma embedded for vector store (local directory)
-- ApeRAG with embedded backends (no separate servers)
-- All components run as Python processes via `uv run`
-- Zero infrastructure setup required beyond Python dependencies
+**v1 MVP Local Development**:
+- SQLite for structured registry (single local file database)
+- Parquet for validated datasets
+- Python components run through `uv`
+- ApeRAG, Infisical, and OmniRoute run as Docker-supported runtime services
 
-**Optional Docker Path (Production-like Testing)**:
-- Postgres instead of SQLite (better concurrency, production-ready)
-- Chroma server instead of embedded (better performance at scale)
-- Docker Compose for reproducible multi-service setup
-- Useful for Oracle Cloud deployment preparation
-- NOT required for v1 MVP completion
+**Runtime Services Path**:
+- ApeRAG owns semantic memory and knowledge graph
+- Infisical owns secrets
+- OmniRoute owns OpenAI-compatible LLM routing
+- Fast unit tests can use fakes, but runtime readiness checks validate the real services
 
-**Key Principle**: Docker Compose is provided as an optional production-like infrastructure path for testing and future Oracle Cloud deployment. Docker Compose must NOT block the local MVP. All v1 development can proceed using uv, SQLite, Parquet, and embedded ApeRAG/vector storage.
+**Key Principle**: research code must remain testable and portable, while active memory,
+secrets, and LLM routing are explicit runtime services rather than hidden embedded stores.
 
 ### Local Deployment (Development)
 
-**v1 MVP Requirements (Minimal Setup - No Docker Required):**
+**v1 MVP Requirements:**
 - Python 3.11+
 - uv (Python package manager)
 - 8GB RAM minimum, 16GB recommended
 - SQLite (included with Python)
-- FAISS or Chroma (embedded, installed via pip)
+- Docker Desktop or Docker Engine for ApeRAG, Infisical, and OmniRoute runtime services
 
-**Optional Requirements (for Rust optimization or production-like testing):**
+**Optional Requirements (for Rust optimization):**
 - Rust 1.75+ (only if implementing Rust components)
-- Docker and Docker Compose (only for production-like infrastructure testing)
 
-**v1 MVP Steps (No Docker):**
+**v1 MVP Steps:**
 1. Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 2. Clone repository and sync dependencies: `uv sync`
 3. Initialize SQLite database: `uv run python -m src.registry.database init`
-4. Initialize ApeRAG with embedded storage: `uv run python -m src.memory.aperag_client init`
-5. Run agents via CLI or dashboard: `uv run python -m apps.cli.main` or `uv run streamlit run apps/dashboard/main.py`
-6. Monitor logs in console or dashboard
-
-**Optional Docker Setup (for production-like testing):**
-1. Install Docker and Docker Compose
-2. Start optional infrastructure: `docker-compose --profile postgres --profile chroma-server up -d`
-3. Configure environment to use Docker services (set DATABASE_TYPE=postgres, VECTOR_STORE=chroma-server)
-4. Run agents as above
-
-**Note**: v1 MVP can be completed entirely without Docker. Docker is provided as an optional path for:
-- Testing production-like deployment
-- Multi-developer shared infrastructure
-- Oracle Cloud deployment preparation
+4. Start and check ApeRAG, Infisical, and OmniRoute through project scripts
+5. Seed curated ApeRAG knowledge from `docs/knowledge/*.md`
+6. Run agents via CLI or dashboard: `uv run python -m apps.cli.main` or `uv run streamlit run apps/dashboard/main.py`
+7. Monitor logs in console or dashboard
 
 ### Oracle Cloud Always Free Deployment
 
@@ -2632,8 +2577,9 @@ The v1 milestone is complete when the system can:
 1. **Initialize repository and infrastructure**
    - GitHub repository created with proper structure
    - Python environment managed with uv, pyproject.toml, uv.lock
-   - SQLite database created with schema (no Docker required)
-   - ApeRAG initialized with embedded vector store (FAISS or Chroma)
+   - SQLite database created with schema
+   - ApeRAG runtime service configured and curated memory seeded
+   - Infisical and OmniRoute runtime readiness checks available
    - All Python dependencies installed and working
 
 2. **Ingest and validate data**
@@ -2692,10 +2638,10 @@ The v1 milestone is complete when the system can:
 - ✅ Registry enables querying and comparison of experiments
 
 **Non-Functional:**
-- ✅ System runs on local PC (i5-1335U, 32GB RAM) without Docker
+- ✅ System runs on local PC (i5-1335U, 32GB RAM) with Docker-supported runtime services
 - ✅ System runs on Oracle Cloud Always Free ARM
-- ✅ Memory usage < 8GB during typical operation (minimal infrastructure)
-- ✅ Disk usage < 20GB for MVP dataset (SQLite + embedded vector store)
+- ✅ Memory usage remains bounded during typical operation
+- ✅ Disk usage < 20GB for MVP dataset excluding explicitly managed runtime service volumes
 - ✅ No paid data dependencies (CCXT for crypto or Alpaca free tier for equities)
 - ✅ All secrets managed through Infisical
 - ✅ CI pipeline passes on all commits
@@ -2722,7 +2668,7 @@ The v1 milestone is complete when the system can:
 - Dual-layer retrieval (vector + graph) provides better context than vector search alone
 
 **Alternatives Considered**:
-- Pure vector store (Chroma only): Lacks relationship modeling
+- Pure vector store only: Lacks relationship modeling
 - Defer to v2: Would require agent refactoring and lose early learning benefits
 - Custom graph implementation: Reinventing the wheel, ApeRAG is proven
 
@@ -2765,33 +2711,33 @@ The v1 milestone is complete when the system can:
 - Accept 10-100x slower execution in v1 if it meets targets
 
 
-### Decision 3: SQLite + Embedded Vector Store for v1
+### Decision 3: SQLite + ApeRAG Runtime Service for v1
 
-**Decision**: Use SQLite for structured registry and embedded vector store (FAISS/Chroma) for ApeRAG in v1. No Docker required.
+**Decision**: Use SQLite for structured registry, Parquet for datasets, and ApeRAG as the active Docker-supported memory service in v1.
 
 **Rationale**:
-- Zero configuration - works out of the box
-- Minimal resource usage - runs comfortably on i5-1335U
-- No server management overhead
+- SQLite keeps structured experiment state simple and reproducible
+- Parquet keeps datasets portable and easy to inspect
+- ApeRAG provides memory and graph features without embedding backend state inside Python modules
+- Docker-supported runtime matches Infisical and OmniRoute operations
 - Sufficient for v1 scale (50-200 assets, hundreds of experiments)
-- Clear upgrade path to Postgres + Neo4j + Chroma server when needed
 
 **Alternatives Considered**:
-- Postgres + Neo4j + Chroma from day one: Adds infrastructure complexity, requires Docker, overkill for v1
+- Postgres + Neo4j + separate vector database from day one: Adds infrastructure complexity beyond current v1 needs
 - Pure file-based storage: No transactions, difficult to query, no referential integrity
 - NoSQL (MongoDB, DynamoDB): Lacks SQL query capabilities, overkill for v1
 
 **Risks**:
 - SQLite may have concurrency issues with multiple writers
-- Embedded vector store may be slower than server-based
-- May need to migrate to Postgres/Neo4j later
+- ApeRAG runtime may consume local CPU/RAM if left running unnecessarily
+- May need to migrate SQLite to Postgres later
 
 **Mitigation**:
 - Use WAL mode for better SQLite concurrency
 - Limit concurrent experiments to avoid write conflicts
 - Design schema carefully to minimize migrations
-- Document migration path to Postgres/Neo4j
-- Provide Docker Compose config for optional production-like testing
+- Use runtime health checks and explicit scripts for ApeRAG, Infisical, and OmniRoute
+- Document migration path to Postgres if registry concurrency becomes a real bottleneck
 
 ### Decision 4: Defer Streaming Infrastructure to v3
 
@@ -2882,8 +2828,8 @@ The v1 milestone is complete when the system can:
 
 **Risk 2: ApeRAG Performance**
 - **Impact**: Slow queries, high memory usage
-- **Probability**: Low (embedded vector store is lightweight)
-- **Mitigation**: Start with small knowledge graph, optimize queries, use FAISS for speed, monitor performance, upgrade to server-based if needed
+- **Probability**: Medium (ApeRAG is an active runtime service and graph extraction can be expensive)
+- **Mitigation**: Use curated shards, bounded seeding, runtime health checks, graph freshness checks, and keep raw logs/large metrics out of memory
 
 **Risk 3: Data Quality Issues**
 - **Impact**: Invalid statistical tests, unreliable backtests
@@ -2897,8 +2843,8 @@ The v1 milestone is complete when the system can:
 
 **Risk 5: Hardware Constraints**
 - **Impact**: Out of memory, slow execution, disk space exhaustion
-- **Probability**: Low (minimal infrastructure uses < 8GB RAM)
-- **Mitigation**: Resource monitoring, streaming processing, data compression, limit concurrent experiments, SQLite + embedded stores are lightweight
+- **Probability**: Medium
+- **Mitigation**: Resource monitoring, bounded runtime services, streaming processing, data compression, and limited concurrent experiments
 
 ### Operational Risks
 
@@ -2932,16 +2878,16 @@ The v1 milestone is complete when the system can:
 
 ### If ApeRAG Proves Too Complex
 
-**Simplification**: Replace ApeRAG with pure vector store (Chroma embedded) + SQLite for relationships.
+**Simplification**: Keep the Memory Agent policy boundary and replace the backend behind that boundary only after a documented backend spike.
 
 **Trade-offs**:
-- Lose graph traversal capabilities
-- Simpler setup and maintenance
-- Less powerful relationship queries
+- Preserves agent-facing contracts
+- Avoids another broad migration through agents
+- May lose graph traversal capabilities depending on replacement backend
 
-**When to Consider**: If ApeRAG setup takes > 2 days or queries are consistently slow (> 5 seconds).
+**When to Consider**: If ApeRAG runtime health, indexing, or retrieval quality remains unreliable after a focused debugging task.
 
-**Note**: v1 already uses embedded vector store, so this simplification is minimal.
+**Note**: the backend is intentionally isolated behind clients and policy services so replacement is possible without direct agent writes.
 
 ### If Python Performance Is Insufficient
 
@@ -2967,16 +2913,16 @@ The v1 milestone is complete when the system can:
 
 **When to Consider**: If agent coordination bugs persist after 1 week of debugging.
 
-### If Embedded Vector Store Is Too Slow
+### If ApeRAG Graph or Search Is Too Slow
 
-**Simplification**: Use Docker Compose with Chroma server instead of embedded.
+**Simplification**: Reduce graph extraction scope, improve curated shards, or add a backend spike behind the Memory Agent boundary.
 
 **Trade-offs**:
-- Faster queries
-- Adds Docker dependency
-- More infrastructure to manage
+- Keeps memory quality higher than sending large raw documents
+- Avoids CPU spikes from oversized graph builds
+- May reduce graph breadth if shards are too narrow
 
-**When to Consider**: If vector search queries take > 5 seconds consistently.
+**When to Consider**: If knowledge search or graph checks exceed agreed runtime targets on curated shards.
 
 ## Open Questions
 
@@ -3013,10 +2959,10 @@ The v1 milestone is complete when the system can:
    - When team has Rust expertise available
    - **Recommendation**: Complete v1 MVP in Python, profile, then decide on Rust
 
-7. **ApeRAG Backend**: Embedded vs. Neo4j?
-   - Embedded (FAISS + SQLite): Simpler, sufficient for v1
-   - Neo4j: More powerful, adds infrastructure complexity
-   - **Recommendation**: Start with embedded, migrate to Neo4j only if graph queries become bottleneck
+7. **ApeRAG Backend**: Managed runtime service vs. direct agent backend access?
+   - Runtime service behind Memory Agent policy: current v1 path
+   - Direct agent backend access: simpler short term, but breaks auditability and backend isolation
+   - **Recommendation**: keep agents behind the Memory Agent policy boundary and change backend internals only behind that contract
 
 
 ## Conclusion
@@ -3026,9 +2972,9 @@ This design document specifies a multi-agent quantitative research system for st
 ### Key Design Principles
 
 1. **Staged Development**: v1 (research), v2 (demo trading), v3 (limited live trading)
-2. **Memory from Day One**: ApeRAG provides long-term memory with embedded vector store
+2. **Memory from Day One**: ApeRAG provides long-term memory and graph retrieval through the runtime service
 3. **Python-First with Optional Rust**: Complete v1 in Python, add Rust only if profiling proves necessary
-4. **Minimal Infrastructure**: SQLite + embedded vector store, no Docker required for v1
+4. **Pragmatic Infrastructure**: SQLite and Parquet locally; ApeRAG, Infisical, and OmniRoute as runtime services
 5. **Human in the Loop**: Mandatory approval gates for critical decisions
 6. **Separation of Concerns**: Specialized agents with clear responsibilities
 7. **Reliable Data Sources**: CCXT for crypto, Alpaca for equities (avoid Yahoo Finance for intraday)
@@ -3036,7 +2982,7 @@ This design document specifies a multi-agent quantitative research system for st
 ### Next Steps
 
 1. **Repository Setup**: Initialize GitHub repository with proper structure
-2. **Minimal Infrastructure**: Set up SQLite + embedded vector store (no Docker)
+2. **Runtime Infrastructure**: Set up SQLite, ApeRAG, Infisical, and OmniRoute checks
 3. **Core Components**: Implement data validation, statistical functions (Python), backtest engine (Python)
 4. **Data Integration**: Integrate CCXT (crypto) or Alpaca (equities) with quality validation
 5. **Agent Implementation**: Build Coordinator, Data, Statistical Testing, Backtest, Critic, Report, Memory agents
@@ -3053,7 +2999,7 @@ This design document specifies a multi-agent quantitative research system for st
 - ✅ 5 complete experiments from hypothesis to report
 - ✅ All property-based tests passing (14 properties)
 - ✅ CI pipeline green
-- ✅ System runs on local PC without Docker
+- ✅ System runs on local PC with bounded Docker-supported runtime services
 - ✅ System runs on Oracle Cloud Always Free
 - ✅ Documentation complete and accurate
 - ✅ Full experiment completes in < 5 minutes (Python acceptable)
@@ -3068,7 +3014,7 @@ This system is designed to evolve from a research platform (v1) to a demo tradin
 - **Comprehensive audit trail**: All decisions logged for review and learning
 - **Strict validation**: Multiple layers of review before promotion to demo/live trading
 - **Clear optimization path**: Python-first with designed Rust API boundaries for future optimization
-- **Scalable infrastructure**: SQLite → Postgres, embedded vector store → server-based, when needed
+- **Scalable infrastructure**: SQLite → Postgres when needed; memory backend remains behind the Memory Agent boundary
 
 The system is explicitly **not** a guarantee of profit or financial advice. It is a research and decision-support tool that requires human judgment and oversight.
 
@@ -3080,8 +3026,8 @@ The system is explicitly **not** a guarantee of profit or financial advice. It i
 
 **Key Changes in v1.2**:
 - Clarified Docker Compose is optional for v1 MVP (not mandatory)
-- v1 local development runs without Docker using uv, SQLite, Parquet, and embedded ApeRAG/vector storage
-- Docker Compose provided as optional production-like infrastructure path for testing and Oracle Cloud deployment
+- v1 local development uses uv, SQLite, and Parquet plus Docker-supported ApeRAG, Infisical, and OmniRoute runtime services
+- Fast checks can use fakes; runtime checks validate the real service boundary
 - Updated data source recommendations (CCXT for crypto, Alpaca for equities; Yahoo Finance not recommended for intraday)
 - Clarified Python-first approach with optional Rust optimization path
 

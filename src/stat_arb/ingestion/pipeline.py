@@ -41,7 +41,7 @@ def fetch_validate_write_ohlcv(
     since: datetime | None = None,
     limit: int | None = None,
     params: dict[str, Any] | None = None,
-    quality_config: OHLCVQualityConfig | None = None,
+    quality_config: OHLCVQualityConfig,
 ) -> OHLCVIngestionResult:
     """Fetch OHLCV data, validate it, and persist parquet only when validation passes."""
     batch = source.fetch_ohlcv_batch(

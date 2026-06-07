@@ -34,22 +34,22 @@ def test_estimate_half_life_rejects_non_mean_reverting_series() -> None:
     residuals = np.linspace(0.0, 100.0, 200)
 
     with pytest.raises(ValueError, match="positive mean reversion"):
-        estimate_half_life(residuals)
+        estimate_half_life(residuals, periods_per_day=1.0)
 
 
 def test_estimate_half_life_rejects_invalid_inputs() -> None:
     """Half-life boundary should validate residual inputs and scaling."""
     with pytest.raises(ValueError, match="one-dimensional"):
-        estimate_half_life([[1.0, 2.0], [3.0, 4.0]])
+        estimate_half_life([[1.0, 2.0], [3.0, 4.0]], periods_per_day=1.0)
 
     with pytest.raises(ValueError, match="finite"):
-        estimate_half_life([1.0, np.nan] * 20)
+        estimate_half_life([1.0, np.nan] * 20, periods_per_day=1.0)
 
     with pytest.raises(ValueError, match="at least 20"):
-        estimate_half_life([1.0, 2.0, 3.0])
+        estimate_half_life([1.0, 2.0, 3.0], periods_per_day=1.0)
 
     with pytest.raises(ValueError, match="non-constant"):
-        estimate_half_life([1.0] * 30)
+        estimate_half_life([1.0] * 30, periods_per_day=1.0)
 
     with pytest.raises(ValueError, match="periods_per_day"):
         estimate_half_life(np.arange(30), periods_per_day=0.0)

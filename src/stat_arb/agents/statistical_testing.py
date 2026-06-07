@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from stat_arb.domain import StatisticalTestResult as DomainStatisticalTestResult
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
 from stat_arb.statistical import (
+    MultipleTestingMethod,
     adf_stationarity_test,
     chronological_train_test_split,
     detect_regime_changes,
@@ -48,9 +49,13 @@ class StatisticalTestingInput:
     prices_b: ArrayLike
     aligned_timestamps: Sequence[datetime]
     train_fraction: float
-    alpha: float = 0.05
-    periods_per_day: float = 1.0
-    regime_window: int = 60
+    alpha: float
+    adf_regression: str
+    adf_autolag: str | None
+    periods_per_day: float
+    regime_window: int
+    regime_mean_shift_threshold: float
+    regime_volatility_ratio_threshold: float
 
 
 @dataclass(frozen=True)
@@ -88,14 +93,26 @@ def run_statistical_testing(
     train_a = prices_a[train_slice]
     train_b = prices_b[train_slice]
 
-    cointegration = engle_granger_cointegration_test(train_a, train_b, alpha=request.alpha)
+    cointegration = engle_granger_cointegration_test(
+        train_a,
+        train_b,
+        alpha=request.alpha,
+        multiple_testing_method=MultipleTestingMethod.NONE,
+    )
     hedge_ratio = estimate_hedge_ratio(train_a, train_b)
     residuals = train_a - (hedge_ratio.intercept + hedge_ratio.hedge_ratio * train_b)
-    adf = adf_stationarity_test(residuals, alpha=request.alpha)
+    adf = adf_stationarity_test(
+        residuals,
+        alpha=request.alpha,
+        regression=request.adf_regression,
+        autolag=request.adf_autolag,
+    )
     half_life = estimate_half_life(residuals, periods_per_day=request.periods_per_day)
     regime = detect_regime_changes(
         residuals,
         window=min(request.regime_window, max(5, residuals.size // 2)),
+        mean_shift_threshold=request.regime_mean_shift_threshold,
+        volatility_ratio_threshold=request.regime_volatility_ratio_threshold,
     )
 
     rejection_reasons = _rejection_reasons(

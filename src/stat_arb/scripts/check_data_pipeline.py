@@ -14,6 +14,7 @@ import pandas as pd
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
+from stat_arb.data_quality import OHLCVQualityConfig
 from stat_arb.ingestion import CCXTOHLCVSource, OHLCVQualityError, fetch_validate_write_ohlcv
 from stat_arb.memory import MemoryAgentService, write_data_quality_failure_memory
 from stat_arb.storage import Base, DataQualityReportRecord, Dataset, persist_ohlcv_ingestion_result
@@ -78,6 +79,14 @@ class FakeApeRAGClient:
         return ["checkpoint-memory-doc"]
 
 
+def _strict_quality_config() -> OHLCVQualityConfig:
+    return OHLCVQualityConfig(
+        max_missing_bar_ratio=0.0,
+        max_abnormal_volume_ratio=0.0,
+        volume_spike_multiplier=10.0,
+    )
+
+
 def run_checkpoint() -> CheckDataPipelineResult:
     """Run a deterministic end-to-end data pipeline checkpoint."""
     root = Path("data/test_tmp") / f"stat-arb-data-pipeline-{uuid4()}"
@@ -111,6 +120,7 @@ def run_checkpoint() -> CheckDataPipelineResult:
                 symbol="BTC/USDT",
                 timeframe="5m",
                 output_root=parquet_root,
+                quality_config=_strict_quality_config(),
             )
             stored = persist_ohlcv_ingestion_result(
                 session,
@@ -190,6 +200,7 @@ def _failed_quality_report(parquet_root: Path):
             symbol="ETH/USDT",
             timeframe="5m",
             output_root=parquet_root,
+            quality_config=_strict_quality_config(),
         )
     except OHLCVQualityError as exc:
         return exc.report

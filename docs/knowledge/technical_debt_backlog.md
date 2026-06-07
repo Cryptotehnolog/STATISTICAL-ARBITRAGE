@@ -34,8 +34,6 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   deprecated and must be updated before the enforced Node.js 24 transition.
 - Infisical recovery: define backup and restore discipline before deleting Docker volumes
   or rotating encryption keys.
-- Kiro skills cleanup: verify Codex can use installed `rust-skills`, then remove duplicate
-  `.kiro/skills` source if no longer needed.
 - Rust boundary: keep Python-first MVP; introduce Rust only after profiling identifies a
   stable compute hotspot with Python reference tests, stable API boundary, benchmark, and
   Ubuntu/Windows build check.
@@ -76,3 +74,5 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   path through `scripts/check_aperag_agent_memory.ps1`.
 - The previous local memory backend code, scripts, tests, and dependencies were removed
   after ApeRAG became the active project and operational agent memory backend.
+- Duplicate `.kiro/skills` source was removed after the selected Rust skills were installed
+  into Codex and confirmed visible in the current session.

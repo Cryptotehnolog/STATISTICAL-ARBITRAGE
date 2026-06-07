@@ -13,6 +13,14 @@ from stat_arb.data_quality import OHLCVQualityConfig
 from stat_arb.ingestion import CCXTOHLCVSource, OHLCVQualityError, fetch_validate_write_ohlcv
 
 
+def _strict_quality_config() -> OHLCVQualityConfig:
+    return OHLCVQualityConfig(
+        max_missing_bar_ratio=0.0,
+        max_abnormal_volume_ratio=0.0,
+        volume_spike_multiplier=10.0,
+    )
+
+
 class FakeExchange:
     """Minimal fake exchange for pipeline tests."""
 
@@ -63,6 +71,7 @@ def test_fetch_validate_write_ohlcv_persists_passed_batch() -> None:
             symbol="BTC/USDT",
             timeframe="5m",
             output_root=output_root,
+            quality_config=_strict_quality_config(),
         )
 
         assert result.quality_report.passed is True
@@ -94,6 +103,7 @@ def test_fetch_validate_write_ohlcv_does_not_persist_failed_batch() -> None:
             symbol="ETH/USDT",
             timeframe="5m",
             output_root=output_root,
+            quality_config=_strict_quality_config(),
         )
 
     assert exc_info.value.report.passed is False
@@ -121,7 +131,11 @@ def test_fetch_validate_write_ohlcv_accepts_quality_thresholds() -> None:
             symbol="ETH/USDT",
             timeframe="5m",
             output_root=output_root,
-            quality_config=OHLCVQualityConfig(max_missing_bar_ratio=0.5),
+            quality_config=OHLCVQualityConfig(
+                max_missing_bar_ratio=0.5,
+                max_abnormal_volume_ratio=0.0,
+                volume_spike_multiplier=10.0,
+            ),
         )
 
         assert result.quality_report.passed is True

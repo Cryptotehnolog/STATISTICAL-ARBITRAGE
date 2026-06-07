@@ -39,8 +39,8 @@ def detect_regime_changes(
     values: ArrayLike,
     *,
     window: int,
-    mean_shift_threshold: float = 3.0,
-    volatility_ratio_threshold: float = 2.5,
+    mean_shift_threshold: float,
+    volatility_ratio_threshold: float,
     min_std: float = 1e-12,
 ) -> RegimeChangeResult:
     """Detect structural breaks by comparing adjacent rolling windows."""

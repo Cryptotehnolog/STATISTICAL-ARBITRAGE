@@ -28,9 +28,9 @@ _TIMEFRAME_UNITS = {
 class OHLCVQualityConfig:
     """Thresholds for OHLCV quality validation."""
 
-    max_missing_bar_ratio: float = 0.0
-    max_abnormal_volume_ratio: float = 0.05
-    volume_spike_multiplier: float = 10.0
+    max_missing_bar_ratio: float
+    max_abnormal_volume_ratio: float
+    volume_spike_multiplier: float
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.max_missing_bar_ratio <= 1.0:
@@ -44,14 +44,13 @@ class OHLCVQualityConfig:
 def validate_ohlcv_batch(
     data: OHLCVBatch | Sequence[OHLCVBar],
     *,
-    config: OHLCVQualityConfig | None = None,
+    config: OHLCVQualityConfig,
 ) -> DataQualityReport:
     """Validate one OHLCV series and return a domain quality report.
 
     ``OHLCVBatch`` already enforces sorted unique timestamps. A raw ``Sequence[OHLCVBar]``
     is accepted so duplicate timestamp detection can run before batch construction.
     """
-    config = config or OHLCVQualityConfig()
     bars, batch = _normalize_input(data)
     sorted_bars = sorted(bars, key=lambda bar: bar.timestamp)
     timestamps = [bar.timestamp for bar in sorted_bars]
