@@ -7,8 +7,11 @@ from stat_arb.agents import (
     CriticLookaheadPolicy,
     CriticOverfittingEvidence,
     CriticOverfittingPolicy,
+    CriticWeakAssumptionEvidence,
+    CriticWeakAssumptionPolicy,
     detect_lookahead_bias,
     detect_overfitting,
+    detect_weak_assumptions,
 )
 from stat_arb.statistical import IndexWindow, WalkForwardWindow
 
@@ -280,4 +283,157 @@ def test_critic_overfitting_evidence_rejects_invalid_counts() -> None:
             out_of_sample_sharpe=0.8,
             parameter_count=4,
             data_point_count=0,
+        )
+
+
+def test_critic_weak_assumption_detection_accepts_strong_evidence() -> None:
+    """Strong statistical evidence should not produce weak-assumption indicators."""
+    assessment = detect_weak_assumptions(
+        CriticWeakAssumptionEvidence(
+            cointegration_p_value=0.01,
+            half_life_days=5.0,
+            regime_changes_detected=False,
+            hedge_ratio_r_squared=0.82,
+        ),
+        policy=CriticWeakAssumptionPolicy(
+            cointegration_alpha=0.05,
+            p_value_warning_margin=0.01,
+            min_half_life_days=1.0,
+            max_half_life_days=30.0,
+            flag_unaddressed_regime_changes=True,
+            min_hedge_ratio_r_squared=0.7,
+        ),
+    )
+
+    assert assessment.weak_assumptions_detected is False
+    assert assessment.indicators == ()
+    assert assessment.checked_rules == (
+        "cointegration_p_value_proximity",
+        "half_life_bounds",
+        "unaddressed_regime_changes",
+        "hedge_ratio_r_squared",
+    )
+
+
+def test_critic_weak_assumption_detection_flags_p_value_proximity() -> None:
+    """P-values near the explicit alpha threshold should be visible."""
+    assessment = detect_weak_assumptions(
+        CriticWeakAssumptionEvidence(
+            cointegration_p_value=0.046,
+            half_life_days=5.0,
+            regime_changes_detected=False,
+            hedge_ratio_r_squared=0.82,
+        ),
+        policy=CriticWeakAssumptionPolicy(
+            cointegration_alpha=0.05,
+            p_value_warning_margin=0.01,
+            min_half_life_days=1.0,
+            max_half_life_days=30.0,
+            flag_unaddressed_regime_changes=True,
+            min_hedge_ratio_r_squared=0.7,
+        ),
+    )
+
+    assert assessment.weak_assumptions_detected is True
+    assert assessment.indicators == (
+        "cointegration_p_value_proximity: p-value 0.046000 is within 0.010000 of alpha 0.050000",
+    )
+
+
+def test_critic_weak_assumption_detection_flags_half_life_outside_bounds() -> None:
+    """Half-life outside explicit bounds should be reported."""
+    assessment = detect_weak_assumptions(
+        CriticWeakAssumptionEvidence(
+            cointegration_p_value=0.01,
+            half_life_days=45.0,
+            regime_changes_detected=False,
+            hedge_ratio_r_squared=0.82,
+        ),
+        policy=CriticWeakAssumptionPolicy(
+            cointegration_alpha=0.05,
+            p_value_warning_margin=0.01,
+            min_half_life_days=1.0,
+            max_half_life_days=30.0,
+            flag_unaddressed_regime_changes=True,
+            min_hedge_ratio_r_squared=0.7,
+        ),
+    )
+
+    assert assessment.weak_assumptions_detected is True
+    assert assessment.indicators == (
+        "half_life_bounds: half-life 45.0000 days is outside [1.0000, 30.0000]",
+    )
+
+
+def test_critic_weak_assumption_detection_flags_regime_change() -> None:
+    """Unaddressed regime changes should be weak-assumption indicators."""
+    assessment = detect_weak_assumptions(
+        CriticWeakAssumptionEvidence(
+            cointegration_p_value=0.01,
+            half_life_days=5.0,
+            regime_changes_detected=True,
+            hedge_ratio_r_squared=0.82,
+        ),
+        policy=CriticWeakAssumptionPolicy(
+            cointegration_alpha=0.05,
+            p_value_warning_margin=0.01,
+            min_half_life_days=1.0,
+            max_half_life_days=30.0,
+            flag_unaddressed_regime_changes=True,
+            min_hedge_ratio_r_squared=0.7,
+        ),
+    )
+
+    assert assessment.weak_assumptions_detected is True
+    assert assessment.indicators == (
+        "unaddressed_regime_change: statistical test detected a regime change",
+    )
+
+
+def test_critic_weak_assumption_detection_flags_low_hedge_ratio_r_squared() -> None:
+    """Weak hedge-ratio regression quality should be visible."""
+    assessment = detect_weak_assumptions(
+        CriticWeakAssumptionEvidence(
+            cointegration_p_value=0.01,
+            half_life_days=5.0,
+            regime_changes_detected=False,
+            hedge_ratio_r_squared=0.55,
+        ),
+        policy=CriticWeakAssumptionPolicy(
+            cointegration_alpha=0.05,
+            p_value_warning_margin=0.01,
+            min_half_life_days=1.0,
+            max_half_life_days=30.0,
+            flag_unaddressed_regime_changes=True,
+            min_hedge_ratio_r_squared=0.7,
+        ),
+    )
+
+    assert assessment.weak_assumptions_detected is True
+    assert assessment.indicators == (
+        "hedge_ratio_r_squared: R2 0.550000 is below required 0.700000",
+    )
+
+
+def test_critic_weak_assumption_policy_rejects_hidden_noop_policy() -> None:
+    """At least one weak-assumption rule must be active."""
+    with pytest.raises(ValueError, match="at least one"):
+        CriticWeakAssumptionPolicy(
+            cointegration_alpha=None,
+            p_value_warning_margin=None,
+            min_half_life_days=None,
+            max_half_life_days=None,
+            flag_unaddressed_regime_changes=False,
+            min_hedge_ratio_r_squared=None,
+        )
+
+
+def test_critic_weak_assumption_evidence_rejects_invalid_values() -> None:
+    """Weak-assumption evidence should reject invalid p-values and R2 values."""
+    with pytest.raises(ValueError, match="cointegration_p_value"):
+        CriticWeakAssumptionEvidence(
+            cointegration_p_value=1.5,
+            half_life_days=5.0,
+            regime_changes_detected=False,
+            hedge_ratio_r_squared=0.82,
         )

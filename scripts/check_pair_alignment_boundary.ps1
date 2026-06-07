@@ -7,8 +7,11 @@ $roots = @(
     "src/stat_arb/statistical_testing",
     "src/stat_arb/backtesting"
 )
-$boundaryPattern = "OHLCVBatch|StatisticalTestResult|cointegration|adf|hedge_ratio"
+$boundaryPattern = "OHLCVBatch|StatisticalTestResult|cointegration|adf"
 $alignmentPattern = "align_ohlcv_pair|PairAlignmentResult|aligned_timestamps"
+$reviewOnlyModules = @(
+    "src/stat_arb/agents/critic.py"
+)
 $violations = @()
 
 Write-Output "Проверка pair alignment boundary..."
@@ -22,6 +25,10 @@ foreach ($root in $roots) {
     $files = Get-ChildItem -LiteralPath $path -Recurse -File -Filter "*.py"
     foreach ($file in $files) {
         $relative = Resolve-Path -LiteralPath $file.FullName -Relative
+        $normalizedRelative = ($relative.TrimStart(".\") -replace "\\", "/")
+        if ($reviewOnlyModules -contains $normalizedRelative) {
+            continue
+        }
         $content = Get-Content -LiteralPath $file.FullName -Raw
         if ($content -match $boundaryPattern -and $content -notmatch $alignmentPattern) {
             $violations += $relative

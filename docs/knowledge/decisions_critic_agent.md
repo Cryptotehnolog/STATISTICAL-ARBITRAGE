@@ -45,3 +45,27 @@ lookahead detection; wait until final Critic decision logic exists.
 Risks: The first detector uses summary evidence, not full train/test distributions or
 parameter search history. Future Critic tasks may add richer evidence, but they should keep
 the same explicit-policy discipline.
+
+## DEC-0051: Detect weak assumptions with explicit statistical evidence
+
+Status: accepted
+
+Decision: Implement Critic Agent weak-assumption detection through
+`CriticWeakAssumptionPolicy`, `CriticWeakAssumptionEvidence`, and
+`detect_weak_assumptions`. The policy explicitly controls cointegration p-value proximity,
+half-life bounds, unaddressed regime-change flagging, and minimum hedge-ratio R2. The
+evidence contract carries cointegration p-value, half-life days, regime-change status, and
+hedge-ratio regression quality.
+
+Rationale: Weak statistical assumptions can make a strategy look valid while hiding fragile
+evidence. These checks must not inherit planning examples or hard-coded thresholds. The
+Critic Agent should return transparent indicators that later decision logic can route into
+reject, quarantine, or approval outcomes.
+
+Alternatives considered: Let Statistical Testing Agent decide all weak assumptions; embed
+thresholds in `CriticReview`; postpone weak-assumption checks until the full Coordinator
+exists.
+
+Risks: This detector uses summary statistical evidence. Later Critic work may add richer
+context such as multiple-testing method, sample size, residual diagnostics, and regime
+break details, but those extensions should remain explicit policy/evidence fields.

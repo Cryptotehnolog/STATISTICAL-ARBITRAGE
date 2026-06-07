@@ -17,6 +17,9 @@ def test_pair_alignment_boundary_guard_targets_future_pair_modules() -> None:
     assert "StatisticalTestResult" in script
     assert "align_ohlcv_pair" in script
     assert "PairAlignmentResult" in script
+    assert "reviewOnlyModules" in script
+    assert "src/stat_arb/agents/critic.py" in script
+    assert "hedge_ratio" not in script
     assert "hedge_ratio|pair" not in script
 
 

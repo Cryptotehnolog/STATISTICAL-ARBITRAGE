@@ -125,6 +125,79 @@ class CriticOverfittingAssessment:
     checked_rules: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class CriticWeakAssumptionPolicy:
+    """Explicit policy contract for weak-assumption detection."""
+
+    cointegration_alpha: float | None
+    p_value_warning_margin: float | None
+    min_half_life_days: float | None
+    max_half_life_days: float | None
+    flag_unaddressed_regime_changes: bool
+    min_hedge_ratio_r_squared: float | None
+
+    def __post_init__(self) -> None:
+        if not any(
+            (
+                self.cointegration_alpha is not None and self.p_value_warning_margin is not None,
+                self.min_half_life_days is not None or self.max_half_life_days is not None,
+                self.flag_unaddressed_regime_changes,
+                self.min_hedge_ratio_r_squared is not None,
+            )
+        ):
+            raise ValueError("at least one weak-assumption rule must be enabled")
+        if self.cointegration_alpha is not None:
+            _validate_probability(self.cointegration_alpha, label="cointegration_alpha")
+            if self.p_value_warning_margin is None:
+                raise ValueError("p_value_warning_margin is required with cointegration_alpha")
+        if self.p_value_warning_margin is not None:
+            if self.p_value_warning_margin < 0.0 or not isfinite(self.p_value_warning_margin):
+                raise ValueError("p_value_warning_margin must be finite and non-negative")
+            if self.cointegration_alpha is None:
+                raise ValueError("cointegration_alpha is required with p_value_warning_margin")
+        if self.min_half_life_days is not None:
+            _validate_positive_float(self.min_half_life_days, label="min_half_life_days")
+        if self.max_half_life_days is not None:
+            _validate_positive_float(self.max_half_life_days, label="max_half_life_days")
+        if (
+            self.min_half_life_days is not None
+            and self.max_half_life_days is not None
+            and self.min_half_life_days > self.max_half_life_days
+        ):
+            raise ValueError("min_half_life_days must be less than or equal to max_half_life_days")
+        if self.min_hedge_ratio_r_squared is not None:
+            _validate_probability(
+                self.min_hedge_ratio_r_squared,
+                label="min_hedge_ratio_r_squared",
+            )
+
+
+@dataclass(frozen=True)
+class CriticWeakAssumptionEvidence:
+    """Evidence required to detect weak statistical assumptions."""
+
+    cointegration_p_value: float
+    half_life_days: float
+    regime_changes_detected: bool
+    hedge_ratio_r_squared: float
+
+    def __post_init__(self) -> None:
+        _validate_probability(self.cointegration_p_value, label="cointegration_p_value")
+        _validate_positive_float(self.half_life_days, label="half_life_days")
+        if not isinstance(self.regime_changes_detected, bool):
+            raise TypeError("regime_changes_detected must be a bool")
+        _validate_probability(self.hedge_ratio_r_squared, label="hedge_ratio_r_squared")
+
+
+@dataclass(frozen=True)
+class CriticWeakAssumptionAssessment:
+    """Result of weak-assumption detection."""
+
+    weak_assumptions_detected: bool
+    indicators: tuple[str, ...]
+    checked_rules: tuple[str, ...]
+
+
 def detect_lookahead_bias(
     evidence: CriticLookaheadEvidence,
     *,
@@ -219,6 +292,55 @@ def detect_overfitting(
     )
 
 
+def detect_weak_assumptions(
+    evidence: CriticWeakAssumptionEvidence,
+    *,
+    policy: CriticWeakAssumptionPolicy,
+) -> CriticWeakAssumptionAssessment:
+    """Detect weak statistical assumptions from explicit test evidence."""
+    indicators: list[str] = []
+    checked_rules: list[str] = []
+
+    if policy.cointegration_alpha is not None and policy.p_value_warning_margin is not None:
+        checked_rules.append("cointegration_p_value_proximity")
+        distance = policy.cointegration_alpha - evidence.cointegration_p_value
+        if 0.0 <= distance <= policy.p_value_warning_margin:
+            indicators.append(
+                "cointegration_p_value_proximity: "
+                f"p-value {evidence.cointegration_p_value:.6f} is within "
+                f"{policy.p_value_warning_margin:.6f} of alpha {policy.cointegration_alpha:.6f}"
+            )
+
+    if policy.min_half_life_days is not None or policy.max_half_life_days is not None:
+        checked_rules.append("half_life_bounds")
+        min_bound = policy.min_half_life_days
+        max_bound = policy.max_half_life_days
+        below_min = min_bound is not None and evidence.half_life_days < min_bound
+        above_max = max_bound is not None and evidence.half_life_days > max_bound
+        if below_min or above_max:
+            indicators.append(_half_life_indicator(evidence.half_life_days, min_bound, max_bound))
+
+    if policy.flag_unaddressed_regime_changes:
+        checked_rules.append("unaddressed_regime_changes")
+        if evidence.regime_changes_detected:
+            indicators.append("unaddressed_regime_change: statistical test detected a regime change")
+
+    if policy.min_hedge_ratio_r_squared is not None:
+        checked_rules.append("hedge_ratio_r_squared")
+        if evidence.hedge_ratio_r_squared < policy.min_hedge_ratio_r_squared:
+            indicators.append(
+                "hedge_ratio_r_squared: "
+                f"R2 {evidence.hedge_ratio_r_squared:.6f} is below required "
+                f"{policy.min_hedge_ratio_r_squared:.6f}"
+            )
+
+    return CriticWeakAssumptionAssessment(
+        weak_assumptions_detected=bool(indicators),
+        indicators=tuple(indicators),
+        checked_rules=tuple(checked_rules),
+    )
+
+
 def _validate_index_pairs(
     decision_indices: tuple[int, ...],
     data_through_indices: tuple[int, ...],
@@ -252,3 +374,37 @@ def _future_data_issues(
                 f"uses data through index {data_through_index}"
             )
     return tuple(issues)
+
+
+def _validate_probability(value: float, *, label: str) -> None:
+    if not isfinite(value) or not 0.0 <= value <= 1.0:
+        raise ValueError(f"{label} must be finite and between 0 and 1")
+
+
+def _validate_positive_float(value: float, *, label: str) -> None:
+    if not isfinite(value) or value <= 0.0:
+        raise ValueError(f"{label} must be finite and positive")
+
+
+def _half_life_indicator(
+    half_life_days: float,
+    min_bound: float | None,
+    max_bound: float | None,
+) -> str:
+    if min_bound is not None and max_bound is not None:
+        return (
+            "half_life_bounds: "
+            f"half-life {half_life_days:.4f} days is outside "
+            f"[{min_bound:.4f}, {max_bound:.4f}]"
+        )
+    if min_bound is not None:
+        return (
+            "half_life_bounds: "
+            f"half-life {half_life_days:.4f} days is below minimum {min_bound:.4f}"
+        )
+    if max_bound is not None:
+        return (
+            "half_life_bounds: "
+            f"half-life {half_life_days:.4f} days is above maximum {max_bound:.4f}"
+        )
+    raise AssertionError("half-life bounds indicator requires at least one bound")
