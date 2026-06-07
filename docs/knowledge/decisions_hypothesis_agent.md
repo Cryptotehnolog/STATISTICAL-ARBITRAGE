@@ -67,3 +67,25 @@ as automatic rejection; skip novelty until full Memory Agent.
 Risks: The current score only handles exact rejected registry pairs and high-similarity
 ApeRAG hits. Task 9.3 must add explicit graph/linking behavior for retests and related
 hypotheses without converting novelty into hidden decision logic.
+
+## DEC-0044: Link hypotheses without making final decisions
+
+Status: accepted
+
+Decision: Hypothesis linking uses explicit `HypothesisLinkingConfig`. When novelty evidence
+finds similar prior hypotheses, the Hypothesis Agent stores those references in
+`similar_hypotheses`. If an exact rejected registry pair exists, the new hypothesis is
+flagged with the configured retest status and rationale text. The agent also writes a
+policy-approved memory request asking ApeRAG to relate the new hypothesis to prior
+hypotheses.
+
+Rationale: Linking is relationship metadata, not a trading decision. The Hypothesis Agent
+should surface retests and similar ideas, while Critic/Coordinator decide whether to reject,
+quarantine, approve, or run another experiment.
+
+Alternatives considered: Automatically reject exact retests; write graph edges directly to
+ApeRAG; store links only in memory without registry references.
+
+Risks: The current link request is represented as a memory document, not a low-level graph
+edge mutation. Keep the Memory Agent policy boundary active and add richer graph APIs only
+if ApeRAG exposes a safe first-class relationship-write endpoint.

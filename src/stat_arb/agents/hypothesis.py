@@ -83,8 +83,17 @@ class HypothesisNoveltyAssessment:
 
     novelty_score: float
     similar_hypothesis_refs: tuple[str, ...]
+    registry_rejected_refs: tuple[str, ...]
     registry_rejected_count: int
     memory_match_count: int
+
+
+@dataclass(frozen=True)
+class HypothesisLinkingConfig:
+    """Explicit linking configuration for related hypotheses and retests."""
+
+    retest_status: str
+    memory_link_tag: str
 
 
 @dataclass(frozen=True)
@@ -106,6 +115,7 @@ def generate_rule_based_hypotheses(
     memory_service: MemoryWriter | None = None,
     novelty_config: HypothesisNoveltyConfig | None = None,
     memory_searcher: HypothesisMemorySearcher | None = None,
+    linking_config: HypothesisLinkingConfig | None = None,
 ) -> HypothesisGenerationResult:
     """Generate deterministic pair hypotheses, persist them, and write memory summaries."""
     _validate_config(config)
@@ -113,6 +123,10 @@ def generate_rule_based_hypotheses(
         _validate_novelty_config(novelty_config)
         if memory_searcher is None:
             raise ValueError("memory_searcher is required when novelty_config is provided")
+    if linking_config is not None:
+        _validate_linking_config(linking_config)
+        if novelty_config is None:
+            raise ValueError("novelty_config is required when linking_config is provided")
     normalized_assets = tuple(_normalize_asset(asset) for asset in assets)
     normalized_correlations = _normalize_correlations(correlations)
 
@@ -142,11 +156,11 @@ def generate_rule_based_hypotheses(
         hypothesis = Hypothesis(
             asset_a=asset_a.symbol,
             asset_b=asset_b.symbol,
-            rationale=_rationale_for(asset_a, asset_b, correlation),
+            rationale=_rationale_for(asset_a, asset_b, correlation, novelty, linking_config),
             source=config.source,
             similar_hypotheses=list(novelty.similar_hypothesis_refs) or None,
             novelty_score=novelty.novelty_score,
-            status=config.initial_status,
+            status=_status_for(config, novelty, linking_config),
             created_by=config.created_by,
         )
         session.add(hypothesis)
@@ -154,6 +168,9 @@ def generate_rule_based_hypotheses(
         stored.append(hypothesis)
         if memory_service is not None:
             memory_service.write(_memory_request_for(hypothesis, correlation))
+            link_request = _link_memory_request_for(hypothesis, novelty, linking_config)
+            if link_request is not None:
+                memory_service.write(link_request)
 
     return HypothesisGenerationResult(
         hypotheses=tuple(stored),
@@ -191,6 +208,13 @@ def _validate_novelty_config(config: HypothesisNoveltyConfig) -> None:
         raise ValueError("memory_match_penalty must be between 0.0 and 1.0")
     if not 0.0 <= config.registry_rejection_penalty <= 1.0:
         raise ValueError("registry_rejection_penalty must be between 0.0 and 1.0")
+
+
+def _validate_linking_config(config: HypothesisLinkingConfig) -> None:
+    if not config.retest_status.strip():
+        raise ValueError("retest_status must be non-empty")
+    if not config.memory_link_tag.strip():
+        raise ValueError("memory_link_tag must be non-empty")
 
 
 def _normalize_asset(asset: HypothesisUniverseAsset) -> HypothesisUniverseAsset:
@@ -256,6 +280,7 @@ def _assess_novelty(
         return HypothesisNoveltyAssessment(
             novelty_score=initial_novelty_score,
             similar_hypothesis_refs=(),
+            registry_rejected_refs=(),
             registry_rejected_count=0,
             memory_match_count=0,
         )
@@ -267,10 +292,12 @@ def _assess_novelty(
         penalty += config.registry_rejection_penalty
     penalty += min(1.0, len(memory_matches) * config.memory_match_penalty)
     score = max(0.0, min(1.0, initial_novelty_score - penalty))
-    refs = tuple(dict.fromkeys([*(item.hypothesis_id for item in rejected), *memory_matches]))
+    rejected_refs = tuple(item.hypothesis_id for item in rejected)
+    refs = tuple(dict.fromkeys([*rejected_refs, *memory_matches]))
     return HypothesisNoveltyAssessment(
         novelty_score=round(score, 6),
         similar_hypothesis_refs=refs,
+        registry_rejected_refs=rejected_refs,
         registry_rejected_count=len(rejected),
         memory_match_count=len(memory_matches),
     )
@@ -317,15 +344,30 @@ def _memory_matches(
     return tuple(dict.fromkeys(refs))
 
 
+def _status_for(
+    config: HypothesisGenerationConfig,
+    novelty: HypothesisNoveltyAssessment,
+    linking_config: HypothesisLinkingConfig | None,
+) -> str:
+    if linking_config is not None and novelty.registry_rejected_count > 0:
+        return linking_config.retest_status
+    return config.initial_status
+
+
 def _rationale_for(
     asset_a: HypothesisUniverseAsset,
     asset_b: HypothesisUniverseAsset,
     correlation: float,
+    novelty: HypothesisNoveltyAssessment,
+    linking_config: HypothesisLinkingConfig | None,
 ) -> str:
-    return (
+    rationale = (
         f"Rule-based pair candidate: {asset_a.symbol}/{asset_b.symbol}; "
         f"same sector {asset_a.sector}; absolute correlation {abs(correlation):.4f}."
     )
+    if linking_config is not None and novelty.registry_rejected_count > 0:
+        rationale = f"Retest candidate: exact rejected pair exists. {rationale}"
+    return rationale
 
 
 def _memory_request_for(hypothesis: Hypothesis, correlation: float) -> MemoryWriteRequest:
@@ -343,5 +385,35 @@ def _memory_request_for(hypothesis: Hypothesis, correlation: float) -> MemoryWri
             "asset_a": hypothesis.asset_a,
             "asset_b": hypothesis.asset_b,
             "correlation_abs": f"{abs(correlation):.4f}",
+        },
+    )
+
+
+def _link_memory_request_for(
+    hypothesis: Hypothesis,
+    novelty: HypothesisNoveltyAssessment,
+    linking_config: HypothesisLinkingConfig | None,
+) -> MemoryWriteRequest | None:
+    if linking_config is None or not novelty.similar_hypothesis_refs:
+        return None
+    tags = [linking_config.memory_link_tag]
+    if novelty.registry_rejected_count > 0:
+        tags.append("retest")
+    refs = ", ".join(novelty.similar_hypothesis_refs)
+    return MemoryWriteRequest(
+        record_type=MemoryRecordType.HYPOTHESIS,
+        title=f"Hypothesis links requested: {hypothesis.asset_a}/{hypothesis.asset_b}",
+        body=(
+            "Request graph links between this hypothesis and similar prior hypotheses. "
+            f"Similar hypothesis references: {refs}. "
+            "This is a relationship flag only; final decision is deferred to Critic/Coordinator."
+        ),
+        source_id=hypothesis.hypothesis_id,
+        registry_reference=f"registry:hypotheses/{hypothesis.hypothesis_id}",
+        tags=tags,
+        metadata={
+            "asset_a": hypothesis.asset_a,
+            "asset_b": hypothesis.asset_b,
+            "similar_count": str(len(novelty.similar_hypothesis_refs)),
         },
     )

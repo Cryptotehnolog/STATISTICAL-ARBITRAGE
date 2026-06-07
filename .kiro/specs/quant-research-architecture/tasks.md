@@ -293,9 +293,10 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Implemented deterministic novelty scoring with explicit `HypothesisNoveltyConfig`
     - _Requirements: 3.2, 3.3_
   
-  - [ ] 9.3 Implement hypothesis linking
+  - [x] 9.3 Implement hypothesis linking
     - Request graph links between similar hypotheses through Memory Agent policy boundary
     - Flag retests of previously rejected hypotheses
+    - Implemented explicit `HypothesisLinkingConfig` with retest status and policy-approved link memory requests
     - _Requirements: 3.6, 3.7_
   
   - [x] 9.4 Integrate Hypothesis Agent with registry and ApeRAG

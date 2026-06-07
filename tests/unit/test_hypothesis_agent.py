@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.agents import (
     HypothesisGenerationConfig,
+    HypothesisLinkingConfig,
     HypothesisMemorySearchResult,
     HypothesisNoveltyConfig,
     HypothesisUniverseAsset,
@@ -144,6 +145,86 @@ def test_hypothesis_agent_calculates_novelty_from_registry_and_aperag() -> None:
     ]
 
 
+def test_hypothesis_agent_links_similar_hypotheses_and_flags_retests() -> None:
+    """Linking should request memory graph links and mark retests without rejecting them."""
+    session = _session()
+    memory = FakeMemoryService()
+    rejected = Hypothesis(
+        asset_a="AAA",
+        asset_b="BBB",
+        rationale="Rejected earlier",
+        source="unit-test",
+        novelty_score=0.1,
+        status="rejected",
+        created_by="pytest",
+    )
+    session.add(rejected)
+    session.flush()
+    searcher = FakeHypothesisMemorySearcher(
+        [
+            HypothesisMemorySearchResult(
+                text="Past related AAA/BBB hypothesis",
+                score=0.91,
+                source="memory-doc",
+                metadata={"hypothesis_id": "memory-hypothesis-2"},
+            )
+        ]
+    )
+
+    result = generate_rule_based_hypotheses(
+        assets=(
+            HypothesisUniverseAsset(symbol="AAA", sector="Banks", market_cap=100_000_000_000),
+            HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
+        ),
+        correlations={("AAA", "BBB"): 0.93},
+        config=_generation_config(),
+        novelty_config=_novelty_config(),
+        linking_config=HypothesisLinkingConfig(
+            retest_status="retest",
+            memory_link_tag="hypothesis-link",
+        ),
+        memory_searcher=searcher,
+        memory_service=memory,
+        session=session,
+    )
+
+    stored = result.hypotheses[0]
+    assert stored.status == "retest"
+    assert stored.similar_hypotheses == [rejected.hypothesis_id, "memory-hypothesis-2"]
+    assert "Retest candidate" in stored.rationale
+    assert len(memory.requests) == 2
+    link_request = memory.requests[1]
+    assert link_request.registry_reference == f"registry:hypotheses/{stored.hypothesis_id}"
+    assert link_request.tags == ["hypothesis-link", "retest"]
+    assert rejected.hypothesis_id in link_request.body
+    assert "memory-hypothesis-2" in link_request.body
+    assert "final decision is deferred" in link_request.body
+
+
+def test_hypothesis_agent_requires_novelty_for_linking_config() -> None:
+    """Linking should not run without novelty evidence."""
+    session = _session()
+
+    try:
+        generate_rule_based_hypotheses(
+            assets=(
+                HypothesisUniverseAsset(symbol="AAA", sector="Banks", market_cap=100_000_000_000),
+                HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
+            ),
+            correlations={("AAA", "BBB"): 0.93},
+            config=_generation_config(),
+            linking_config=HypothesisLinkingConfig(
+                retest_status="retest",
+                memory_link_tag="hypothesis-link",
+            ),
+            session=session,
+        )
+    except ValueError as exc:
+        assert "novelty_config" in str(exc)
+    else:
+        raise AssertionError("linking_config without novelty_config should fail")
+
+
 def test_hypothesis_agent_requires_memory_searcher_for_novelty_config() -> None:
     """Novelty config should not silently skip ApeRAG search."""
     session = _session()
@@ -230,4 +311,13 @@ def _generation_config() -> HypothesisGenerationConfig:
         initial_status="new",
         source="rule_based",
         created_by="hypothesis_agent",
+    )
+
+
+def _novelty_config() -> HypothesisNoveltyConfig:
+    return HypothesisNoveltyConfig(
+        memory_top_k=5,
+        memory_similarity_threshold=0.8,
+        memory_match_penalty=0.25,
+        registry_rejection_penalty=0.7,
     )
