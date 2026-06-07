@@ -25,7 +25,7 @@ foreach ($root in $roots) {
     $files = Get-ChildItem -LiteralPath $path -Recurse -File -Filter "*.py"
     foreach ($file in $files) {
         $relative = Resolve-Path -LiteralPath $file.FullName -Relative
-        $normalizedRelative = ($relative.TrimStart(".\") -replace "\\", "/")
+        $normalizedRelative = (($relative -replace "^\.[\\/]", "") -replace "\\", "/")
         if ($reviewOnlyModules -contains $normalizedRelative) {
             continue
         }

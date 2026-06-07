@@ -19,6 +19,7 @@ def test_pair_alignment_boundary_guard_targets_future_pair_modules() -> None:
     assert "PairAlignmentResult" in script
     assert "reviewOnlyModules" in script
     assert "src/stat_arb/agents/critic.py" in script
+    assert '^\\.[\\\\/]' in script
     assert "hedge_ratio" not in script
     assert "hedge_ratio|pair" not in script
 
