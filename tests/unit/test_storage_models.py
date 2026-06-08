@@ -287,6 +287,12 @@ def test_backtest_result_creation(session: Session):
         dataset_b_id=dataset_b.dataset_id,
         git_commit_hash="abc123def456",
         config_hash="config123",
+        dataset_ids=["dataset-a", "dataset-b"],
+        random_seed=12345,
+        execution_command=["uv", "run", "stat-arb", "backtest"],
+        run_timestamp=datetime(2024, 7, 1, 12, 0, 0),
+        lock_file_hash="f" * 64,
+        execution_time_seconds=12.5,
         train_window_days=60,
         test_window_days=30,
         num_windows=3,
@@ -324,6 +330,12 @@ def test_backtest_result_creation(session: Session):
     assert result.gross_pnl == 15234.56
     assert result.net_pnl == 12456.78
     assert result.sharpe_ratio == 1.85
+    assert result.dataset_ids == ["dataset-a", "dataset-b"]
+    assert result.random_seed == 12345
+    assert result.execution_command == ["uv", "run", "stat-arb", "backtest"]
+    assert result.run_timestamp == datetime(2024, 7, 1, 12, 0, 0)
+    assert result.lock_file_hash == "f" * 64
+    assert result.execution_time_seconds == 12.5
 
 
 def test_critic_review_creation(session: Session):
@@ -385,6 +397,12 @@ def test_critic_review_creation(session: Session):
         dataset_b_id=dataset_b.dataset_id,
         git_commit_hash="abc123",
         config_hash="config123",
+        dataset_ids=[dataset_a.dataset_id, dataset_b.dataset_id],
+        random_seed=12345,
+        execution_command=["uv", "run", "stat-arb", "backtest"],
+        run_timestamp=datetime(2024, 7, 1, 12, 0, 0),
+        lock_file_hash="f" * 64,
+        execution_time_seconds=12.5,
         train_window_days=60,
         test_window_days=30,
         num_windows=3,

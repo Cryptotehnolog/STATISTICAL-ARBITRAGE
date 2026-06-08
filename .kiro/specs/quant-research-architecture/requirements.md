@@ -42,6 +42,17 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 - **Funding_Rate**: Periodic payment for perpetual futures positions
 - **Borrow_Cost**: Fee for short positions in equities or margin products
 
+## Requirement Priority Policy
+
+The project uses MoSCoW priorities to avoid treating all requirements as equal:
+
+- **MUST for v1**: reproducible repository setup, data ingestion and quality validation, statistical testing, backtesting with costs, Critic Agent checks, Structured_Registry, ApeRAG memory boundary, secrets management, CI checks, and MVP acceptance.
+- **SHOULD for v1**: report generation, dashboard inspection, richer memory query quality checks, failure handling, and documentation that supports safe operation.
+- **COULD for v1**: broader agent autonomy, optional Docker packaging beyond already required runtime services, portfolio-level reporting, and advanced graph visualization.
+- **WON'T for v1 implementation**: live trading, streaming infrastructure, enterprise monitoring, and full legal/compliance workflow automation. Legal disclaimers and audit expectations remain v1 documentation requirements.
+
+Concrete statistical and cost thresholds SHALL be explicit policy/config values with provenance. The system SHALL NOT hide expert-proposed thresholds as silent code defaults.
+
 
 ## Requirements
 
@@ -78,6 +89,9 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 8. THE Data_Agent SHALL generate a Data_Quality_Report before backtesting
 9. IF data quality is below the defined threshold, THEN THE Data_Agent SHALL reject or quarantine the dataset
 10. THE Data_Agent SHALL store dataset provenance including source, download time, symbol mapping, timeframe, adjustment mode, and validation status
+11. THE Data_Agent SHALL support incremental ingestion that fetches only missing or stale OHLCV ranges when prior data exists
+12. THE Data_Agent SHALL record dataset freshness and reject or quarantine stale datasets before statistical testing or backtesting
+13. THE Data_Agent SHALL define an explicit re-download and gap-repair policy for missing, corrupted, or superseded source data
 
 
 ### Requirement 3: Hypothesis Generation
@@ -193,6 +207,9 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 10. THE Memory_Agent SHALL store manual notes and human decisions in ApeRAG
 11. THE Memory_Agent SHALL reference Structured_Registry IDs instead of duplicating numeric metrics in ApeRAG
 12. THE Memory_Agent SHALL NOT store raw logs, raw prompts, large datasets, or secrets in ApeRAG
+13. THE Memory_Agent SHALL provide retrieval-quality checks using curated evaluation questions with expected registry IDs, decision IDs, or topic markers
+14. THE Memory_Agent SHALL report memory retrieval latency separately from agent answer quality
+15. THE Memory_Agent SHALL support degraded operation for write failures through a durable write-ahead queue or explicit safe mode before agent workflows depend on memory writes
 
 
 ### Requirement 9: Structured Experiment Registry
@@ -465,6 +482,9 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 12. THE System SHALL provide a dashboard or report view showing experiments, pair results, and Backtest_Report
 13. THE System SHALL run tests and linting in GitHub Actions
 14. THE System SHALL define exact numeric MVP targets for number of assets, timeframe, number of pairs, runtime target, and required reports
+15. THE System SHALL run at least one reproducible data-to-report workflow without manual intervention after configuration is supplied
+16. THE System SHALL verify that two runs with identical data, explicit config, random seed, and dependency lock hash produce the same registry-level results within the configured tolerance
+17. THE System SHALL treat "no approved profitable pair found" as a valid research outcome if the pipeline provides complete rejection reasons, rather than forcing a positive-PnL result
 
 
 ### Requirement 23: Hardware and Operational Constraints
@@ -587,6 +607,7 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 12. THE Report_Agent SHALL write report artifact links to the Structured_Registry
 13. THE Report_Agent SHALL write human-readable summaries to ApeRAG
 14. THE Memory_Agent SHALL NOT write raw logs, raw prompts, large datasets, or secrets to ApeRAG
+15. THIS requirement SHALL refine Requirement 8 by assigning write responsibilities to each agent, not duplicate Requirement 8's general memory capability criteria
 
 
 ### Requirement 29: Future Dynamic Layer Design
@@ -626,4 +647,19 @@ The system will operate on constrained hardware (local i5-1335U PC with 32GB RAM
 10. THE System SHALL require human approval for promotion to demo
 11. THE System SHALL require human approval for promotion to live
 12. THE System SHALL require small capital allocation only for initial live trading
+
+
+### Requirement 31: Non-Functional Runtime and Resource Criteria
+
+**User Story:** As a system operator, I want explicit runtime and resource limits, so that the local PC and future Ubuntu server remain usable during research workflows.
+
+#### Acceptance Criteria
+
+1. THE System SHALL define maximum runtime targets for MVP ingestion, statistical testing, backtesting, memory checks, and report generation workflows
+2. THE System SHALL define maximum memory and disk usage targets for local MVP datasets and Docker-supported runtime services
+3. THE System SHALL warn when local runtime memory or disk usage exceeds 80% of the configured budget
+4. THE System SHALL keep ordinary commit checks independent from external LLM, ApeRAG graph rebuild, Infisical, and provider account availability
+5. THE System SHALL define dashboard or report-view latency targets before dashboard implementation is accepted
+6. THE System SHALL define uptime/readiness expectations for ApeRAG, OmniRoute, Infisical, and fallback LLM providers separately from deterministic Python core tests
+7. THE System SHALL document Ubuntu deployment resource expectations before server migration
 

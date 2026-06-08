@@ -152,7 +152,9 @@ Stores comprehensive backtest results with cost attribution.
 **Key Fields:**
 - `backtest_id` (PK): UUID
 - `hypothesis_id`, `test_id` (FK): References to hypothesis and test
-- `git_commit_hash`, `config_hash`: Reproducibility tracking
+- `git_commit_hash`, `config_hash`: Reproducibility identifiers
+- `dataset_ids`, `random_seed`, `execution_command`, `run_timestamp`, `lock_file_hash`: Reproducibility manifest fields
+- `execution_time_seconds`: Optional measured runtime for the backtest execution
 - `gross_pnl`, `net_pnl`: Performance metrics
 - `commission_cost`, `spread_cost`, `slippage_cost`, `funding_cost`, `borrow_cost`: Cost breakdown
 - `sharpe_ratio`, `sortino_ratio`, `max_drawdown`: Risk metrics

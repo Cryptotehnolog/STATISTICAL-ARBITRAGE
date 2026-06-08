@@ -381,20 +381,24 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Store agent decisions (hypotheses, test summaries, backtest conclusions)
     - Store manual notes from users
     - Require all agent writes to pass through Memory Agent policy rules
-    - _Requirements: 8.2-8.10_
+    - Introduce a `MemoryBackend` adapter boundary so ApeRAG can be replaced without changing agent-facing modules
+    - _Requirements: 8.2-8.10, 8.15_
 
   - [ ] 11.2 Complete ApeRAG query operations
     - Query by topic (retrieve relevant context)
     - Query by entity (find all info about asset/hypothesis/experiment)
     - Query by relationship (traverse graph for related hypotheses)
     - Keep project knowledge and operational agent memory as separate collections
-    - _Requirements: 8.2-8.10_
+    - Add curated retrieval-quality checks with expected registry IDs, decision IDs, or topic markers
+    - Keep retrieval readiness checks separate from full agent answer-quality evaluation
+    - _Requirements: 8.2-8.10, 8.13, 8.14_
   
   - [ ] 11.3 Harden memory filtering rules
     - Prevent storing raw logs, prompts, large datasets, secrets
     - Reference registry IDs instead of duplicating numeric metrics
     - Prevent direct agent-facing ApeRAG writes that bypass policy boundary
-    - _Requirements: 8.11, 8.12_
+    - Implement degraded memory write handling through explicit safe mode or a durable write-ahead queue
+    - _Requirements: 8.11, 8.12, 8.15_
   
   - [ ]* 11.4 Write integration tests for Memory Agent
     - Test write and query operations
@@ -437,6 +441,8 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Create task queue with priority support
     - Implement task assignment to agents
     - Track task status and completion
+    - Persist task state transitions in the Structured_Registry so unfinished tasks can recover after restart
+    - Define explicit retry limits and resource-aware parallelism limits
     - _Requirements: 12.1_
   
   - [ ] 13.2 Implement experiment lifecycle state machine
@@ -590,7 +596,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - [ ] 17.6 Implement database and RAG failure handling
     - Detect failures and enter safe mode
     - Log failures and alert operator
+    - Replay queued memory writes after ApeRAG recovers, or require manual operator approval when replay is unsafe
     - _Requirements: 15.8_
+
+  - [ ] 17.8 Implement local resource budget monitoring
+    - Warn when runtime RAM or disk usage exceeds 80% of configured budget
+    - Keep Docker-supported runtime resource checks separate from ordinary pre-commit checks
+    - _Requirements: 31.2, 31.3, 31.4, 31.6_
   
   - [ ]* 17.7 Write unit tests for error handling
     - Test retry logic with mock failures
@@ -741,9 +753,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - System runs on Oracle Cloud Always Free ARM ✓
     - Memory usage < 8GB during operation ✓
     - Disk usage < 20GB for MVP dataset ✓
+    - Runtime targets are defined for ingestion, statistical testing, backtesting, memory checks, and report generation ✓
+    - Dashboard/report-view latency target is defined before dashboard acceptance ✓
     - No paid data dependencies ✓
     - All secrets managed through Infisical ✓
-    - _Requirements: 22.1-22.14, 23.1-23.11_
+    - _Requirements: 22.1-22.17, 23.1-23.11, 31.1-31.7_
   
   - [ ] 22.5 Document known limitations and future work
     - Document v1 scope boundaries
@@ -757,6 +771,30 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - Review all documentation for completeness
   - Verify all MVP acceptance criteria met
   - Prepare system for user acceptance testing
+
+- [ ] 24. Expert-review research hardening
+  - [ ] 24.1 Add statistical residual diagnostics
+    - Add residual autocorrelation diagnostics such as Ljung-Box where configured
+    - Add residual distribution-shape diagnostics such as Jarque-Bera or Shapiro where configured
+    - Treat diagnostic failures as explicit Critic signals unless policy configuration defines rejection behavior
+    - _Requirements: 4.1-4.12, 7.4, 31.1_
+
+  - [ ] 24.2 Add cointegration and hedge-ratio stability diagnostics
+    - Add rolling hedge-ratio stability metrics before promoting crypto pairs
+    - Add rolling or recursive cointegration stability checks
+    - Keep Kalman, Johansen, and Markov-switching models as explicit extension paths, not hidden replacements for Engle-Granger
+    - _Requirements: 4.1-4.12, 7.4_
+
+  - [ ] 24.3 Add explicit capacity and cost realism scenarios
+    - Add capacity-adjusted Sharpe scenarios for configured capital sizes
+    - Add liquidity-aware slippage and market-impact scenarios where source data supports them
+    - Add explicit leg-risk and execution-delay scenarios without hidden default rates
+    - _Requirements: 5.1-5.14, 6.10, 7.6, 7.7_
+
+  - [ ] 24.4 Clarify and implement asset-class-specific data adjustments
+    - Document v1 crypto-first behavior and adjusted-price-only equities policy
+    - Add split/dividend handling before enabling raw equity OHLCV workflows
+    - _Requirements: 2.10, 20.1-20.12_
 
 ## Notes
 
@@ -775,7 +813,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
 
 ## Task Dependency Graph
 
-**Note: This dependency graph excludes deferred tasks (20, 21). The first MVP execution follows waves 0-22 only.**
+**Note: This dependency graph excludes deferred tasks (20, 21). The first MVP execution follows waves 0-24 only.**
 
 ```json
 {
@@ -862,7 +900,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     },
     {
       "id": 20,
-      "tasks": ["16.9", "17.1", "17.2", "17.3", "17.4", "17.5", "17.6"]
+      "tasks": ["16.9", "17.1", "17.2", "17.3", "17.4", "17.5", "17.6", "17.8"]
     },
     {
       "id": 21,
@@ -874,7 +912,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
     },
     {
       "id": 23,
-      "tasks": ["22.2", "22.3", "22.4", "22.5", "23"]
+      "tasks": ["22.2", "22.3", "22.4", "22.5"]
+    },
+    {
+      "id": 24,
+      "tasks": ["24.1", "24.2", "24.3", "24.4", "23"]
     }
   ]
 }

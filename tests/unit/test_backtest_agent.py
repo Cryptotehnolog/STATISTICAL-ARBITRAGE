@@ -78,6 +78,11 @@ def test_backtest_agent_persists_registry_result_and_memory_summary(
     assert stored.test_id == str(test_id)
     assert stored.git_commit_hash == "abcdef1"
     assert len(stored.config_hash) == 64
+    assert stored.dataset_ids == [str(dataset_a_id), str(dataset_b_id)]
+    assert stored.random_seed is None
+    assert stored.execution_command == ["stat-arb", "backtest"]
+    assert stored.run_timestamp == datetime(2024, 1, 2, tzinfo=UTC)
+    assert stored.lock_file_hash
     assert stored.gross_pnl == pytest.approx(result.stored_result.gross_pnl)
     assert stored.net_pnl + stored.commission_cost + stored.spread_cost + stored.slippage_cost + stored.funding_cost + stored.borrow_cost == pytest.approx(stored.gross_pnl)
     assert stored.net_pnl_2x_costs < stored.net_pnl_half_costs

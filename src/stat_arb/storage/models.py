@@ -263,6 +263,12 @@ class BacktestResult(Base):
     # Reproducibility tracking
     git_commit_hash: Mapped[str] = mapped_column(String(40), nullable=False)
     config_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    dataset_ids: Mapped[list] = mapped_column(JSON, nullable=False)
+    random_seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    execution_command: Mapped[list] = mapped_column(JSON, nullable=False)
+    run_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    lock_file_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    execution_time_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Walk-forward configuration
     train_window_days: Mapped[int] = mapped_column(Integer, nullable=False)

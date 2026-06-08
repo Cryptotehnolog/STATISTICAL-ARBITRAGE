@@ -432,6 +432,12 @@ class BacktestResult(DomainModel):
     dataset_b_id: UUID
     git_commit_hash: str = Field(min_length=7, max_length=40)
     config_hash: str = Field(min_length=1, max_length=64)
+    dataset_ids: list[UUID] = Field(min_length=1)
+    random_seed: int | None = Field(default=None, ge=0)
+    execution_command: list[str] = Field(min_length=1)
+    run_timestamp: datetime
+    lock_file_hash: str = Field(min_length=64, max_length=64)
+    execution_time_seconds: float = Field(ge=0.0)
     train_window_days: int = Field(gt=0)
     test_window_days: int = Field(gt=0)
     num_windows: int = Field(gt=0)
@@ -465,6 +471,14 @@ class BacktestResult(DomainModel):
         """Validate backtest references, thresholds, and cost attribution."""
         if self.dataset_a_id == self.dataset_b_id:
             raise ValueError("dataset_a_id and dataset_b_id must be different")
+        if self.dataset_a_id not in self.dataset_ids or self.dataset_b_id not in self.dataset_ids:
+            raise ValueError("dataset_ids must include dataset_a_id and dataset_b_id")
+        if len(set(self.dataset_ids)) != len(self.dataset_ids):
+            raise ValueError("dataset_ids must be unique")
+        if self.run_timestamp.tzinfo is None or self.run_timestamp.utcoffset() is None:
+            raise ValueError("run_timestamp must be timezone-aware")
+        if any(not part.strip() for part in self.execution_command):
+            raise ValueError("execution_command must not contain empty values")
         if self.exit_threshold >= self.entry_threshold:
             raise ValueError("exit_threshold must be lower than entry_threshold")
 

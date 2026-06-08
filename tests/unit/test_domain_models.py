@@ -308,13 +308,21 @@ def test_statistical_test_requires_ordered_windows_and_rejection_reason() -> Non
 
 def test_backtest_validates_cost_attribution() -> None:
     """Backtest net PnL should match gross PnL minus all costs."""
+    dataset_a_id = uuid4()
+    dataset_b_id = uuid4()
     common = {
         "hypothesis_id": uuid4(),
         "test_id": uuid4(),
-        "dataset_a_id": uuid4(),
-        "dataset_b_id": uuid4(),
+        "dataset_a_id": dataset_a_id,
+        "dataset_b_id": dataset_b_id,
         "git_commit_hash": "abcdef1",
         "config_hash": "config-hash",
+        "dataset_ids": [dataset_a_id, dataset_b_id],
+        "random_seed": 12345,
+        "execution_command": ["uv", "run", "stat-arb", "backtest"],
+        "run_timestamp": datetime(2024, 7, 1, 12, 0, tzinfo=UTC),
+        "lock_file_hash": "f" * 64,
+        "execution_time_seconds": 12.5,
         "train_window_days": 60,
         "test_window_days": 30,
         "num_windows": 3,
@@ -598,6 +606,12 @@ def test_all_domain_models_round_trip_through_json() -> None:
             dataset_b_id=dataset_b_id,
             git_commit_hash="abcdef1",
             config_hash="cfg",
+            dataset_ids=[dataset_a_id, dataset_b_id],
+            random_seed=12345,
+            execution_command=["uv", "run", "stat-arb", "backtest"],
+            run_timestamp=datetime(2024, 7, 1, 12, 0, tzinfo=UTC),
+            lock_file_hash="f" * 64,
+            execution_time_seconds=12.5,
             train_window_days=60,
             test_window_days=30,
             num_windows=2,

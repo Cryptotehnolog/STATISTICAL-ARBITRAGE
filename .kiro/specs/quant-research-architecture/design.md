@@ -60,6 +60,12 @@ The system serves as a reproducible research platform with proper data quality c
 
 **Key Principle**: core research code must remain portable and testable without hidden service calls, but memory, secrets, and LLM routing are active Docker-supported services. Fast unit checks may use fakes; integration checks verify the real runtime services separately.
 
+**Memory backend boundary**: agent-facing code SHALL depend on a Memory Agent policy/service boundary, not on direct ApeRAG APIs. The concrete v1 backend is ApeRAG, but the boundary must support a future `MemoryBackend` adapter so project memory can move to another backend without rewriting Data, Hypothesis, Statistical Testing, Backtest, Critic, Report, or Coordinator agents.
+
+**Degraded memory mode**: deterministic research workflows SHALL still write structured records to SQLite/Parquet if ApeRAG is temporarily unavailable. Memory writes that cannot complete SHALL either enter an explicit safe mode or be stored in a durable write-ahead queue for later replay; they SHALL NOT be silently dropped.
+
+**LLM routing policy**: OmniRoute `my-ai` is the primary ApeRAG graph completion gateway while it passes readiness checks. FreeDeepseekAPI and FreeQwenApi are explicit fallback backends only; scripts must select them visibly and must not silently rotate providers. Long graph rebuilds should run provider readiness checks before starting.
+
 
 ## Architecture
 
@@ -149,6 +155,7 @@ graph TB
 - **Agent memory**: Enables agents to learn from past decisions and avoid repeated mistakes
 - **Development knowledge**: Stores architecture decisions, code references, and lessons learned
 - **Operational memory backend**: ApeRAG runs as the active external memory service while structured research data stays in SQLite and Parquet
+- **Backend exit path**: ApeRAG is selected for v1, but agent code depends on memory contracts and policy services so a future backend can replace it behind the boundary if retrieval quality, reliability, or resource usage becomes unacceptable
 
 **Why Python-first with optional Rust?**
 - **Rapid development**: Python enables faster iteration and prototyping
@@ -175,6 +182,8 @@ graph TB
 ### Coordinator Agent
 
 **Responsibility**: Manage task queue and experiment lifecycle from hypothesis through final decision.
+
+**Orchestration model for v1**: the Coordinator starts as a durable, registry-backed workflow orchestrator rather than a distributed microservice. It SHALL record task state transitions in the Structured_Registry, call agent boundaries through explicit Python services, support retry limits, and recover unfinished tasks after process restart. Parallelism is allowed only where tasks do not share mutable state and must be limited by configured runtime/resource budgets.
 
 **Inputs:**
 - User commands (CLI or dashboard)
@@ -365,7 +374,7 @@ NEW → DATA_VALIDATION → STATISTICAL_TESTING → BACKTESTING → CRITIC_REVIE
 
 **Key Operations:**
 1. **Verify data quality**: Check that quality reports exist and pass thresholds
-2. **Train/test split**: Use 70/30 split or walk-forward windows
+2. **Train/test split**: Use an explicit chronological split or explicit walk-forward windows supplied by configuration
 3. **Engle-Granger cointegration test**: Test for long-run equilibrium relationship
 4. **ADF test on residuals**: Verify stationarity of spread
 5. **Hedge ratio estimation**: Calculate optimal position sizing ratio
@@ -373,12 +382,14 @@ NEW → DATA_VALIDATION → STATISTICAL_TESTING → BACKTESTING → CRITIC_REVIE
 7. **Z-score construction**: Standardize residuals for signal generation
 8. **Multiple testing correction**: Apply Bonferroni or Benjamini-Hochberg correction
 9. **Regime change detection**: Check for structural breaks using Chow test or rolling statistics
+10. **Residual diagnostics**: Check residual autocorrelation and distribution-shape diagnostics where configured
+11. **Stability diagnostics**: Track rolling hedge-ratio and cointegration stability before promoting fragile crypto pairs
 
-**Statistical Thresholds:**
-- Cointegration p-value: < 0.05 (after correction)
-- ADF p-value: < 0.05
-- Half-life: 1-30 days (for 15-minute bars, 96-2880 bars)
-- Minimum R²: 0.3 for hedge ratio regression
+**Statistical Policy:**
+- Statistical thresholds SHALL be supplied explicitly through versioned configuration or policy snapshots
+- Expert-suggested values such as p-value limits, half-life bounds, and hedge-ratio R² floors are allowed only as named policy presets with provenance, never as silent defaults
+- Residual normality failures, residual autocorrelation, unstable hedge ratios, and short half-life estimates SHALL be treated as Critic/diagnostic signals unless a policy explicitly defines rejection behavior
+- Advanced methods such as rolling hedge ratio, Kalman filtering, Johansen tests, and Markov-switching regimes are extension paths; v1 should prioritize stability diagnostics before adding broad model complexity
 
 **Rust Integration:**
 ```python
@@ -426,18 +437,17 @@ result = cointegration_test(
 8. **Sensitivity analysis**: Test impact of cost assumptions
 9. **Baseline comparison**: Compare against naive buy-and-hold or random entry
 
-**Cost Assumptions (v1 defaults):**
-- Commission: 0.1% per trade (0.05% per side)
-- Spread: 0.05% (half of bid-ask spread)
-- Slippage: 0.02% (market impact)
-- Funding rate: 0.01% per day for perpetual futures (if applicable)
-- Borrow cost: 0.5% annualized for short positions (if applicable)
+**Cost Assumption Policy:**
+- Cost assumptions SHALL be explicit inputs backed by verified or manually approved snapshots
+- The backtest engine SHALL NOT provide hidden default commission, spread, slippage, funding, borrow, or market-impact rates
+- Slippage and market-impact models SHOULD account for liquidity, order size, and volume/ADV where data is available
+- Funding rates SHOULD use historical funding data for perpetual futures when available
+- Cost stress scenarios, capacity-adjusted Sharpe, leg-risk assumptions, max holding time, Z-score emergency exits, and rolling-statistic invalidation exits SHALL be explicit scenarios, not silent defaults
 
 **Walk-Forward Configuration:**
-- Training window: 60 days (5760 bars at 15-minute)
-- Testing window: 30 days (2880 bars at 15-minute)
-- Step size: 30 days (non-overlapping test windows)
-- Minimum windows: 3 (90 days total data)
+- Training window, testing window, step size, and minimum windows SHALL be explicit configuration values
+- Example window values may appear only in tutorials or named experiment configs, not in production code defaults
+- The Structured_Registry SHALL store the exact configured values used by each backtest
 
 **Rust Integration:**
 ```python
