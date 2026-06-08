@@ -6,6 +6,9 @@ from stat_arb.agents.backtest import (
     run_backtest_agent_persistence,
 )
 from stat_arb.agents.critic import (
+    CriticInsufficientTestingAssessment,
+    CriticInsufficientTestingEvidence,
+    CriticInsufficientTestingPolicy,
     CriticLookaheadAssessment,
     CriticLookaheadEvidence,
     CriticLookaheadPolicy,
@@ -15,6 +18,7 @@ from stat_arb.agents.critic import (
     CriticWeakAssumptionAssessment,
     CriticWeakAssumptionEvidence,
     CriticWeakAssumptionPolicy,
+    detect_insufficient_testing,
     detect_lookahead_bias,
     detect_overfitting,
     detect_weak_assumptions,
@@ -38,6 +42,9 @@ from stat_arb.agents.statistical_testing import (
 __all__ = [
     "BacktestAgentInput",
     "BacktestAgentRunResult",
+    "CriticInsufficientTestingAssessment",
+    "CriticInsufficientTestingEvidence",
+    "CriticInsufficientTestingPolicy",
     "CriticLookaheadAssessment",
     "CriticLookaheadEvidence",
     "CriticLookaheadPolicy",
@@ -56,6 +63,7 @@ __all__ = [
     "HypothesisUniverseAsset",
     "StatisticalTestingInput",
     "StatisticalTestingRunResult",
+    "detect_insufficient_testing",
     "detect_lookahead_bias",
     "detect_overfitting",
     "detect_weak_assumptions",

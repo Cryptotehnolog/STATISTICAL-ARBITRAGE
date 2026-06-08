@@ -69,3 +69,27 @@ exists.
 Risks: This detector uses summary statistical evidence. Later Critic work may add richer
 context such as multiple-testing method, sample size, residual diagnostics, and regime
 break details, but those extensions should remain explicit policy/evidence fields.
+
+## DEC-0052: Detect insufficient testing with explicit validation evidence
+
+Status: accepted
+
+Decision: Implement Critic Agent insufficient-testing detection through
+`CriticInsufficientTestingPolicy`, `CriticInsufficientTestingEvidence`, and
+`detect_insufficient_testing`. The policy explicitly controls minimum walk-forward window
+count, minimum test-period length in days, and required sensitivity-analysis scenarios.
+The evidence contract carries observed walk-forward window count, observed test-period
+length, and completed sensitivity scenarios.
+
+Rationale: A strategy can pass statistical checks and still be under-tested. The Critic
+Agent should make missing validation coverage visible without silently borrowing example
+numbers from plans or tutorials. The detector reports transparent indicators; later
+decision logic will decide whether those indicators mean reject, quarantine, or approval.
+
+Alternatives considered: Hard-code a common walk-forward count and test length; make the
+Backtest Agent reject under-tested strategies directly; wait for full Coordinator logic.
+
+Risks: This detector validates coverage metadata, not the quality of each sensitivity
+scenario. Future Critic work may add checks for scenario relevance, cost realism, and
+stress-test completeness, but those additions should remain explicit policy/evidence
+fields.

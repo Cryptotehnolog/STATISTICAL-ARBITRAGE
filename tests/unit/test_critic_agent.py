@@ -3,12 +3,15 @@
 import pytest
 
 from stat_arb.agents import (
+    CriticInsufficientTestingEvidence,
+    CriticInsufficientTestingPolicy,
     CriticLookaheadEvidence,
     CriticLookaheadPolicy,
     CriticOverfittingEvidence,
     CriticOverfittingPolicy,
     CriticWeakAssumptionEvidence,
     CriticWeakAssumptionPolicy,
+    detect_insufficient_testing,
     detect_lookahead_bias,
     detect_overfitting,
     detect_weak_assumptions,
@@ -436,4 +439,127 @@ def test_critic_weak_assumption_evidence_rejects_invalid_values() -> None:
             half_life_days=5.0,
             regime_changes_detected=False,
             hedge_ratio_r_squared=0.82,
+        )
+
+
+def test_critic_insufficient_testing_detection_accepts_adequate_validation() -> None:
+    """Adequate walk-forward coverage and sensitivity scenarios should pass cleanly."""
+    assessment = detect_insufficient_testing(
+        CriticInsufficientTestingEvidence(
+            walk_forward_window_count=5,
+            test_period_days=90.0,
+            sensitivity_scenarios=("double_costs", "half_costs"),
+        ),
+        policy=CriticInsufficientTestingPolicy(
+            min_walk_forward_windows=3,
+            min_test_period_days=30.0,
+            required_sensitivity_scenarios=("double_costs", "half_costs"),
+        ),
+    )
+
+    assert assessment.insufficient_testing_detected is False
+    assert assessment.indicators == ()
+    assert assessment.checked_rules == (
+        "minimum_walk_forward_windows",
+        "minimum_test_period_length",
+        "required_sensitivity_analysis",
+    )
+
+
+def test_critic_insufficient_testing_detection_flags_too_few_walk_forward_windows() -> None:
+    """Too few walk-forward windows should be visible to Critic."""
+    assessment = detect_insufficient_testing(
+        CriticInsufficientTestingEvidence(
+            walk_forward_window_count=2,
+            test_period_days=90.0,
+            sensitivity_scenarios=("double_costs", "half_costs"),
+        ),
+        policy=CriticInsufficientTestingPolicy(
+            min_walk_forward_windows=3,
+            min_test_period_days=30.0,
+            required_sensitivity_scenarios=("double_costs", "half_costs"),
+        ),
+    )
+
+    assert assessment.insufficient_testing_detected is True
+    assert assessment.indicators == (
+        "minimum_walk_forward_windows: 2 windows is below required 3",
+    )
+
+
+def test_critic_insufficient_testing_detection_flags_short_test_period() -> None:
+    """Short explicit test periods should be insufficient-testing indicators."""
+    assessment = detect_insufficient_testing(
+        CriticInsufficientTestingEvidence(
+            walk_forward_window_count=5,
+            test_period_days=20.0,
+            sensitivity_scenarios=("double_costs", "half_costs"),
+        ),
+        policy=CriticInsufficientTestingPolicy(
+            min_walk_forward_windows=3,
+            min_test_period_days=30.0,
+            required_sensitivity_scenarios=("double_costs", "half_costs"),
+        ),
+    )
+
+    assert assessment.insufficient_testing_detected is True
+    assert assessment.indicators == (
+        "minimum_test_period_length: 20.0000 days is below required 30.0000",
+    )
+
+
+def test_critic_insufficient_testing_detection_flags_missing_sensitivity_scenarios() -> None:
+    """Missing required sensitivity analysis should be reported explicitly."""
+    assessment = detect_insufficient_testing(
+        CriticInsufficientTestingEvidence(
+            walk_forward_window_count=5,
+            test_period_days=90.0,
+            sensitivity_scenarios=("double_costs",),
+        ),
+        policy=CriticInsufficientTestingPolicy(
+            min_walk_forward_windows=3,
+            min_test_period_days=30.0,
+            required_sensitivity_scenarios=("double_costs", "half_costs"),
+        ),
+    )
+
+    assert assessment.insufficient_testing_detected is True
+    assert assessment.indicators == (
+        "required_sensitivity_analysis: missing scenarios half_costs",
+    )
+
+
+def test_critic_insufficient_testing_policy_rejects_hidden_noop_policy() -> None:
+    """At least one insufficient-testing rule must be active."""
+    with pytest.raises(ValueError, match="at least one"):
+        CriticInsufficientTestingPolicy(
+            min_walk_forward_windows=None,
+            min_test_period_days=None,
+            required_sensitivity_scenarios=(),
+        )
+
+
+def test_critic_insufficient_testing_evidence_rejects_invalid_values() -> None:
+    """Validation evidence should reject impossible counts and periods."""
+    with pytest.raises(ValueError, match="walk_forward_window_count"):
+        CriticInsufficientTestingEvidence(
+            walk_forward_window_count=-1,
+            test_period_days=90.0,
+            sensitivity_scenarios=("double_costs",),
+        )
+
+
+def test_critic_insufficient_testing_rejects_fractional_walk_forward_counts() -> None:
+    """Walk-forward window counts are discrete validation artifacts."""
+    with pytest.raises(TypeError, match="min_walk_forward_windows"):
+        CriticInsufficientTestingPolicy(
+            min_walk_forward_windows=2.5,  # type: ignore[arg-type]
+            min_test_period_days=None,
+            required_sensitivity_scenarios=(),
+        )
+    with pytest.raises(TypeError, match="walk_forward_window_count"):
+        CriticInsufficientTestingEvidence(
+            walk_forward_window_count=2.5,  # type: ignore[arg-type]
+            test_period_days=90.0,
+            sensitivity_scenarios=("double_costs",),
         )

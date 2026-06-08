@@ -336,10 +336,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Implemented explicit `CriticWeakAssumptionPolicy` and evidence-based indicators without hidden thresholds
     - _Requirements: 7.4_
 
-  - [ ] 10.4 Implement insufficient testing detection
+  - [x] 10.4 Implement insufficient testing detection
     - Check minimum walk-forward windows from explicit critic policy configuration
     - Check test period length from explicit critic policy configuration
     - Check for missing sensitivity analysis
+    - Implemented explicit `CriticInsufficientTestingPolicy` and evidence-based indicators without hidden thresholds
     - _Requirements: 7.5_
   
   - [ ] 10.5 Implement cost realism checks

@@ -198,6 +198,65 @@ class CriticWeakAssumptionAssessment:
     checked_rules: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class CriticInsufficientTestingPolicy:
+    """Explicit policy contract for insufficient-testing detection."""
+
+    min_walk_forward_windows: int | None
+    min_test_period_days: float | None
+    required_sensitivity_scenarios: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if not any(
+            (
+                self.min_walk_forward_windows is not None,
+                self.min_test_period_days is not None,
+                bool(self.required_sensitivity_scenarios),
+            )
+        ):
+            raise ValueError("at least one insufficient-testing rule must be enabled")
+        if self.min_walk_forward_windows is not None:
+            if isinstance(self.min_walk_forward_windows, bool) or not isinstance(
+                self.min_walk_forward_windows,
+                int,
+            ):
+                raise TypeError("min_walk_forward_windows must be an integer")
+            if self.min_walk_forward_windows <= 0:
+                raise ValueError("min_walk_forward_windows must be positive")
+        if self.min_test_period_days is not None:
+            _validate_positive_float(self.min_test_period_days, label="min_test_period_days")
+        _validate_sensitivity_scenario_names(self.required_sensitivity_scenarios)
+
+
+@dataclass(frozen=True)
+class CriticInsufficientTestingEvidence:
+    """Evidence required to detect insufficient strategy validation."""
+
+    walk_forward_window_count: int
+    test_period_days: float
+    sensitivity_scenarios: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if isinstance(self.walk_forward_window_count, bool) or not isinstance(
+            self.walk_forward_window_count,
+            int,
+        ):
+            raise TypeError("walk_forward_window_count must be an integer")
+        if self.walk_forward_window_count < 0:
+            raise ValueError("walk_forward_window_count must be non-negative")
+        _validate_positive_float(self.test_period_days, label="test_period_days")
+        _validate_sensitivity_scenario_names(self.sensitivity_scenarios)
+
+
+@dataclass(frozen=True)
+class CriticInsufficientTestingAssessment:
+    """Result of insufficient-testing detection."""
+
+    insufficient_testing_detected: bool
+    indicators: tuple[str, ...]
+    checked_rules: tuple[str, ...]
+
+
 def detect_lookahead_bias(
     evidence: CriticLookaheadEvidence,
     *,
@@ -341,6 +400,53 @@ def detect_weak_assumptions(
     )
 
 
+def detect_insufficient_testing(
+    evidence: CriticInsufficientTestingEvidence,
+    *,
+    policy: CriticInsufficientTestingPolicy,
+) -> CriticInsufficientTestingAssessment:
+    """Detect insufficient validation coverage from explicit test evidence."""
+    indicators: list[str] = []
+    checked_rules: list[str] = []
+
+    if policy.min_walk_forward_windows is not None:
+        checked_rules.append("minimum_walk_forward_windows")
+        if evidence.walk_forward_window_count < policy.min_walk_forward_windows:
+            indicators.append(
+                "minimum_walk_forward_windows: "
+                f"{evidence.walk_forward_window_count} windows is below required "
+                f"{policy.min_walk_forward_windows}"
+            )
+
+    if policy.min_test_period_days is not None:
+        checked_rules.append("minimum_test_period_length")
+        if evidence.test_period_days < policy.min_test_period_days:
+            indicators.append(
+                "minimum_test_period_length: "
+                f"{evidence.test_period_days:.4f} days is below required "
+                f"{policy.min_test_period_days:.4f}"
+            )
+
+    if policy.required_sensitivity_scenarios:
+        checked_rules.append("required_sensitivity_analysis")
+        observed = set(_normalized_sensitivity_scenarios(evidence.sensitivity_scenarios))
+        missing = tuple(
+            scenario
+            for scenario in _normalized_sensitivity_scenarios(policy.required_sensitivity_scenarios)
+            if scenario not in observed
+        )
+        if missing:
+            indicators.append(
+                "required_sensitivity_analysis: missing scenarios " + ", ".join(missing)
+            )
+
+    return CriticInsufficientTestingAssessment(
+        insufficient_testing_detected=bool(indicators),
+        indicators=tuple(indicators),
+        checked_rules=tuple(checked_rules),
+    )
+
+
 def _validate_index_pairs(
     decision_indices: tuple[int, ...],
     data_through_indices: tuple[int, ...],
@@ -384,6 +490,16 @@ def _validate_probability(value: float, *, label: str) -> None:
 def _validate_positive_float(value: float, *, label: str) -> None:
     if not isfinite(value) or value <= 0.0:
         raise ValueError(f"{label} must be finite and positive")
+
+
+def _validate_sensitivity_scenario_names(scenarios: tuple[str, ...]) -> None:
+    for scenario in scenarios:
+        if not isinstance(scenario, str) or not scenario.strip():
+            raise ValueError("sensitivity scenario names must be non-empty strings")
+
+
+def _normalized_sensitivity_scenarios(scenarios: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(scenario.strip().lower() for scenario in scenarios))
 
 
 def _half_life_indicator(
