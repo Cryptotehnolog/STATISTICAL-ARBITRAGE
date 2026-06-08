@@ -6,7 +6,7 @@ param(
         "2fda8409-2145-4f72-8df5-f130843589a8",
         "a6868470-cc9c-4d3d-b4e2-14b933b87aae"
     ),
-    [switch]$AllowMyAiCombo
+    [switch]$RequireMyAiCombo
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,7 +27,7 @@ try {
 
     $env:OMNIROUTE_STATE_DB = $tempDb
     $env:OMNIROUTE_FORBIDDEN_IDS = ($ForbiddenConnectionIds -join ",")
-    $env:OMNIROUTE_ALLOW_MY_AI = if ($AllowMyAiCombo) { "1" } else { "0" }
+    $env:OMNIROUTE_REQUIRE_MY_AI = if ($RequireMyAiCombo) { "1" } else { "0" }
 
     $pythonScript = @'
 import json
@@ -41,9 +41,9 @@ forbidden_ids = [
     for item in os.environ.get("OMNIROUTE_FORBIDDEN_IDS", "").split(",")
     if item.strip()
 ]
-allow_my_ai = os.environ.get("OMNIROUTE_ALLOW_MY_AI") == "1"
+require_my_ai = os.environ.get("OMNIROUTE_REQUIRE_MY_AI") == "1"
 
-connection_patterns = ["kiro"] + forbidden_ids
+connection_patterns = forbidden_ids
 
 def like_any(column):
     return " or ".join([f"{column} like ?" for _ in connection_patterns])
@@ -55,64 +55,71 @@ checks = {}
 with sqlite3.connect(db_path) as con:
     cur = con.cursor()
 
-    my_ai_clause = "0" if allow_my_ai else "lower(name) = 'my-ai'"
-    checks["combos_with_stale_kiro_or_my_ai"] = cur.execute(
+    checks["combos_with_forbidden_connection_ids"] = cur.execute(
         f"""
         select count(*)
         from combos
-        where {my_ai_clause}
-           or {like_any("data")}
+        where {like_any("data")}
         """,
         params(),
     ).fetchone()[0]
 
-    checks["session_account_affinity_kiro"] = cur.execute(
-        "select count(*) from session_account_affinity where provider = 'kiro'"
+    checks["my_ai_combo_present"] = cur.execute(
+        "select count(*) from combos where lower(name) = 'my-ai'"
     ).fetchone()[0]
 
-    checks["key_value_kiro"] = cur.execute(
+    checks["session_account_affinity_forbidden_ids"] = cur.execute(
+        f"""
+        select count(*)
+        from session_account_affinity
+        where {like_any("connection_id")}
+        """,
+        params(),
+    ).fetchone()[0]
+
+    checks["key_value_forbidden_ids"] = cur.execute(
         f"""
         select count(*)
         from key_value
-        where key like '%kiro%'
+        where {like_any("key")}
            or {like_any("value")}
+        """,
+        params() + params(),
+    ).fetchone()[0]
+
+    checks["usage_history_forbidden_ids"] = cur.execute(
+        f"""
+        select count(*)
+        from usage_history
+        where {like_any("connection_id")}
         """,
         params(),
     ).fetchone()[0]
 
-    checks["usage_history_kiro"] = cur.execute(
-        """
-        select count(*)
-        from usage_history
-        where provider = 'kiro'
-           or model like 'kiro/%'
-        """
-    ).fetchone()[0]
-
-    checks["call_logs_kiro_or_my_ai"] = cur.execute(
-        """
+    checks["call_logs_forbidden_ids"] = cur.execute(
+        f"""
         select count(*)
         from call_logs
-        where provider = 'kiro'
-           or model like 'kiro/%'
-           or requested_model like 'kiro/%'
-           or model = 'my-ai'
-           or requested_model = 'my-ai'
-        """
+        where {like_any("path")}
+        """,
+        params(),
     ).fetchone()[0]
 
-    checks["semantic_cache_kiro_or_my_ai"] = cur.execute(
-        """
+    checks["semantic_cache_forbidden_ids"] = cur.execute(
+        f"""
         select count(*)
         from semantic_cache
-        where model = 'my-ai'
-           or model like 'kiro/%'
-           or response like '%kiro%'
-        """
+        where {like_any("model")}
+           or {like_any("response")}
+        """,
+        params() + params(),
     ).fetchone()[0]
 
-print(json.dumps(checks, ensure_ascii=False, indent=2))
+my_ai_combo_present = checks.pop("my_ai_combo_present")
+print(json.dumps({**checks, "my_ai_combo_present": my_ai_combo_present}, ensure_ascii=False, indent=2))
 failed = {key: value for key, value in checks.items() if value}
+if my_ai_combo_present < 1 and require_my_ai:
+    failed["my_ai_combo_missing"] = 1
 if failed:
     print("Найдены stale OmniRoute записи:", json.dumps(failed, ensure_ascii=False), file=sys.stderr)
     sys.exit(1)
@@ -127,5 +134,5 @@ finally {
     }
     Remove-Item Env:\OMNIROUTE_STATE_DB -ErrorAction SilentlyContinue
     Remove-Item Env:\OMNIROUTE_FORBIDDEN_IDS -ErrorAction SilentlyContinue
-    Remove-Item Env:\OMNIROUTE_ALLOW_MY_AI -ErrorAction SilentlyContinue
+    Remove-Item Env:\OMNIROUTE_REQUIRE_MY_AI -ErrorAction SilentlyContinue
 }
