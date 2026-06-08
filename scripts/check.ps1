@@ -1,13 +1,15 @@
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$python = Join-Path $repoRoot ".venv\Scripts\python.exe"
+$windowsPython = Join-Path $repoRoot ".venv\Scripts\python.exe"
+$linuxPython = Join-Path $repoRoot ".venv/bin/python"
+$python = if (Test-Path -LiteralPath $windowsPython) { $windowsPython } else { $linuxPython }
 $unitCheck = Join-Path $PSScriptRoot "check_unit.ps1"
 $packageDataDir = Join-Path $repoRoot "src\stat_arb\data"
 $env:PYTHONDONTWRITEBYTECODE = "1"
 
 if (-not (Test-Path -LiteralPath $python)) {
-    Write-Error "Ожидался Python из virtualenv: $python. Сначала выполните 'uv sync'."
+    Write-Error "Ожидался Python из virtualenv: $windowsPython или $linuxPython. Сначала выполните 'uv sync'."
 }
 
 if (Test-Path -LiteralPath $packageDataDir) {
