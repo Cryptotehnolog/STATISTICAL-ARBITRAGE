@@ -18,11 +18,18 @@ if (-not $containerId) {
     Write-Error "Docker container '$ContainerName' не найден."
 }
 
-$tempDb = Join-Path $env:TEMP "omniroute-state-check-$([guid]::NewGuid()).sqlite"
+$tempDir = Join-Path $env:TEMP "omniroute-state-check-$([guid]::NewGuid())"
 try {
+    New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+
+    $tempDb = Join-Path $tempDir "storage.sqlite"
     docker cp "${ContainerName}:/app/data/storage.sqlite" $tempDb | Out-Null
     if (-not (Test-Path $tempDb)) {
         Write-Error "Не удалось скопировать OmniRoute storage.sqlite для проверки."
+    }
+    foreach ($sqliteSidecar in @("storage.sqlite-wal", "storage.sqlite-shm")) {
+        $target = Join-Path $tempDir $sqliteSidecar
+        docker cp "${ContainerName}:/app/data/$sqliteSidecar" $target 2>$null
     }
 
     $env:OMNIROUTE_STATE_DB = $tempDb
@@ -54,6 +61,26 @@ def params():
 checks = {}
 with sqlite3.connect(db_path) as con:
     cur = con.cursor()
+    existing_tables = {
+        row[0]
+        for row in cur.execute("select name from sqlite_master where type = 'table'")
+    }
+    required_tables = {
+        "combos",
+        "session_account_affinity",
+        "key_value",
+        "usage_history",
+        "call_logs",
+        "semantic_cache",
+    }
+    missing_tables = sorted(required_tables - existing_tables)
+    if missing_tables:
+        print(
+            "OmniRoute SQLite schema еще не готова или скопирована без WAL: "
+            + ", ".join(missing_tables),
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     checks["combos_with_forbidden_connection_ids"] = cur.execute(
         f"""
@@ -126,11 +153,14 @@ if failed:
 '@
 
     $pythonScript | python -
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Проверка OmniRoute state завершилась с ошибкой."
+    }
     Write-Output "OmniRoute state OK: stale Kiro/my-ai привязки не найдены."
 }
 finally {
-    if (Test-Path $tempDb) {
-        Remove-Item -LiteralPath $tempDb -Force
+    if (Test-Path $tempDir) {
+        Remove-Item -LiteralPath $tempDir -Force -Recurse
     }
     Remove-Item Env:\OMNIROUTE_STATE_DB -ErrorAction SilentlyContinue
     Remove-Item Env:\OMNIROUTE_FORBIDDEN_IDS -ErrorAction SilentlyContinue
