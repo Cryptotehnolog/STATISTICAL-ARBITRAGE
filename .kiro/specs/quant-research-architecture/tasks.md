@@ -275,7 +275,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - Verified statistical testing pipeline with `scripts/check_statistical_pipeline.ps1`
   - Verified backtest pipeline with `scripts/check_backtest_pipeline.ps1`
   - Verified active ApeRAG memory health with `scripts/check_memory_health.ps1`
-  - Confirmed tasks 9-10 are not implemented yet and must stay open.
+  - Superseded by completed Task 9 Hypothesis Agent and Task 10 Critic Agent checkpoints.
 
 - [x] 9. Build Hypothesis Agent
   - [x] 9.1 Implement rule-based pair generation
@@ -603,11 +603,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Run Ruff linting on all Python code
     - Run pytest with coverage reporting
     - Fail if coverage < 70% for core logic
+    - CI now runs coverage over core packages with `--cov-fail-under=70`
     - _Requirements: 18.1-18.8_
   
-  - [ ] 18.2 Create GitHub Actions workflow for property tests
+  - [x] 18.2 Create GitHub Actions workflow for property tests
     - Run all property-based tests with 100 iterations
     - Report failing examples with shrinking
+    - Added `scripts/check_property_integration.ps1` and CI property/integration smoke step
     - _Requirements: 18.1-18.8_
   
   - [ ] 18.3 Create GitHub Actions workflow for reproducibility checks

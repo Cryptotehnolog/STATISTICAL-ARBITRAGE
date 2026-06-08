@@ -110,6 +110,8 @@ def test_calculate_pair_pnl_rejects_invalid_periods_per_day() -> None:
             datetime(2024, 1, 1, 0, 15, tzinfo=UTC),
         ],
         hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
     )
 
     with pytest.raises(ValueError, match="periods_per_day"):
@@ -127,6 +129,8 @@ def test_calculate_pair_pnl_requires_portfolio_value_for_positive_turnover() -> 
             datetime(2024, 1, 1, 0, 15, tzinfo=UTC),
         ],
         hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
     )
 
     with pytest.raises(ValueError, match="average_portfolio_value"):
@@ -145,6 +149,8 @@ def test_calculate_pair_pnl_handles_empty_trade_sequence_without_fake_activity()
             datetime(2024, 1, 1, 0, 30, tzinfo=UTC),
         ],
         hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
     )
 
     result = calculate_pair_pnl(

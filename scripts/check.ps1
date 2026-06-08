@@ -17,7 +17,13 @@ if (Test-Path -LiteralPath $packageDataDir) {
 Push-Location $repoRoot
 try {
     & $python -m ruff check --no-cache src tests
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
     & $unitCheck
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
 }
 finally {
     Pop-Location

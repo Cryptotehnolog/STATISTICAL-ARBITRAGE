@@ -1,7 +1,3 @@
-param(
-    [switch]$WithCoverage
-)
-
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -12,20 +8,9 @@ if (-not (Test-Path -LiteralPath $python)) {
     Write-Error "Ожидался Python из virtualenv: $python. Сначала выполните 'uv sync'."
 }
 
-$pytestArgs = @(
-    "-m", "pytest",
-    "tests/unit",
-    "-m", "not slow",
-    "-p", "no:cacheprovider"
-)
-
-if (-not $WithCoverage) {
-    $pytestArgs += "--no-cov"
-}
-
 Push-Location $repoRoot
 try {
-    & $python @pytestArgs
+    & $python -m pytest tests/unit/test_research_defaults_policy.py --no-cov -p no:cacheprovider
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }

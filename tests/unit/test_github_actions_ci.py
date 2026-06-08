@@ -17,8 +17,15 @@ def test_ci_workflow_runs_core_python_checks() -> None:
     assert "uv sync --extra dev" in workflow
     assert "./scripts/check_user_facing_russian.ps1" in workflow
     assert "./scripts/check_secret_leaks.ps1" in workflow
+    assert "./scripts/check_research_defaults.ps1" in workflow
+    assert "./scripts/check_property_integration.ps1" in workflow
     assert "uv run ruff check --no-cache src tests" in workflow
-    assert 'uv run pytest tests/unit -m "not slow" --no-cov -p no:cacheprovider' in workflow
+    assert 'uv run pytest tests/unit -m "not slow"' in workflow
+    assert "--cov=stat_arb.backtest" in workflow
+    assert "--cov=stat_arb.statistical" in workflow
+    assert "--cov=stat_arb.storage" in workflow
+    assert "--cov-fail-under=70" in workflow
+    assert "--no-cov" not in workflow
 
 
 def test_ci_workflow_does_not_require_local_services_or_secrets() -> None:

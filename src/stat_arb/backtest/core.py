@@ -70,8 +70,8 @@ def run_pair_backtest_core(
     z_scores: ArrayLike,
     aligned_timestamps: Sequence[datetime],
     hedge_ratio: float,
-    entry_threshold: float = 2.0,
-    exit_threshold: float = 0.5,
+    entry_threshold: float,
+    exit_threshold: float,
 ) -> BacktestCoreResult:
     """Build deterministic pair-trading positions from aligned prices and z-scores.
 

@@ -1,6 +1,7 @@
 """Unit tests for pair backtest signal and position construction."""
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -62,6 +63,8 @@ def test_pair_backtest_core_ignores_undefined_zscore_until_signal_exists() -> No
         z_scores=[np.nan, np.nan, 2.5],
         aligned_timestamps=_timestamps(3),
         hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
     )
 
     assert result.steps[0].position == SpreadPosition.FLAT
@@ -78,6 +81,8 @@ def test_pair_backtest_core_validates_aligned_inputs() -> None:
             z_scores=[0.0, 1.0],
             aligned_timestamps=_timestamps(2),
             hedge_ratio=1.0,
+            entry_threshold=2.0,
+            exit_threshold=0.5,
         )
 
     timestamps = list(_timestamps(3))
@@ -89,6 +94,8 @@ def test_pair_backtest_core_validates_aligned_inputs() -> None:
             z_scores=[0.0, 1.0, 2.0],
             aligned_timestamps=timestamps,
             hedge_ratio=1.0,
+            entry_threshold=2.0,
+            exit_threshold=0.5,
         )
 
 
@@ -101,6 +108,8 @@ def test_pair_backtest_core_validates_thresholds_and_hedge_ratio() -> None:
             z_scores=[0.0, 1.0],
             aligned_timestamps=_timestamps(2),
             hedge_ratio=0.0,
+            entry_threshold=2.0,
+            exit_threshold=0.5,
         )
 
     with pytest.raises(ValueError, match="exit_threshold"):
@@ -121,7 +130,17 @@ def test_pair_backtest_core_validates_thresholds_and_hedge_ratio() -> None:
             z_scores=[0.0, np.inf],
             aligned_timestamps=_timestamps(2),
             hedge_ratio=1.0,
+            entry_threshold=2.0,
+            exit_threshold=0.5,
         )
+
+
+def test_pair_backtest_core_requires_explicit_thresholds() -> None:
+    """Trading thresholds are research assumptions and must be passed explicitly."""
+    implementation = Path("src/stat_arb/backtest/core.py").read_text(encoding="utf-8")
+
+    assert "entry_threshold: float = " not in implementation
+    assert "exit_threshold: float = " not in implementation
 
 
 def _timestamps(count: int) -> tuple[datetime, ...]:

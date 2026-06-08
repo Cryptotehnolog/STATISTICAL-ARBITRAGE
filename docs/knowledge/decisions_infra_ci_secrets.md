@@ -51,8 +51,27 @@ free from local secrets and long-running LLM dependencies.
 Alternatives considered: Windows-only CI; running the local PowerShell `check.ps1`; adding
 OmniRoute and Infisical integration checks to every push.
 
-Risks: CI does not yet cover external service readiness, property tests, or reproducibility
-checks. Those remain separate follow-up tasks under the CI section.
+Risks: CI does not cover external service readiness or reproducibility checks. Those remain
+separate follow-up tasks under the CI section.
+
+## DEC-0057: Enforce core coverage and property/integration smoke in CI
+
+Status: accepted
+
+Decision: CI must run unit tests with coverage over core packages and fail below 70% core
+coverage. CI and pre-commit also run `scripts/check_property_integration.ps1`, which keeps
+`tests/property` and `tests/integration` active instead of decorative.
+
+Rationale: Task 18.1 promised a 70% coverage gate for core logic, and the repository layout
+promised property/integration test locations. Those promises need executable guards, not
+just plan text. External service checks remain separate from CI because they require local
+Docker state and provider credentials.
+
+Alternatives considered: Keep coverage only in local pytest defaults; leave property tests
+inside `tests/unit`; defer integration smoke until the Coordinator exists.
+
+Risks: The integration smoke is local and does not prove live ApeRAG availability. Live
+memory readiness remains covered by `scripts/check_memory_health.ps1`.
 
 ## DEC-0024: Close bootstrap tasks 1-4 only after registry reproducibility property test
 

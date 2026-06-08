@@ -91,6 +91,8 @@ def test_performance_metrics_handle_no_trades_without_fake_profitability() -> No
         z_scores=[0.0, 0.1, -0.1],
         aligned_timestamps=_timestamps(3),
         hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
     )
     result = calculate_performance_metrics(
         equity_curve=[100.0, 100.0, 100.0],
@@ -122,6 +124,8 @@ def test_performance_metrics_validate_inputs() -> None:
         z_scores=[0.0, 0.1, -0.1],
         aligned_timestamps=_timestamps(3),
         hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
     )
 
     with pytest.raises(ValueError, match="positive"):

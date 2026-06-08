@@ -14,8 +14,9 @@ Requirements: 9.1-9.11, 27.14
 import logging
 from pathlib import Path
 
-from alembic import command
 from alembic.config import Config
+
+from alembic import command
 
 logger = logging.getLogger(__name__)
 

@@ -68,6 +68,8 @@ def test_cost_sensitivity_requires_explicit_scenarios() -> None:
             datetime(2024, 1, 1, 0, 15, tzinfo=UTC),
         ],
         hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
     )
 
     with pytest.raises(TypeError):
@@ -105,6 +107,8 @@ def test_cost_sensitivity_validates_scenarios() -> None:
             datetime(2024, 1, 1, 0, 15, tzinfo=UTC),
         ],
         hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
     )
 
     with pytest.raises(ValueError, match="unique"):
