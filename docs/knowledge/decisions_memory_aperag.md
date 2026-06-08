@@ -179,6 +179,37 @@ Verification result: `scripts/check_free_qwen.ps1` passed against `qwen3.7-plus`
 `scripts/check_aperag_graph_smoke.ps1 -CompletionBackend free_qwen -CompletionModel
 qwen3.7-plus` produced an active smoke graph with non-empty labels, nodes, and edges.
 
+## DEC-0026: Keep OmniRoute primary and keep web-session providers as explicit fallbacks
+
+Status: accepted
+
+Decision: Use OmniRoute `my-ai` as the primary ApeRAG graph completion backend after
+the clean OmniRoute reinstall and fresh Kiro OAuth connection. Keep FreeDeepseekAPI and
+FreeQwenApi installed only as explicit fallback backends selected with
+`-CompletionBackend free_deepseek` or `-CompletionBackend free_qwen`; do not silently
+promote either fallback to default.
+
+Rationale: A clean OmniRoute state plus a fresh AWS/Kiro account restored real chat and
+ApeRAG graph extraction. `scripts/check_aperag_graph_smoke.ps1 -CompletionBackend
+omniroute -CompletionModel my-ai` completed with a non-empty graph, proving that OmniRoute
+is again suitable for bounded ApeRAG graph work. FreeDeepseekAPI and FreeQwenApi remain
+useful insurance, but both depend on browser/web sessions that can expire or change without
+notice.
+
+Operational policy: Run `scripts/check_omniroute_readiness.ps1` before OmniRoute-backed
+ApeRAG graph rebuilds. Treat quota, cooldown, missing `my-ai`, missing models, failing chat,
+or recent `402`/quota log patterns as early warning signs. If OmniRoute readiness fails,
+use FreeDeepseekAPI as the first fallback for reliability and FreeQwenApi as the experimental
+fallback for concurrency testing.
+
+Alternatives considered: Delete FreeDeepseekAPI and FreeQwenApi after OmniRoute recovery;
+make FreeQwenApi the default because it may offer parallelism; rotate providers silently
+inside scripts.
+
+Risks: OmniRoute can still fail when Kiro quota expires or AWS/Kiro auth changes. Web-session
+fallbacks can fail when upstream sites change their UI or session model. Keep backend
+selection explicit so failures are visible and reproducible.
+
 ## DEC-0009: Use curated knowledge shards instead of seeding large Kiro specs directly
 
 Status: accepted
