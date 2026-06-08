@@ -1,14 +1,15 @@
 param(
     [string]$EnvFile = "data\aperag\.env",
     [string]$CollectionTitle = "stat-arb-project-knowledge",
-    [ValidateSet("omniroute", "free_deepseek")]
+    [ValidateSet("omniroute", "free_deepseek", "free_qwen")]
     [string]$CompletionBackend = "omniroute",
     [string]$CompletionProvider = "",
     [string]$CompletionModel = "",
     [int]$TimeoutSeconds = 900,
     [int]$MaxRetries = 2,
     [int]$RetryDelaySeconds = 30,
-    [int]$GraphPollSeconds = 10
+    [int]$GraphPollSeconds = 10,
+    [switch]$FullRebuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -179,8 +180,18 @@ if (-not $docs.items -or $docs.items.Count -eq 0) {
     Write-Error "ApeRAG collection пуста: $($collection.id)"
 }
 
+$docsToRebuild = if ($FullRebuild) {
+    @($docs.items)
+}
+else {
+    @($docs.items | Where-Object { $_.graph_index_status -ne "ACTIVE" })
+}
+if ($docsToRebuild.Count -eq 0) {
+    Write-Output "Graph rebuild skipped: all documents already have ACTIVE graph indexes."
+}
+
 $graphRebuildStartedAt = Get-Date
-Invoke-GraphRebuild -Documents @($docs.items)
+Invoke-GraphRebuild -Documents $docsToRebuild
 
 $attempt = 0
 while ($true) {

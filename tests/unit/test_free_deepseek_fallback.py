@@ -55,7 +55,7 @@ def test_aperag_can_select_free_deepseek_completion_backend_explicitly() -> None
     enable_graph = ENABLE_GRAPH.read_text(encoding="utf-8")
     env_example = ENV_EXAMPLE.read_text(encoding="utf-8")
 
-    assert '[ValidateSet("omniroute", "free_deepseek")]' in configure
+    assert '[ValidateSet("omniroute", "free_deepseek", "free_qwen")]' in configure
     assert '$CompletionBackend = "omniroute"' in configure
     assert "stat-arb-free-deepseek" in configure
     assert "http://host.docker.internal:9655/v1" in configure
@@ -70,7 +70,7 @@ def test_aperag_graph_smoke_can_select_free_deepseek_model() -> None:
     """Small graph smoke should benchmark real ApeRAG extraction with fallback models."""
     graph_smoke = GRAPH_SMOKE.read_text(encoding="utf-8")
 
-    assert '[ValidateSet("omniroute", "free_deepseek")]' in graph_smoke
+    assert '[ValidateSet("omniroute", "free_deepseek", "free_qwen")]' in graph_smoke
     assert "[string]$CompletionModel" in graph_smoke
     assert "-CompletionBackend $CompletionBackend" in graph_smoke
     assert "stat-arb-free-deepseek" in graph_smoke

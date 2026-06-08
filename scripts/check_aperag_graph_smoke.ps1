@@ -1,7 +1,7 @@
 param(
     [string]$EnvFile = "data\aperag\.env",
     [string]$CollectionTitle = "stat-arb-graph-smoke",
-    [ValidateSet("omniroute", "free_deepseek")]
+    [ValidateSet("omniroute", "free_deepseek", "free_qwen")]
     [string]$CompletionBackend = "omniroute",
     [string]$CompletionProvider = "",
     [string]$CompletionModel = "",
@@ -58,19 +58,17 @@ function Get-SmokeCollection {
 Write-Output "Проверка ApeRAG graph smoke..."
 
 if (-not $CompletionProvider) {
-    $CompletionProvider = if ($CompletionBackend -eq "free_deepseek") {
-        "stat-arb-free-deepseek"
-    }
-    else {
-        "stat-arb-omniroute"
+    $CompletionProvider = switch ($CompletionBackend) {
+        "free_deepseek" { "stat-arb-free-deepseek" }
+        "free_qwen" { "stat-arb-free-qwen" }
+        default { "stat-arb-omniroute" }
     }
 }
 if (-not $CompletionModel) {
-    $CompletionModel = if ($CompletionBackend -eq "free_deepseek") {
-        "deepseek-chat"
-    }
-    else {
-        "my-ai"
+    $CompletionModel = switch ($CompletionBackend) {
+        "free_deepseek" { "deepseek-chat" }
+        "free_qwen" { "qwen3.7-plus" }
+        default { "my-ai" }
     }
 }
 

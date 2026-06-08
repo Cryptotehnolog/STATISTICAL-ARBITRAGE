@@ -150,6 +150,35 @@ in about 169 seconds and produced 230 nodes / 241 edges. A full rebuild with
 Short chat latency alone is not enough to choose the model because ApeRAG graph extraction
 is a different workload.
 
+## DEC-0025: Add FreeQwenApi as a third explicit experimental graph fallback
+
+Status: accepted
+
+Decision: Keep OmniRoute as the default ApeRAG graph completion gateway and keep
+FreeDeepseekAPI as the first verified fallback, but add FreeQwenApi as a third explicit
+experimental fallback selected with `-CompletionBackend free_qwen`. FreeQwenApi must run
+in its own Docker container named `stat-arb-free-qwen`, expose an OpenAI-compatible endpoint
+on local port `3264`, and keep Qwen Web session files under ignored runtime storage
+`data/free_qwen/`.
+
+Rationale: FreeDeepseekAPI graph rebuilds worked, but `deepseek-chat` behaved sequentially
+on the ApeRAG workload. FreeQwenApi exposes a page pool and may provide better concurrency,
+so it is worth testing as a fallback without replacing the default provider.
+
+Alternatives considered: Replace OmniRoute immediately; put FreeQwenApi inside the ApeRAG
+container; skip Qwen because DeepSeek already works; make Qwen the default backend before
+benchmarking the full curated rebuild.
+
+Risks: FreeQwenApi depends on a local Qwen Web session and on an upstream repository that
+currently does not ship a `package-lock.json`, so the Docker image uses
+`npm install --omit=dev --no-audit --no-fund` instead of `npm ci`. Treat this backend as
+experimental until `scripts/check_free_qwen.ps1` and bounded ApeRAG graph smoke checks pass
+reliably. Do not make it the default without a full curated benchmark and dependency review.
+
+Verification result: `scripts/check_free_qwen.ps1` passed against `qwen3.7-plus`, and
+`scripts/check_aperag_graph_smoke.ps1 -CompletionBackend free_qwen -CompletionModel
+qwen3.7-plus` produced an active smoke graph with non-empty labels, nodes, and edges.
+
 ## DEC-0009: Use curated knowledge shards instead of seeding large Kiro specs directly
 
 Status: accepted

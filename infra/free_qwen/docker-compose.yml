@@ -1,0 +1,32 @@
+services:
+  stat-arb-free-qwen:
+    container_name: stat-arb-free-qwen
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      CHROME_PATH: /usr/bin/chromium
+      PORT: 3264
+      HOST: 0.0.0.0
+      SKIP_ACCOUNT_MENU: "true"
+      NON_INTERACTIVE: "true"
+    volumes:
+      - ../../data/free_qwen/session:/app/session
+      - ../../data/free_qwen/logs:/app/logs
+      - ../../data/free_qwen/uploads:/app/uploads
+    ports:
+      - "127.0.0.1:3264:3264"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3264/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

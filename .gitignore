@@ -114,6 +114,10 @@ deepseek-auth.json
 auth.json
 .chrome-profile-deepseek/
 .chrome-for-testing-profile-deepseek/
+data/free_qwen/session/
+data/free_qwen/logs/
+data/free_qwen/uploads/
+Authorization.txt
 
 # Rust
 target/

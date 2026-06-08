@@ -11,7 +11,9 @@ regular memory updates do not reprocess one oversized document.
 - `docs/knowledge/decisions_infra_ci_secrets.md`: runtime layout, Infisical, GitHub Actions,
   local-first infrastructure constraints.
 - `docs/knowledge/decisions_data_pipeline.md`: domain contracts, CCXT ingestion, OHLCV
-  validation, registry persistence, resampling.
+  validation, registry persistence.
+- `docs/knowledge/decisions_data_transforms.md`: resampling, deterministic dataset IDs,
+  pair alignment, data property tests, and data-pipeline checkpoints.
 - `docs/knowledge/decisions_statistical_testing.md`: Engle-Granger cointegration,
   multiple-testing correction, and Statistical Testing Agent boundaries.
 - `docs/knowledge/decisions_backtesting.md`: Backtest Agent signal generation, position

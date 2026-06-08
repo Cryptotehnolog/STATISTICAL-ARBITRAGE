@@ -38,3 +38,13 @@ def test_enable_aperag_curated_graph_serializes_free_deepseek_rebuilds() -> None
     assert "[int]$GraphPollSeconds" in script
     assert "Sequential graph status" in script
     assert '$currentDoc.graph_index_status -in @("PENDING", "CREATING")' in script
+
+
+def test_enable_aperag_curated_graph_rebuilds_only_not_active_documents_by_default() -> None:
+    """Graph rebuild should avoid reprocessing already-active documents unless forced."""
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "[switch]$FullRebuild" in script
+    assert '$docsToRebuild = if ($FullRebuild)' in script
+    assert '$_.graph_index_status -ne "ACTIVE"' in script
+    assert "Graph rebuild skipped: all documents already have ACTIVE graph indexes." in script

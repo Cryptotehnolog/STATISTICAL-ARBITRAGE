@@ -20,9 +20,11 @@ the root cause; the active LLM combo had no usable upstream account at that mome
 Follow-up:
 - Keep the OmniRoute combo/account readiness check outside ordinary pre-commit checks and
   fail before starting long ApeRAG graph rebuilds when chat completion returns 503.
-- FreeDeepseekAPI fallback scaffolding exists, but it remains experimental until a local
-  `data/free_deepseek/deepseek-auth.json` session is created and
-  `scripts/check_free_deepseek.ps1` passes.
+- FreeDeepseekAPI is verified as an explicit fallback, but full curated rebuilds are
+  sequential and slower than an ideal provider path.
+- FreeQwenApi is now available as a third explicit experimental fallback after local Qwen
+  Web auth and `scripts/check_free_qwen.ps1`, but it must remain non-default until a full
+  curated benchmark and dependency review are complete.
 - Keep bounded retries in `scripts/enable_aperag_curated_graph.ps1`, and fail clearly
   after the retry budget is exhausted.
 - After OmniRoute accounts are active again or FreeDeepseekAPI auth is verified, rerun

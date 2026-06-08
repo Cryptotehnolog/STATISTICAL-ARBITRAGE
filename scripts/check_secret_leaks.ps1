@@ -26,6 +26,10 @@ $sensitiveFilePatterns = @(
     "(^|/|\\)auth\.json$",
     "(^|/|\\)\.chrome-profile-deepseek(/|\\)",
     "(^|/|\\)\.chrome-for-testing-profile-deepseek(/|\\)",
+    "(^|/|\\)data/free_qwen/session(/|\\)",
+    "(^|/|\\)session/tokens\.json$",
+    "(^|/|\\)session/accounts(/|\\)",
+    "(^|/|\\)Authorization\.txt$", # Authorization.txt
     "^secrets(/|\\)",
     "\.pem$",
     "\.key$",
@@ -42,6 +46,7 @@ $secretPatterns = @(
     @{ Name = "Private key block"; Pattern = "-----BEGIN (RSA |OPENSSH |EC |DSA |)PRIVATE KEY-----" },
     @{ Name = "Infisical bootstrap key"; Pattern = "^(ENCRYPTION_KEY|AUTH_SECRET|INFISICAL_POSTGRES_PASSWORD)=" },
     @{ Name = "DeepSeek web token"; Pattern = "^(DEEPSEEK_TOKEN|DEEPSEEK_COOKIE|DEEPSEEK_HIF_DLIQ|DEEPSEEK_HIF_LEIM)=" },
+    @{ Name = "Qwen session token"; Pattern = "^(QWEN_TOKEN|QWEN_COOKIE|AUTHORIZATION)=" },
     @{ Name = "Runtime secret assignment"; Pattern = "^[A-Za-z0-9_]*(API_KEY|API_SECRET|CLIENT_SECRET|TOKEN|PASSWORD|PRIVATE_KEY)=[^#\s].+" }
 )
 
@@ -141,7 +146,12 @@ function Test-FileContent {
 function Test-WorkingTreeEnvFiles {
     param([System.Collections.ArrayList]$Violations)
 
-    $envFiles = @(".env", "infra/infisical/.env", "data/free_deepseek/deepseek-auth.json")
+    $envFiles = @(
+        ".env",
+        "infra/infisical/.env",
+        "data/free_deepseek/deepseek-auth.json",
+        "data/free_qwen/session/tokens.json"
+    )
     foreach ($file in $envFiles) {
         $fullPath = Join-Path $repoRoot $file
         if (-not (Test-Path -LiteralPath $fullPath)) {

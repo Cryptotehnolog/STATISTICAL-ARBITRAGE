@@ -41,9 +41,10 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - GitHub CLI in Codex: use `scripts/gh_no_proxy.ps1` for `gh` commands because this session
   can inherit broken process proxy variables pointing at `127.0.0.1:9`.
 - OmniRoute benchmarking: re-run model ordering benchmark when provider behavior changes.
-- ApeRAG graph fallback: FreeDeepseekAPI is available only as an explicit experimental
-  `-CompletionBackend free_deepseek` path after local DeepSeek Web auth is created and
-  `scripts/check_free_deepseek.ps1` passes.
+- ApeRAG graph fallback: FreeDeepseekAPI and FreeQwenApi are available only as explicit
+  experimental paths through `-CompletionBackend free_deepseek` and
+  `-CompletionBackend free_qwen`. Keep OmniRoute as default until a full curated benchmark
+  proves a better stable provider order.
 - Data ingestion CLI: add user-facing ingestion command only after quality report generation
   and dataset provenance are wired to the registry.
 - Data-quality failure memory: route `DataQualityFailureSummary` to ApeRAG through the
