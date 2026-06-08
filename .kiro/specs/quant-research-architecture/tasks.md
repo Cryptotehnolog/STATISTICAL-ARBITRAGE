@@ -312,7 +312,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Added edge-case coverage for reverse rejected pairs, duplicate memory refs, novelty floor, and no-link behavior
     - _Requirements: 18.8_
 
-- [ ] 10. Build Critic Agent
+- [x] 10. Build Critic Agent
   - [x] 10.1 Implement lookahead bias detection
     - Check that signals use only past data
     - Verify no future information in position sizing
@@ -350,21 +350,28 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Implemented explicit `CriticCostRealismPolicy` and evidence-based indicators without hidden thresholds
     - _Requirements: 7.6, 7.7_
   
-  - [ ] 10.6 Implement decision logic
+  - [x] 10.6 Implement decision logic
     - Reject: critical issues (lookahead bias, negative net PnL)
     - Quarantine: moderate issues (weak statistics, high turnover)
     - Approve: no critical issues
+    - Implemented explicit `CriticDecisionPolicy`, `CriticDecisionEvidence`, and `decide_critic_review`
+    - Unknown indicators are quarantined instead of silently approved
+    - Clean reviews require explicit `approve_when_no_issues=True`
     - _Requirements: 7.10_
   
-  - [ ] 10.7 Integrate Critic Agent with registry and ApeRAG
+  - [x] 10.7 Integrate Critic Agent with registry and ApeRAG
     - Write objections and detected risks through Memory Agent policy boundary
     - Write final review status to SQLite registry
+    - Implemented `run_critic_agent_persistence` to require an existing backtest, write `CriticReview`, and emit only a concise policy-bound memory summary
+    - Added `scripts/check_critic_agent_boundaries.ps1` to prevent direct ApeRAG writes or registry bypass
     - _Requirements: 7.8, 7.9_
   
-  - [ ]* 10.8 Write unit tests for critic detection logic
+  - [x]* 10.8 Write unit tests for critic detection logic
     - Test lookahead bias detection with synthetic examples
     - Test overfitting detection with mock results
     - Test decision logic for various scenarios
+    - Added edge-case coverage for cost realism, unknown decision indicators, explicit approval policy, blank indicator rejection, registry persistence, and memory boundary integration
+    - Expanded `scripts/check_critic_pipeline.ps1` to cover 10.1-10.8 in one checkpoint
     - _Requirements: 18.8_
 
 - [ ] 11. Build full Memory Agent on top of the existing ApeRAG boundary

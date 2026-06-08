@@ -5,6 +5,9 @@ import pytest
 from stat_arb.agents import (
     CriticCostRealismEvidence,
     CriticCostRealismPolicy,
+    CriticDecisionEvidence,
+    CriticDecisionPolicy,
+    CriticDecisionStatus,
     CriticInsufficientTestingEvidence,
     CriticInsufficientTestingPolicy,
     CriticLookaheadEvidence,
@@ -13,6 +16,7 @@ from stat_arb.agents import (
     CriticOverfittingPolicy,
     CriticWeakAssumptionEvidence,
     CriticWeakAssumptionPolicy,
+    decide_critic_review,
     detect_cost_realism,
     detect_insufficient_testing,
     detect_lookahead_bias,
@@ -803,4 +807,145 @@ def test_critic_cost_realism_evidence_rejects_invalid_values() -> None:
             snapshot_slippage_rate=0.0004,
             cost_snapshot_status="verified",
             cost_snapshot_source="",
+        )
+
+
+def test_critic_decision_rejects_critical_issues() -> None:
+    """Critical indicators should produce an explicit reject decision."""
+    decision = decide_critic_review(
+        CriticDecisionEvidence(
+            lookahead_issues=("signal_lookahead: future bar used",),
+            overfitting_indicators=(),
+            weak_assumption_indicators=(),
+            insufficient_testing_indicators=(),
+            cost_realism_indicators=(),
+            operational_concerns=(),
+        ),
+        policy=CriticDecisionPolicy(
+            reject_issue_prefixes=("signal_lookahead", "negative_net_pnl_after_costs"),
+            quarantine_issue_prefixes=("excessive_turnover", "cointegration_p_value_proximity"),
+            approve_when_no_issues=True,
+        ),
+    )
+
+    assert decision.status is CriticDecisionStatus.REJECTED
+    assert decision.recommendation == "Reject"
+    assert decision.objections == ("signal_lookahead: future bar used",)
+
+
+def test_critic_decision_quarantines_moderate_issues() -> None:
+    """Moderate indicators should be quarantined without being auto-rejected."""
+    decision = decide_critic_review(
+        CriticDecisionEvidence(
+            lookahead_issues=(),
+            overfitting_indicators=(),
+            weak_assumption_indicators=("cointegration_p_value_proximity: near alpha",),
+            insufficient_testing_indicators=(),
+            cost_realism_indicators=("excessive_turnover: turnover too high",),
+            operational_concerns=(),
+        ),
+        policy=CriticDecisionPolicy(
+            reject_issue_prefixes=("signal_lookahead", "negative_net_pnl_after_costs"),
+            quarantine_issue_prefixes=("excessive_turnover", "cointegration_p_value_proximity"),
+            approve_when_no_issues=True,
+        ),
+    )
+
+    assert decision.status is CriticDecisionStatus.QUARANTINED
+    assert decision.recommendation == "Quarantine"
+    assert decision.objections == (
+        "cointegration_p_value_proximity: near alpha",
+        "excessive_turnover: turnover too high",
+    )
+
+
+def test_critic_decision_approves_only_when_policy_allows_no_issues() -> None:
+    """Approval is allowed only through explicit decision policy."""
+    decision = decide_critic_review(
+        CriticDecisionEvidence(
+            lookahead_issues=(),
+            overfitting_indicators=(),
+            weak_assumption_indicators=(),
+            insufficient_testing_indicators=(),
+            cost_realism_indicators=(),
+            operational_concerns=(),
+        ),
+        policy=CriticDecisionPolicy(
+            reject_issue_prefixes=("signal_lookahead",),
+            quarantine_issue_prefixes=("excessive_turnover",),
+            approve_when_no_issues=True,
+        ),
+    )
+
+    assert decision.status is CriticDecisionStatus.APPROVED
+    assert decision.recommendation == "Approve"
+    assert decision.objections == ()
+
+
+def test_critic_decision_quarantines_unknown_issue_prefixes() -> None:
+    """Unknown indicators should not slip into approval through unmatched prefixes."""
+    decision = decide_critic_review(
+        CriticDecisionEvidence(
+            lookahead_issues=(),
+            overfitting_indicators=("new_detector: suspicious pattern",),
+            weak_assumption_indicators=(),
+            insufficient_testing_indicators=(),
+            cost_realism_indicators=(),
+            operational_concerns=(),
+        ),
+        policy=CriticDecisionPolicy(
+            reject_issue_prefixes=("signal_lookahead",),
+            quarantine_issue_prefixes=("excessive_turnover",),
+            approve_when_no_issues=True,
+        ),
+    )
+
+    assert decision.status is CriticDecisionStatus.QUARANTINED
+    assert decision.recommendation == "Quarantine"
+    assert decision.objections == ("new_detector: suspicious pattern",)
+
+
+def test_critic_decision_keeps_clean_review_pending_without_explicit_approval() -> None:
+    """A clean review should be quarantined unless policy explicitly permits approval."""
+    decision = decide_critic_review(
+        CriticDecisionEvidence(
+            lookahead_issues=(),
+            overfitting_indicators=(),
+            weak_assumption_indicators=(),
+            insufficient_testing_indicators=(),
+            cost_realism_indicators=(),
+            operational_concerns=(),
+        ),
+        policy=CriticDecisionPolicy(
+            reject_issue_prefixes=("signal_lookahead",),
+            quarantine_issue_prefixes=("excessive_turnover",),
+            approve_when_no_issues=False,
+        ),
+    )
+
+    assert decision.status is CriticDecisionStatus.QUARANTINED
+    assert decision.recommendation == "Quarantine"
+    assert decision.objections == ()
+
+
+def test_critic_decision_evidence_rejects_empty_indicator_text() -> None:
+    """Decision evidence should not carry blank review indicators."""
+    with pytest.raises(ValueError, match="lookahead_issues"):
+        CriticDecisionEvidence(
+            lookahead_issues=("",),
+            overfitting_indicators=(),
+            weak_assumption_indicators=(),
+            insufficient_testing_indicators=(),
+            cost_realism_indicators=(),
+            operational_concerns=(),
+        )
+
+
+def test_critic_decision_policy_rejects_hidden_noop_policy() -> None:
+    """Decision routing should not silently approve without explicit policy."""
+    with pytest.raises(ValueError, match="at least one"):
+        CriticDecisionPolicy(
+            reject_issue_prefixes=(),
+            quarantine_issue_prefixes=(),
+            approve_when_no_issues=False,
         )

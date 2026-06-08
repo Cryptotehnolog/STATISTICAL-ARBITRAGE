@@ -3,9 +3,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from math import isfinite
+from typing import Protocol
+from uuid import UUID
 
+from sqlalchemy.orm import Session
+
+from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
 from stat_arb.statistical import WalkForwardWindow, assert_no_lookahead
+from stat_arb.storage.models import BacktestResult as StoredBacktestResult
+from stat_arb.storage.models import CriticReview as StoredCriticReview
+
+
+class MemoryWriter(Protocol):
+    """Minimal Memory Agent service protocol used by this boundary."""
+
+    def write(self, request: MemoryWriteRequest) -> object:
+        """Write a policy-approved memory record."""
 
 
 @dataclass(frozen=True)
@@ -334,6 +349,109 @@ class CriticCostRealismAssessment:
     checked_rules: tuple[str, ...]
 
 
+class CriticDecisionStatus(StrEnum):
+    """Final Critic review decision status."""
+
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    QUARANTINED = "quarantined"
+
+
+@dataclass(frozen=True)
+class CriticDecisionPolicy:
+    """Explicit policy contract for Critic decision routing."""
+
+    reject_issue_prefixes: tuple[str, ...]
+    quarantine_issue_prefixes: tuple[str, ...]
+    approve_when_no_issues: bool
+
+    def __post_init__(self) -> None:
+        if not any(
+            (
+                bool(self.reject_issue_prefixes),
+                bool(self.quarantine_issue_prefixes),
+                self.approve_when_no_issues,
+            )
+        ):
+            raise ValueError("at least one critic decision rule must be enabled")
+        if not isinstance(self.approve_when_no_issues, bool):
+            raise TypeError("approve_when_no_issues must be a bool")
+        _validate_issue_prefixes(self.reject_issue_prefixes, label="reject_issue_prefixes")
+        _validate_issue_prefixes(
+            self.quarantine_issue_prefixes,
+            label="quarantine_issue_prefixes",
+        )
+
+
+@dataclass(frozen=True)
+class CriticDecisionEvidence:
+    """Aggregated Critic indicators used for final decision routing."""
+
+    lookahead_issues: tuple[str, ...]
+    overfitting_indicators: tuple[str, ...]
+    weak_assumption_indicators: tuple[str, ...]
+    insufficient_testing_indicators: tuple[str, ...]
+    cost_realism_indicators: tuple[str, ...]
+    operational_concerns: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        for label, values in (
+            ("lookahead_issues", self.lookahead_issues),
+            ("overfitting_indicators", self.overfitting_indicators),
+            ("weak_assumption_indicators", self.weak_assumption_indicators),
+            ("insufficient_testing_indicators", self.insufficient_testing_indicators),
+            ("cost_realism_indicators", self.cost_realism_indicators),
+            ("operational_concerns", self.operational_concerns),
+        ):
+            _validate_indicator_texts(values, label=label)
+
+    @property
+    def all_indicators(self) -> tuple[str, ...]:
+        """Return all indicators in stable review order."""
+        return (
+            *self.lookahead_issues,
+            *self.overfitting_indicators,
+            *self.weak_assumption_indicators,
+            *self.insufficient_testing_indicators,
+            *self.cost_realism_indicators,
+            *self.operational_concerns,
+        )
+
+
+@dataclass(frozen=True)
+class CriticDecisionAssessment:
+    """Final Critic decision result."""
+
+    status: CriticDecisionStatus
+    recommendation: str
+    objections: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CriticAgentInput:
+    """Input contract for persisting one completed Critic review."""
+
+    backtest_id: UUID
+    lookahead: CriticLookaheadAssessment
+    overfitting: CriticOverfittingAssessment
+    weak_assumptions: CriticWeakAssumptionAssessment
+    insufficient_testing: CriticInsufficientTestingAssessment
+    cost_realism: CriticCostRealismAssessment
+    decision: CriticDecisionAssessment
+    operational_concerns: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _validate_indicator_texts(self.operational_concerns, label="operational_concerns")
+
+
+@dataclass(frozen=True)
+class CriticAgentRunResult:
+    """Result of a registry-backed Critic Agent persistence step."""
+
+    stored_review: StoredCriticReview
+    memory_written: bool
+
+
 def detect_lookahead_bias(
     evidence: CriticLookaheadEvidence,
     *,
@@ -582,6 +700,116 @@ def detect_cost_realism(
     )
 
 
+def decide_critic_review(
+    evidence: CriticDecisionEvidence,
+    *,
+    policy: CriticDecisionPolicy,
+) -> CriticDecisionAssessment:
+    """Route Critic indicators into an explicit review decision."""
+    indicators = evidence.all_indicators
+    reject_objections = tuple(
+        indicator
+        for indicator in indicators
+        if _matches_any_prefix(indicator, policy.reject_issue_prefixes)
+    )
+    if reject_objections:
+        return CriticDecisionAssessment(
+            status=CriticDecisionStatus.REJECTED,
+            recommendation="Reject",
+            objections=reject_objections,
+        )
+
+    quarantine_objections = tuple(
+        indicator
+        for indicator in indicators
+        if _matches_any_prefix(indicator, policy.quarantine_issue_prefixes)
+    )
+    if quarantine_objections:
+        return CriticDecisionAssessment(
+            status=CriticDecisionStatus.QUARANTINED,
+            recommendation="Quarantine",
+            objections=quarantine_objections,
+        )
+
+    if not indicators and policy.approve_when_no_issues:
+        return CriticDecisionAssessment(
+            status=CriticDecisionStatus.APPROVED,
+            recommendation="Approve",
+            objections=(),
+        )
+
+    return CriticDecisionAssessment(
+        status=CriticDecisionStatus.QUARANTINED,
+        recommendation="Quarantine",
+        objections=indicators,
+    )
+
+
+def run_critic_agent_persistence(
+    request: CriticAgentInput,
+    *,
+    session: Session,
+    memory_service: MemoryWriter | None = None,
+) -> CriticAgentRunResult:
+    """Persist structured Critic review results and write a concise memory summary."""
+    _require_backtest_result(session, backtest_id=request.backtest_id)
+    stored = _persist_critic_review(session, request)
+    memory_written = False
+    if memory_service is not None:
+        memory_service.write(_memory_request_for(stored))
+        memory_written = True
+    return CriticAgentRunResult(stored_review=stored, memory_written=memory_written)
+
+
+def _persist_critic_review(
+    session: Session,
+    request: CriticAgentInput,
+) -> StoredCriticReview:
+    stored = StoredCriticReview(
+        backtest_id=str(request.backtest_id),
+        lookahead_bias_detected=request.lookahead.lookahead_bias_detected,
+        overfitting_indicators=list(request.overfitting.indicators),
+        weak_assumptions=list(request.weak_assumptions.indicators),
+        insufficient_testing=list(request.insufficient_testing.indicators),
+        cost_concerns=list(request.cost_realism.indicators),
+        operational_concerns=list(request.operational_concerns),
+        status=request.decision.status.value,
+        recommendation=request.decision.recommendation,
+        objections="\n".join(request.decision.objections) if request.decision.objections else "None",
+    )
+    session.add(stored)
+    session.flush()
+    return stored
+
+
+def _memory_request_for(review: StoredCriticReview) -> MemoryWriteRequest:
+    return MemoryWriteRequest(
+        record_type=MemoryRecordType.CRITIC_REVIEW,
+        title="Critic review completed",
+        body=(
+            "Critic review completed. Structured objections, review status, and "
+            "recommendation are stored in the registry."
+        ),
+        source_id=review.review_id,
+        registry_reference=f"registry:critic_reviews/{review.review_id}",
+        tags=["critic", "review", review.status],
+        metadata={
+            "backtest_id": review.backtest_id,
+            "status": review.status,
+        },
+    )
+
+
+def _require_backtest_result(session: Session, *, backtest_id: UUID) -> None:
+    result = (
+        session.query(StoredBacktestResult)
+        .filter(StoredBacktestResult.backtest_id == str(backtest_id))
+        .first()
+    )
+    if result is None:
+        raise ValueError(f"backtest result is required for critic review {backtest_id}")
+
+
 def _validate_index_pairs(
     decision_indices: tuple[int, ...],
     data_through_indices: tuple[int, ...],
@@ -644,6 +872,18 @@ def _validate_status_names(statuses: tuple[str, ...]) -> None:
             raise ValueError("cost snapshot statuses must be non-empty strings")
 
 
+def _validate_issue_prefixes(prefixes: tuple[str, ...], *, label: str) -> None:
+    for prefix in prefixes:
+        if not isinstance(prefix, str) or not prefix.strip():
+            raise ValueError(f"{label} must contain non-empty strings")
+
+
+def _validate_indicator_texts(indicators: tuple[str, ...], *, label: str) -> None:
+    for indicator in indicators:
+        if not isinstance(indicator, str) or not indicator.strip():
+            raise ValueError(f"{label} must contain non-empty strings")
+
+
 def _normalized_sensitivity_scenarios(scenarios: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(scenario.strip().lower() for scenario in scenarios))
 
@@ -654,6 +894,11 @@ def _normalized_statuses(statuses: tuple[str, ...]) -> tuple[str, ...]:
 
 def _normalized_status(status: str) -> str:
     return status.strip().lower()
+
+
+def _matches_any_prefix(indicator: str, prefixes: tuple[str, ...]) -> bool:
+    normalized = indicator.strip().lower()
+    return any(normalized.startswith(prefix.strip().lower()) for prefix in prefixes)
 
 
 def _slippage_difference_ratio(assumed_rate: float, snapshot_rate: float) -> float:

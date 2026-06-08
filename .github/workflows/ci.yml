@@ -56,6 +56,10 @@ jobs:
         shell: pwsh
         run: ./scripts/check_backtest_agent_boundaries.ps1
 
+      - name: Check Critic Agent boundaries
+        shell: pwsh
+        run: ./scripts/check_critic_agent_boundaries.ps1
+
       - name: Check Critic Agent pipeline
         shell: pwsh
         run: ./scripts/check_critic_pipeline.ps1

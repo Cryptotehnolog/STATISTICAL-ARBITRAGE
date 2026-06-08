@@ -8,10 +8,11 @@ def test_check_critic_pipeline_runs_critic_tests() -> None:
     script = Path("scripts/check_critic_pipeline.ps1").read_text(encoding="utf-8")
 
     assert "test_critic_agent.py" in script
+    assert "test_critic_agent_persistence.py" in script
     assert "test_check_critic_pipeline.py" in script
     assert "uv run pytest" in script
     assert "--no-cov" in script
-    assert "10.1-10.5" in script
+    assert "10.1-10.8" in script
 
 
 def test_check_critic_pipeline_is_in_pre_commit_and_ci() -> None:

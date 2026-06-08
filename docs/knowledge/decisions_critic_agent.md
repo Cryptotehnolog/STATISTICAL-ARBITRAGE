@@ -118,3 +118,64 @@ Risks: This detector reviews summary evidence and snapshot provenance, not live 
 microstructure. Future Cost Assumption Agent work should collect, refresh, and verify
 venue/account-specific snapshots before production usage, while Critic remains responsible
 for transparent review indicators.
+
+## DEC-0054: Route final Critic decisions through explicit decision policy
+
+Status: accepted
+
+Decision: Implement final Critic review routing through `CriticDecisionPolicy`,
+`CriticDecisionEvidence`, and `decide_critic_review`. The policy explicitly lists reject
+and quarantine issue prefixes and separately controls whether a clean review may be
+approved. Unknown indicators are quarantined instead of being silently approved.
+
+Rationale: Reject/quarantine/approve is a research governance decision, not a hidden
+implementation detail. Critical issues such as lookahead or negative net PnL can be routed
+to rejection, moderate or uncertain issues can be quarantined, and clean approval must
+remain explicit so later agents cannot inherit accidental defaults.
+
+Alternatives considered: Hard-code issue severities inside individual detectors; approve
+any review with no matched critical prefixes; postpone decision routing to the future
+Coordinator.
+
+Risks: Prefix-based routing is intentionally simple. Future Coordinator work may replace
+prefix matching with richer severity objects, but it must preserve explicit policy and
+unknown-indicator quarantine semantics.
+
+## DEC-0055: Persist Critic reviews in registry before memory summaries
+
+Status: accepted
+
+Decision: Implement `run_critic_agent_persistence` as the Critic Agent boundary for
+completed reviews. It requires an existing `BacktestResult`, stores structured review
+fields in `CriticReview`, and writes only a concise summary through the Memory Agent
+policy-compatible writer. Critic Agent code must not call ApeRAG directly.
+
+Rationale: The registry is the source of truth for metrics, objections, statuses, and
+provenance. ApeRAG memory should carry searchable summaries and references, not duplicate
+metric-heavy payloads. This keeps future agent memory useful while preserving exact audit
+data in the database.
+
+Alternatives considered: Write all review details directly into ApeRAG; keep Critic
+results in memory only; let Backtest Agent own the final rejection decision.
+
+Risks: The first persistence boundary writes completed reviews rather than orchestrating
+the full Critic workflow. Future Task 11 Memory Agent work should add richer query/write
+operations without allowing direct ApeRAG writes from agent modules.
+
+## DEC-0056: Treat Critic Agent 10.1-10.8 as one checkpoint baseline
+
+Status: accepted
+
+Decision: Expand `scripts/check_critic_pipeline.ps1` to cover lookahead, overfitting,
+weak-assumption, insufficient-testing, cost-realism, final decision, registry persistence,
+memory-boundary, and checkpoint-script tests in one command.
+
+Rationale: Critic Agent failures are governance failures. A single checkpoint command makes
+it cheap to verify that detection, routing, persistence, and memory boundaries still work
+together before moving to later agents.
+
+Alternatives considered: Keep separate ad hoc pytest commands; rely only on full
+pre-commit; test persistence only in integration scripts.
+
+Risks: The checkpoint remains a unit-level baseline. It does not prove real ApeRAG writes
+or live registry migrations, which are covered by separate memory/backend checks.
