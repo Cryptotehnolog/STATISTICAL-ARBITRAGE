@@ -24,3 +24,13 @@ def test_check_aperag_knowledge_can_require_expected_text() -> None:
     assert "$_.content" in script
     assert "$_.metadata.title" in script
     assert "expected text" in script
+
+
+def test_check_aperag_knowledge_readiness_depends_on_required_indexes() -> None:
+    """ApeRAG document status may lag while vector/fulltext indexes are already usable."""
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+    bad_docs_block = script.split("$badDocs = @(", 1)[1].split(")", 1)[0]
+
+    assert 'vector_index_status -ne "ACTIVE"' in bad_docs_block
+    assert 'fulltext_index_status -ne "ACTIVE"' in bad_docs_block
+    assert 'status -ne "COMPLETE"' not in bad_docs_block

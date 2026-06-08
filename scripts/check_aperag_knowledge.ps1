@@ -78,7 +78,6 @@ if (-not $docs.items -or $docs.items.Count -eq 0) {
 
 $badDocs = @(
     $docs.items | Where-Object {
-        $_.status -ne "COMPLETE" -or
         $_.vector_index_status -ne "ACTIVE" -or
         $_.fulltext_index_status -ne "ACTIVE"
     }
