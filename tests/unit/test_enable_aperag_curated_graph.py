@@ -14,6 +14,8 @@ def test_enable_aperag_curated_graph_retries_transient_llm_failures() -> None:
     assert "ALL_ACCOUNTS_INACTIVE" in script
     assert "all upstream accounts are inactive" in script
     assert "ServiceUnavailable" in script
+    assert "parallel_chat_limit" in script
+    assert "Сообщение генерируется" in script
     assert "GraphRebuildStartedAt" in script
     assert "RegexOptions]::IgnoreCase" in script
     assert 'Start-Sleep -Seconds 5' in script
@@ -25,3 +27,14 @@ def test_enable_aperag_curated_graph_retries_transient_llm_failures() -> None:
     assert script.index("Test-TransientGraphFailure") < script.index(
         "ApeRAG graph rebuild failed"
     )
+
+
+def test_enable_aperag_curated_graph_serializes_free_deepseek_rebuilds() -> None:
+    """Browser-backed FreeDeepseekAPI should avoid parallel graph extraction requests."""
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert '$sequentialGraphRebuild = $CompletionBackend -eq "free_deepseek"' in script
+    assert "FreeDeepseekAPI backend detected" in script
+    assert "[int]$GraphPollSeconds" in script
+    assert "Sequential graph status" in script
+    assert '$currentDoc.graph_index_status -in @("PENDING", "CREATING")' in script

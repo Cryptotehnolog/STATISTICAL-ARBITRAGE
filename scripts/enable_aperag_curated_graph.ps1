@@ -7,7 +7,8 @@ param(
     [string]$CompletionModel = "",
     [int]$TimeoutSeconds = 900,
     [int]$MaxRetries = 2,
-    [int]$RetryDelaySeconds = 30
+    [int]$RetryDelaySeconds = 30,
+    [int]$GraphPollSeconds = 10
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,6 +29,15 @@ Get-Content -LiteralPath $envPath | ForEach-Object {
 $headers = @{
     Authorization = "Bearer $env:APERAG_API_KEY"
     "Content-Type" = "application/json"
+}
+$sequentialGraphRebuild = $CompletionBackend -eq "free_deepseek"
+if ($sequentialGraphRebuild) {
+    if (-not $PSBoundParameters.ContainsKey("MaxRetries")) {
+        $MaxRetries = 5
+    }
+    if (-not $PSBoundParameters.ContainsKey("RetryDelaySeconds")) {
+        $RetryDelaySeconds = 60
+    }
 }
 
 function Invoke-ApeRagJson {
@@ -79,7 +89,9 @@ function Test-TransientGraphFailure {
         "service_unavailable",
         "temporarily unavailable",
         "rate limit",
-        "Too Many Requests"
+        "Too Many Requests",
+        "parallel_chat_limit",
+        "Сообщение генерируется"
     )
 
     $logs = ""
@@ -113,10 +125,21 @@ function Invoke-GraphRebuild {
             index_types = @("GRAPH")
         } | Out-Null
         Write-Output "GRAPH rebuild requested: $($doc.name)"
+        if ($sequentialGraphRebuild) {
+            do {
+                Start-Sleep -Seconds $GraphPollSeconds
+                $currentDocs = Invoke-ApeRagJson -Method "GET" -Path "/api/v1/collections/$($collection.id)/documents?page=1&page_size=100"
+                $currentDoc = $currentDocs.items | Where-Object { $_.id -eq $doc.id } | Select-Object -First 1
+                Write-Output "Sequential graph status: $($doc.name)=$($currentDoc.graph_index_status)"
+            } while ($currentDoc.graph_index_status -in @("PENDING", "CREATING"))
+        }
     }
 }
 
 Write-Output "Включение ApeRAG graph для curated memory..."
+if ($sequentialGraphRebuild) {
+    Write-Output "FreeDeepseekAPI backend detected: graph rebuild will run sequentially to avoid DeepSeek Web parallel chat limits."
+}
 
 .\scripts\configure_aperag.ps1 `
     -EnvFile $EnvFile `
