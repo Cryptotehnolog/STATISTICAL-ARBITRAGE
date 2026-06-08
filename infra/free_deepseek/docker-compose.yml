@@ -1,0 +1,29 @@
+services:
+  stat-arb-free-deepseek:
+    container_name: stat-arb-free-deepseek
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: 9655
+      NON_INTERACTIVE: "1"
+      SKIP_ACCOUNT_MENU: "1"
+      DEEPSEEK_AUTH_PATH: /runtime/deepseek-auth.json
+    volumes:
+      - ../../data/free_deepseek:/runtime
+    ports:
+      - "127.0.0.1:9655:9655"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:9655/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

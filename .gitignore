@@ -110,6 +110,10 @@ docs/knowledge_graph/graph.json
 *.pem
 *.crt
 credentials.json
+deepseek-auth.json
+auth.json
+.chrome-profile-deepseek/
+.chrome-for-testing-profile-deepseek/
 
 # Rust
 target/

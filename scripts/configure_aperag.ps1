@@ -1,9 +1,11 @@
 param(
     [string]$EnvFile = "data\aperag\.env",
+    [ValidateSet("omniroute", "free_deepseek")]
+    [string]$CompletionBackend = "omniroute",
     [string]$EmbeddingProvider = "stat-arb-local-embeddings",
-    [string]$CompletionProvider = "stat-arb-omniroute",
     [string]$EmbeddingModel = "sentence-transformers/all-MiniLM-L6-v2",
-    [string]$CompletionModel = "my-ai"
+    [string]$CompletionProvider = "",
+    [string]$CompletionModel = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,6 +30,42 @@ if (-not $env:APERAG_API_BASE_URL -or -not $env:APERAG_API_KEY) {
 $headers = @{
     Authorization = "Bearer $env:APERAG_API_KEY"
     "Content-Type" = "application/json"
+}
+
+if (-not $CompletionProvider) {
+    $CompletionProvider = if ($CompletionBackend -eq "free_deepseek") {
+        "stat-arb-free-deepseek"
+    }
+    else {
+        "stat-arb-omniroute"
+    }
+}
+if (-not $CompletionModel) {
+    $CompletionModel = if ($CompletionBackend -eq "free_deepseek") {
+        "deepseek-chat"
+    }
+    else {
+        "my-ai"
+    }
+}
+
+$completionLabel = if ($CompletionBackend -eq "free_deepseek") {
+    "Stat Arb FreeDeepseekAPI"
+}
+else {
+    "Stat Arb OmniRoute"
+}
+$completionBaseUrl = if ($CompletionBackend -eq "free_deepseek") {
+    "http://host.docker.internal:9655/v1"
+}
+else {
+    "http://host.docker.internal:20128/v1"
+}
+$completionTags = if ($CompletionBackend -eq "free_deepseek") {
+    @("stat-arb", "free-deepseek", "completion", "experimental")
+}
+else {
+    @("stat-arb", "omniroute", "completion")
 }
 
 function Invoke-ApeRagJson {
@@ -76,12 +114,12 @@ if (-not ($providers | Where-Object { $_.name -eq $EmbeddingProvider })) {
 if (-not ($providers | Where-Object { $_.name -eq $CompletionProvider })) {
     Invoke-ApeRagJson -Method "POST" -Path "/api/v1/llm_providers" -Body @{
         name = $CompletionProvider
-        label = "Stat Arb OmniRoute"
+        label = $completionLabel
         completion_dialect = "openai"
         embedding_dialect = "openai"
         rerank_dialect = "jina_ai"
         allow_custom_base_url = $true
-        base_url = "http://host.docker.internal:20128/v1"
+        base_url = $completionBaseUrl
         api_key = "local-not-secret"
         status = "enable"
     } | Out-Null
@@ -112,9 +150,9 @@ if (-not ($models | Where-Object { $_.provider_name -eq $CompletionProvider -and
         context_window = 200000
         max_input_tokens = 180000
         max_output_tokens = 8192
-        tags = @("stat-arb", "omniroute", "completion")
+        tags = $completionTags
     } | Out-Null
     Write-Output "Создан ApeRAG completion model: $CompletionModel"
 }
 
-Write-Output "ApeRAG providers/models настроены."
+Write-Output "ApeRAG providers/models настроены: completion_backend=$CompletionBackend, provider=$CompletionProvider, model=$CompletionModel"

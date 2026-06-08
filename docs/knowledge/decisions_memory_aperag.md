@@ -119,6 +119,30 @@ document through OmniRoute automatically.
 Risks: Large but useful sources may be skipped until they are split into smaller curated
 documents.
 
+## DEC-0022: Add FreeDeepseekAPI only as an explicit experimental graph fallback
+
+Status: accepted
+
+Decision: Keep OmniRoute as the default ApeRAG graph completion gateway, but add
+FreeDeepseekAPI as an explicit experimental fallback selected with
+`-CompletionBackend free_deepseek`. FreeDeepseekAPI must run in its own Docker container
+named `stat-arb-free-deepseek`, expose an OpenAI-compatible endpoint on local port `9655`,
+and keep DeepSeek Web session files under ignored runtime storage
+`data/free_deepseek/`.
+
+Rationale: OmniRoute can become unavailable when its upstream accounts or quotas fail.
+ApeRAG graph rebuilds should have a tested fallback integration path, but it must not
+silently replace the default backend or become a hidden production dependency.
+
+Alternatives considered: Delete OmniRoute immediately; embed FreeDeepseekAPI inside the
+ApeRAG container; switch all agent LLM traffic to FreeDeepseekAPI; keep retrying OmniRoute
+without a fallback boundary.
+
+Risks: FreeDeepseekAPI depends on a local DeepSeek Web session and may break when the web
+service changes. The start script must fail fast when `deepseek-auth.json` is missing so
+Docker does not enter a noisy restart loop. Treat this backend as experimental until
+`scripts/check_free_deepseek.ps1` and an ApeRAG graph rebuild smoke pass.
+
 ## DEC-0009: Use curated knowledge shards instead of seeding large Kiro specs directly
 
 Status: accepted

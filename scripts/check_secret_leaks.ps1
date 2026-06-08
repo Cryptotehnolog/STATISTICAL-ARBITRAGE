@@ -22,6 +22,10 @@ $sensitiveFilePatterns = @(
     "(^|/|\\)\.env$",
     "(^|/|\\)\.env\.(local|production|prod|staging|dev)$",
     "(^|/|\\)credentials\.json$",
+    "(^|/|\\)deepseek-auth\.json$",
+    "(^|/|\\)auth\.json$",
+    "(^|/|\\)\.chrome-profile-deepseek(/|\\)",
+    "(^|/|\\)\.chrome-for-testing-profile-deepseek(/|\\)",
     "^secrets(/|\\)",
     "\.pem$",
     "\.key$",
@@ -37,6 +41,7 @@ $secretPatterns = @(
     @{ Name = "Slack token"; Pattern = "xox[baprs]-[A-Za-z0-9-]{10,}" },
     @{ Name = "Private key block"; Pattern = "-----BEGIN (RSA |OPENSSH |EC |DSA |)PRIVATE KEY-----" },
     @{ Name = "Infisical bootstrap key"; Pattern = "^(ENCRYPTION_KEY|AUTH_SECRET|INFISICAL_POSTGRES_PASSWORD)=" },
+    @{ Name = "DeepSeek web token"; Pattern = "^(DEEPSEEK_TOKEN|DEEPSEEK_COOKIE|DEEPSEEK_HIF_DLIQ|DEEPSEEK_HIF_LEIM)=" },
     @{ Name = "Runtime secret assignment"; Pattern = "^[A-Za-z0-9_]*(API_KEY|API_SECRET|CLIENT_SECRET|TOKEN|PASSWORD|PRIVATE_KEY)=[^#\s].+" }
 )
 
@@ -136,7 +141,7 @@ function Test-FileContent {
 function Test-WorkingTreeEnvFiles {
     param([System.Collections.ArrayList]$Violations)
 
-    $envFiles = @(".env", "infra/infisical/.env")
+    $envFiles = @(".env", "infra/infisical/.env", "data/free_deepseek/deepseek-auth.json")
     foreach ($file in $envFiles) {
         $fullPath = Join-Path $repoRoot $file
         if (-not (Test-Path -LiteralPath $fullPath)) {

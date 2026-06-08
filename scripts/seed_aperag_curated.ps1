@@ -3,6 +3,10 @@ param(
     [string]$KnowledgeDir = "docs\knowledge",
     [string]$CollectionTitle = "stat-arb-project-knowledge",
     [string]$CollectionDescription = "Curated project knowledge shards for Statistical Arbitrage agents.",
+    [ValidateSet("omniroute", "free_deepseek")]
+    [string]$CompletionBackend = "omniroute",
+    [string]$CompletionProvider = "",
+    [string]$CompletionModel = "",
     [switch]$EnableGraph,
     [switch]$Force
 )
@@ -85,7 +89,28 @@ function Upload-CuratedShard {
     Write-Output "Uploaded: $($File.Name)"
 }
 
-.\scripts\configure_aperag.ps1 -EnvFile $EnvFile | Write-Output
+if (-not $CompletionProvider) {
+    $CompletionProvider = if ($CompletionBackend -eq "free_deepseek") {
+        "stat-arb-free-deepseek"
+    }
+    else {
+        "stat-arb-omniroute"
+    }
+}
+if (-not $CompletionModel) {
+    $CompletionModel = if ($CompletionBackend -eq "free_deepseek") {
+        "deepseek-chat"
+    }
+    else {
+        "my-ai"
+    }
+}
+
+.\scripts\configure_aperag.ps1 `
+    -EnvFile $EnvFile `
+    -CompletionBackend $CompletionBackend `
+    -CompletionProvider $CompletionProvider `
+    -CompletionModel $CompletionModel | Write-Output
 
 if ($Force) {
     .\scripts\recalculate_aperag_quota.ps1 -EnvFile $EnvFile | Write-Output
@@ -114,8 +139,8 @@ $config = @{
         timeout = 60
     }
     completion = @{
-        model = "my-ai"
-        model_service_provider = "stat-arb-omniroute"
+        model = $CompletionModel
+        model_service_provider = $CompletionProvider
         custom_llm_provider = "openai"
         temperature = 0.1
         max_tokens = 2048
@@ -211,7 +236,12 @@ $manifest = [ordered]@{
 $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestFile -Encoding UTF8
 
 if ($EnableGraph) {
-    .\scripts\enable_aperag_curated_graph.ps1 -EnvFile $EnvFile -CollectionTitle $CollectionTitle | Write-Output
+    .\scripts\enable_aperag_curated_graph.ps1 `
+        -EnvFile $EnvFile `
+        -CollectionTitle $CollectionTitle `
+        -CompletionBackend $CompletionBackend `
+        -CompletionProvider $CompletionProvider `
+        -CompletionModel $CompletionModel | Write-Output
 }
 
 Write-Output "ApeRAG curated seed завершен: collection=$($collection.id), shards=$($files.Count)"

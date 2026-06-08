@@ -1,6 +1,10 @@
 param(
     [string]$EnvFile = "data\aperag\.env",
     [string]$CollectionTitle = "stat-arb-project-knowledge",
+    [ValidateSet("omniroute", "free_deepseek")]
+    [string]$CompletionBackend = "omniroute",
+    [string]$CompletionProvider = "",
+    [string]$CompletionModel = "",
     [int]$TimeoutSeconds = 900,
     [int]$MaxRetries = 2,
     [int]$RetryDelaySeconds = 30
@@ -70,6 +74,7 @@ function Test-TransientGraphFailure {
 
     $knownTransientPatterns = @(
         "ALL_ACCOUNTS_INACTIVE",
+        "all upstream accounts are inactive",
         "ServiceUnavailable",
         "service_unavailable",
         "temporarily unavailable",
@@ -80,8 +85,9 @@ function Test-TransientGraphFailure {
     $logs = ""
     if (Get-Command docker -ErrorAction SilentlyContinue) {
         try {
+            Start-Sleep -Seconds 5
             $since = $GraphRebuildStartedAt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-            $logs = docker logs aperag-celeryworker --since $since --tail 300 2>&1
+            $logs = (docker logs aperag-celeryworker --since $since --tail 500 2>&1) -join "`n"
         }
         catch {
             $logs = ""
@@ -89,7 +95,7 @@ function Test-TransientGraphFailure {
     }
 
     foreach ($pattern in $knownTransientPatterns) {
-        if ($logs -match [regex]::Escape($pattern)) {
+        if ([regex]::IsMatch($logs, [regex]::Escape($pattern), [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
             $names = ($FailedDocuments | ForEach-Object { $_.name }) -join ", "
             Write-Output "Transient ApeRAG graph failure detected ($pattern): $names"
             return $true
@@ -112,7 +118,11 @@ function Invoke-GraphRebuild {
 
 Write-Output "Включение ApeRAG graph для curated memory..."
 
-.\scripts\configure_aperag.ps1 -EnvFile $EnvFile | Write-Output
+.\scripts\configure_aperag.ps1 `
+    -EnvFile $EnvFile `
+    -CompletionBackend $CompletionBackend `
+    -CompletionProvider $CompletionProvider `
+    -CompletionModel $CompletionModel | Write-Output
 
 $collections = Invoke-ApeRagJson -Method "GET" -Path "/api/v1/collections?page=1&page_size=100"
 $collection = $collections.items | Where-Object { $_.title -eq $CollectionTitle } | Select-Object -First 1
@@ -161,8 +171,13 @@ while ($true) {
 
         $failed = @($docs.items | Where-Object { $_.graph_index_status -eq "FAILED" })
         if ($failed.Count -gt 0) {
-            if ($attempt -lt $MaxRetries -and (Test-TransientGraphFailure -FailedDocuments $failed -GraphRebuildStartedAt $graphRebuildStartedAt)) {
+            $isTransient = Test-TransientGraphFailure -FailedDocuments $failed -GraphRebuildStartedAt $graphRebuildStartedAt
+            if ($attempt -lt $MaxRetries -and ($isTransient -or $failed.Count -gt 0)) {
                 $attempt += 1
+                if (-not $isTransient) {
+                    $names = ($failed | ForEach-Object { $_.name }) -join ", "
+                    Write-Output "Retrying failed GRAPH documents without confirmed transient log pattern: $names"
+                }
                 Write-Output "Повтор ApeRAG graph rebuild: attempt=$attempt/$MaxRetries через $RetryDelaySeconds секунд."
                 Start-Sleep -Seconds $RetryDelaySeconds
                 $graphRebuildStartedAt = Get-Date
