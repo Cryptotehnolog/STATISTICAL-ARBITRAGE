@@ -10,16 +10,22 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ### TD-0021: Harden ApeRAG graph rebuild against OmniRoute provider outages
 
-Status: open
+Status: resolved
 
 Why deferred: During Critic Agent task 10.5, ApeRAG vector/fulltext seeding worked but
 knowledge-graph rebuild repeatedly failed because OmniRoute `my-ai` chat returned HTTP
 503 with `ALL_ACCOUNTS_INACTIVE`. The project code and local ApeRAG containers were not
 the root cause; the active LLM combo had no usable upstream account at that moment.
 
+Resolution: OmniRoute was reinstalled with a clean Docker volume, a fresh Kiro OAuth
+connection was added, `my-ai` was rebuilt without stale account-bound IDs, and
+`scripts/check_omniroute_readiness.ps1` now checks Docker health, stale state, models,
+chat, latency, provider quota/cooldown/auth status, recent log risk patterns, and token
+expiry before long ApeRAG graph rebuilds. The restored OmniRoute path passed bounded
+ApeRAG graph smoke and a full curated graph rebuild.
+
 Follow-up:
-- Keep the OmniRoute combo/account readiness check outside ordinary pre-commit checks and
-  fail before starting long ApeRAG graph rebuilds when chat completion returns 503.
+- Keep the OmniRoute combo/account readiness check outside ordinary pre-commit checks.
 - FreeDeepseekAPI is verified as an explicit fallback, but full curated rebuilds are
   sequential and slower than an ideal provider path.
 - FreeQwenApi is now available as a third explicit experimental fallback after local Qwen
@@ -27,9 +33,6 @@ Follow-up:
   curated benchmark and dependency review are complete.
 - Keep bounded retries in `scripts/enable_aperag_curated_graph.ps1`, and fail clearly
   after the retry budget is exhausted.
-- After OmniRoute accounts are active again or FreeDeepseekAPI auth is verified, rerun
-  `scripts/seed_aperag_curated.ps1 -Apply -EnableGraph`, then
-  `scripts/check_memory_health.ps1`.
 
 Related tasks: 10.5, 11.1, 11.4, TD-0013.
 
