@@ -3,6 +3,8 @@
 import pytest
 
 from stat_arb.agents import (
+    CriticCostRealismEvidence,
+    CriticCostRealismPolicy,
     CriticInsufficientTestingEvidence,
     CriticInsufficientTestingPolicy,
     CriticLookaheadEvidence,
@@ -11,6 +13,7 @@ from stat_arb.agents import (
     CriticOverfittingPolicy,
     CriticWeakAssumptionEvidence,
     CriticWeakAssumptionPolicy,
+    detect_cost_realism,
     detect_insufficient_testing,
     detect_lookahead_bias,
     detect_overfitting,
@@ -562,4 +565,174 @@ def test_critic_insufficient_testing_rejects_fractional_walk_forward_counts() ->
             walk_forward_window_count=2.5,  # type: ignore[arg-type]
             test_period_days=90.0,
             sensitivity_scenarios=("double_costs",),
+        )
+
+
+def test_critic_cost_realism_detection_accepts_verified_realistic_costs() -> None:
+    """Verified realistic cost evidence should not produce cost concerns."""
+    assessment = detect_cost_realism(
+        CriticCostRealismEvidence(
+            gross_pnl=100.0,
+            net_pnl=82.0,
+            turnover=1.5,
+            assumed_slippage_rate=0.0002,
+            snapshot_slippage_rate=0.00025,
+            cost_snapshot_status="verified",
+            cost_snapshot_source="exchange-fee-snapshot-2026-06-08",
+        ),
+        policy=CriticCostRealismPolicy(
+            flag_negative_net_pnl=True,
+            max_turnover=2.0,
+            max_slippage_rate_to_snapshot_ratio=1.5,
+            allowed_cost_snapshot_statuses=("verified", "manual_approved"),
+        ),
+    )
+
+    assert assessment.cost_realism_concerns_detected is False
+    assert assessment.indicators == ()
+    assert assessment.checked_rules == (
+        "negative_net_pnl_after_costs",
+        "excessive_turnover",
+        "verified_cost_snapshot",
+        "slippage_assumption_realism",
+    )
+
+
+def test_critic_cost_realism_detection_flags_negative_net_pnl_after_costs() -> None:
+    """Net losses after costs should be visible to the Critic Agent."""
+    assessment = detect_cost_realism(
+        CriticCostRealismEvidence(
+            gross_pnl=10.0,
+            net_pnl=-1.25,
+            turnover=1.0,
+            assumed_slippage_rate=0.0002,
+            snapshot_slippage_rate=0.00025,
+            cost_snapshot_status="verified",
+            cost_snapshot_source="exchange-fee-snapshot-2026-06-08",
+        ),
+        policy=CriticCostRealismPolicy(
+            flag_negative_net_pnl=True,
+            max_turnover=2.0,
+            max_slippage_rate_to_snapshot_ratio=1.5,
+            allowed_cost_snapshot_statuses=("verified", "manual_approved"),
+        ),
+    )
+
+    assert assessment.cost_realism_concerns_detected is True
+    assert assessment.indicators == (
+        "negative_net_pnl_after_costs: net PnL -1.2500 is below 0.0000 after costs",
+    )
+
+
+def test_critic_cost_realism_detection_flags_excessive_turnover() -> None:
+    """Turnover above explicit policy should be reported."""
+    assessment = detect_cost_realism(
+        CriticCostRealismEvidence(
+            gross_pnl=100.0,
+            net_pnl=82.0,
+            turnover=2.5,
+            assumed_slippage_rate=0.0002,
+            snapshot_slippage_rate=0.00025,
+            cost_snapshot_status="verified",
+            cost_snapshot_source="exchange-fee-snapshot-2026-06-08",
+        ),
+        policy=CriticCostRealismPolicy(
+            flag_negative_net_pnl=True,
+            max_turnover=2.0,
+            max_slippage_rate_to_snapshot_ratio=1.5,
+            allowed_cost_snapshot_statuses=("verified", "manual_approved"),
+        ),
+    )
+
+    assert assessment.cost_realism_concerns_detected is True
+    assert assessment.indicators == (
+        "excessive_turnover: turnover 2.5000 exceeds policy maximum 2.0000",
+    )
+
+
+def test_critic_cost_realism_detection_flags_unapproved_cost_snapshot() -> None:
+    """Cost realism review should reject stale or unapproved cost snapshots."""
+    assessment = detect_cost_realism(
+        CriticCostRealismEvidence(
+            gross_pnl=100.0,
+            net_pnl=82.0,
+            turnover=1.5,
+            assumed_slippage_rate=0.0002,
+            snapshot_slippage_rate=0.00025,
+            cost_snapshot_status="stale",
+            cost_snapshot_source="exchange-fee-snapshot-2026-06-08",
+        ),
+        policy=CriticCostRealismPolicy(
+            flag_negative_net_pnl=True,
+            max_turnover=2.0,
+            max_slippage_rate_to_snapshot_ratio=1.5,
+            allowed_cost_snapshot_statuses=("verified", "manual_approved"),
+        ),
+    )
+
+    assert assessment.cost_realism_concerns_detected is True
+    assert assessment.indicators == (
+        "verified_cost_snapshot: status stale is not allowed; allowed statuses are verified, manual_approved",
+    )
+
+
+def test_critic_cost_realism_detection_flags_unrealistic_slippage_assumption() -> None:
+    """Assumed slippage too far from an approved snapshot should be visible."""
+    assessment = detect_cost_realism(
+        CriticCostRealismEvidence(
+            gross_pnl=100.0,
+            net_pnl=82.0,
+            turnover=1.5,
+            assumed_slippage_rate=0.0001,
+            snapshot_slippage_rate=0.0004,
+            cost_snapshot_status="verified",
+            cost_snapshot_source="exchange-fee-snapshot-2026-06-08",
+        ),
+        policy=CriticCostRealismPolicy(
+            flag_negative_net_pnl=True,
+            max_turnover=2.0,
+            max_slippage_rate_to_snapshot_ratio=1.5,
+            allowed_cost_snapshot_statuses=("verified", "manual_approved"),
+        ),
+    )
+
+    assert assessment.cost_realism_concerns_detected is True
+    assert assessment.indicators == (
+        "slippage_assumption_realism: assumed slippage 0.000100 differs from snapshot "
+        "0.000400 by ratio 4.0000, above allowed 1.5000",
+    )
+
+
+def test_critic_cost_realism_policy_rejects_hidden_noop_policy() -> None:
+    """At least one cost-realism rule must be active."""
+    with pytest.raises(ValueError, match="at least one"):
+        CriticCostRealismPolicy(
+            flag_negative_net_pnl=False,
+            max_turnover=None,
+            max_slippage_rate_to_snapshot_ratio=None,
+            allowed_cost_snapshot_statuses=(),
+        )
+
+
+def test_critic_cost_realism_evidence_rejects_invalid_values() -> None:
+    """Cost evidence should reject impossible rates and missing provenance."""
+    with pytest.raises(ValueError, match="assumed_slippage_rate"):
+        CriticCostRealismEvidence(
+            gross_pnl=100.0,
+            net_pnl=82.0,
+            turnover=1.5,
+            assumed_slippage_rate=-0.0001,
+            snapshot_slippage_rate=0.0004,
+            cost_snapshot_status="verified",
+            cost_snapshot_source="",
+        )
+    with pytest.raises(ValueError, match="cost_snapshot_source"):
+        CriticCostRealismEvidence(
+            gross_pnl=100.0,
+            net_pnl=82.0,
+            turnover=1.5,
+            assumed_slippage_rate=0.0001,
+            snapshot_slippage_rate=0.0004,
+            cost_snapshot_status="verified",
+            cost_snapshot_source="",
         )

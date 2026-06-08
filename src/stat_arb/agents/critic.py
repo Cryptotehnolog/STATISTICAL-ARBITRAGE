@@ -257,6 +257,83 @@ class CriticInsufficientTestingAssessment:
     checked_rules: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class CriticCostRealismPolicy:
+    """Explicit policy contract for cost-realism detection."""
+
+    flag_negative_net_pnl: bool
+    max_turnover: float | None
+    max_slippage_rate_to_snapshot_ratio: float | None
+    allowed_cost_snapshot_statuses: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if not any(
+            (
+                self.flag_negative_net_pnl,
+                self.max_turnover is not None,
+                self.max_slippage_rate_to_snapshot_ratio is not None,
+                bool(self.allowed_cost_snapshot_statuses),
+            )
+        ):
+            raise ValueError("at least one cost-realism rule must be enabled")
+        if not isinstance(self.flag_negative_net_pnl, bool):
+            raise TypeError("flag_negative_net_pnl must be a bool")
+        if self.max_turnover is not None:
+            _validate_positive_float(self.max_turnover, label="max_turnover")
+        if self.max_slippage_rate_to_snapshot_ratio is not None:
+            _validate_positive_float(
+                self.max_slippage_rate_to_snapshot_ratio,
+                label="max_slippage_rate_to_snapshot_ratio",
+            )
+            if not self.allowed_cost_snapshot_statuses:
+                raise ValueError(
+                    "allowed_cost_snapshot_statuses is required with slippage realism"
+                )
+        _validate_status_names(self.allowed_cost_snapshot_statuses)
+
+
+@dataclass(frozen=True)
+class CriticCostRealismEvidence:
+    """Evidence required to detect unrealistic cost assumptions."""
+
+    gross_pnl: float
+    net_pnl: float
+    turnover: float
+    assumed_slippage_rate: float
+    snapshot_slippage_rate: float
+    cost_snapshot_status: str
+    cost_snapshot_source: str
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("gross_pnl", self.gross_pnl),
+            ("net_pnl", self.net_pnl),
+        ):
+            if not isfinite(value):
+                raise ValueError(f"{label} must be finite")
+        _validate_non_negative_float(self.turnover, label="turnover")
+        _validate_non_negative_float(
+            self.assumed_slippage_rate,
+            label="assumed_slippage_rate",
+        )
+        _validate_non_negative_float(
+            self.snapshot_slippage_rate,
+            label="snapshot_slippage_rate",
+        )
+        _validate_status_names((self.cost_snapshot_status,))
+        if not isinstance(self.cost_snapshot_source, str) or not self.cost_snapshot_source.strip():
+            raise ValueError("cost_snapshot_source is required")
+
+
+@dataclass(frozen=True)
+class CriticCostRealismAssessment:
+    """Result of cost-realism detection."""
+
+    cost_realism_concerns_detected: bool
+    indicators: tuple[str, ...]
+    checked_rules: tuple[str, ...]
+
+
 def detect_lookahead_bias(
     evidence: CriticLookaheadEvidence,
     *,
@@ -447,6 +524,64 @@ def detect_insufficient_testing(
     )
 
 
+def detect_cost_realism(
+    evidence: CriticCostRealismEvidence,
+    *,
+    policy: CriticCostRealismPolicy,
+) -> CriticCostRealismAssessment:
+    """Detect cost-realism concerns from explicit cost evidence."""
+    indicators: list[str] = []
+    checked_rules: list[str] = []
+
+    if policy.flag_negative_net_pnl:
+        checked_rules.append("negative_net_pnl_after_costs")
+        if evidence.net_pnl < 0.0:
+            indicators.append(
+                "negative_net_pnl_after_costs: "
+                f"net PnL {evidence.net_pnl:.4f} is below 0.0000 after costs"
+            )
+
+    if policy.max_turnover is not None:
+        checked_rules.append("excessive_turnover")
+        if evidence.turnover > policy.max_turnover:
+            indicators.append(
+                "excessive_turnover: "
+                f"turnover {evidence.turnover:.4f} exceeds policy maximum "
+                f"{policy.max_turnover:.4f}"
+            )
+
+    if policy.allowed_cost_snapshot_statuses:
+        checked_rules.append("verified_cost_snapshot")
+        allowed_statuses = _normalized_statuses(policy.allowed_cost_snapshot_statuses)
+        status = _normalized_status(evidence.cost_snapshot_status)
+        if status not in allowed_statuses:
+            indicators.append(
+                "verified_cost_snapshot: "
+                f"status {status} is not allowed; allowed statuses are "
+                + ", ".join(allowed_statuses)
+            )
+
+    if policy.max_slippage_rate_to_snapshot_ratio is not None:
+        checked_rules.append("slippage_assumption_realism")
+        ratio = _slippage_difference_ratio(
+            evidence.assumed_slippage_rate,
+            evidence.snapshot_slippage_rate,
+        )
+        if ratio > policy.max_slippage_rate_to_snapshot_ratio:
+            indicators.append(
+                "slippage_assumption_realism: "
+                f"assumed slippage {evidence.assumed_slippage_rate:.6f} differs from "
+                f"snapshot {evidence.snapshot_slippage_rate:.6f} by ratio {ratio:.4f}, "
+                f"above allowed {policy.max_slippage_rate_to_snapshot_ratio:.4f}"
+            )
+
+    return CriticCostRealismAssessment(
+        cost_realism_concerns_detected=bool(indicators),
+        indicators=tuple(indicators),
+        checked_rules=tuple(checked_rules),
+    )
+
+
 def _validate_index_pairs(
     decision_indices: tuple[int, ...],
     data_through_indices: tuple[int, ...],
@@ -492,14 +627,41 @@ def _validate_positive_float(value: float, *, label: str) -> None:
         raise ValueError(f"{label} must be finite and positive")
 
 
+def _validate_non_negative_float(value: float, *, label: str) -> None:
+    if not isfinite(value) or value < 0.0:
+        raise ValueError(f"{label} must be finite and non-negative")
+
+
 def _validate_sensitivity_scenario_names(scenarios: tuple[str, ...]) -> None:
     for scenario in scenarios:
         if not isinstance(scenario, str) or not scenario.strip():
             raise ValueError("sensitivity scenario names must be non-empty strings")
 
 
+def _validate_status_names(statuses: tuple[str, ...]) -> None:
+    for status in statuses:
+        if not isinstance(status, str) or not status.strip():
+            raise ValueError("cost snapshot statuses must be non-empty strings")
+
+
 def _normalized_sensitivity_scenarios(scenarios: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(scenario.strip().lower() for scenario in scenarios))
+
+
+def _normalized_statuses(statuses: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(_normalized_status(status) for status in statuses))
+
+
+def _normalized_status(status: str) -> str:
+    return status.strip().lower()
+
+
+def _slippage_difference_ratio(assumed_rate: float, snapshot_rate: float) -> float:
+    if assumed_rate == snapshot_rate:
+        return 1.0
+    if assumed_rate == 0.0 or snapshot_rate == 0.0:
+        return float("inf")
+    return max(assumed_rate, snapshot_rate) / min(assumed_rate, snapshot_rate)
 
 
 def _half_life_indicator(

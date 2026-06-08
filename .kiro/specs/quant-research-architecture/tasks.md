@@ -343,10 +343,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Implemented explicit `CriticInsufficientTestingPolicy` and evidence-based indicators without hidden thresholds
     - _Requirements: 7.5_
   
-  - [ ] 10.5 Implement cost realism checks
+  - [x] 10.5 Implement cost realism checks
     - Detect negative net PnL after costs
     - Detect excessive turnover against explicit critic policy configuration
     - Check slippage assumption realism against verified/manual-approved cost snapshots
+    - Implemented explicit `CriticCostRealismPolicy` and evidence-based indicators without hidden thresholds
     - _Requirements: 7.6, 7.7_
   
   - [ ] 10.6 Implement decision logic

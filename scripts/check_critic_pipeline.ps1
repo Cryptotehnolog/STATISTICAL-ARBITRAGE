@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-Write-Host "Проверка Critic Agent pipeline..."
+Write-Host "Проверка Critic Agent pipeline: 10.1-10.5..."
 
 Push-Location $repoRoot
 try {
@@ -16,4 +16,4 @@ finally {
     Pop-Location
 }
 
-Write-Host "Проверка Critic Agent pipeline прошла."
+Write-Host "Проверка Critic Agent pipeline 10.1-10.5 прошла."

@@ -93,3 +93,28 @@ Risks: This detector validates coverage metadata, not the quality of each sensit
 scenario. Future Critic work may add checks for scenario relevance, cost realism, and
 stress-test completeness, but those additions should remain explicit policy/evidence
 fields.
+
+## DEC-0053: Detect cost realism with explicit approved cost evidence
+
+Status: accepted
+
+Decision: Implement Critic Agent cost-realism detection through
+`CriticCostRealismPolicy`, `CriticCostRealismEvidence`, and `detect_cost_realism`. The
+policy explicitly controls negative-net-PnL flagging, maximum turnover, allowed cost
+snapshot statuses, and maximum slippage difference versus an approved snapshot. The
+evidence contract carries gross PnL, net PnL, turnover, assumed slippage, snapshot
+slippage, cost snapshot status, and cost snapshot source.
+
+Rationale: Cost assumptions can turn a paper strategy into a loss after realistic fees,
+slippage, borrow, or funding. The Critic Agent must not invent acceptable turnover,
+slippage, or cost-source rules. Those review rules are research assumptions and must be
+passed explicitly from verified/manual-approved configuration.
+
+Alternatives considered: Reject negative net PnL directly inside the Backtest Agent;
+hard-code common turnover and slippage limits; defer cost realism until full Critic
+decision logic.
+
+Risks: This detector reviews summary evidence and snapshot provenance, not live market
+microstructure. Future Cost Assumption Agent work should collect, refresh, and verify
+venue/account-specific snapshots before production usage, while Critic remains responsible
+for transparent review indicators.
