@@ -6,6 +6,7 @@ DOCKERFILE = Path("infra/free_deepseek/Dockerfile")
 COMPOSE = Path("infra/free_deepseek/docker-compose.yml")
 START_SCRIPT = Path("scripts/start_free_deepseek.ps1")
 CHECK_SCRIPT = Path("scripts/check_free_deepseek.ps1")
+GRAPH_SMOKE = Path("scripts/check_aperag_graph_smoke.ps1")
 CONFIGURE_APERAG = Path("scripts/configure_aperag.ps1")
 SEED_APERAG = Path("scripts/seed_aperag_curated.ps1")
 ENABLE_GRAPH = Path("scripts/enable_aperag_curated_graph.ps1")
@@ -63,6 +64,17 @@ def test_aperag_can_select_free_deepseek_completion_backend_explicitly() -> None
     assert "-CompletionBackend $CompletionBackend" in enable_graph
     assert "APERAG_COMPLETION_BACKEND=omniroute" in env_example
     assert "FREE_DEEPSEEK_BASE_URL=http://127.0.0.1:9655/v1" in env_example
+
+
+def test_aperag_graph_smoke_can_select_free_deepseek_model() -> None:
+    """Small graph smoke should benchmark real ApeRAG extraction with fallback models."""
+    graph_smoke = GRAPH_SMOKE.read_text(encoding="utf-8")
+
+    assert '[ValidateSet("omniroute", "free_deepseek")]' in graph_smoke
+    assert "[string]$CompletionModel" in graph_smoke
+    assert "-CompletionBackend $CompletionBackend" in graph_smoke
+    assert "stat-arb-free-deepseek" in graph_smoke
+    assert "deepseek-chat" in graph_smoke
 
 
 def test_secret_guard_blocks_free_deepseek_runtime_auth_files() -> None:

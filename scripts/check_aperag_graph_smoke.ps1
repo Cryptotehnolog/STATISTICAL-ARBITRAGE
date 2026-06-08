@@ -1,6 +1,10 @@
 param(
     [string]$EnvFile = "data\aperag\.env",
     [string]$CollectionTitle = "stat-arb-graph-smoke",
+    [ValidateSet("omniroute", "free_deepseek")]
+    [string]$CompletionBackend = "omniroute",
+    [string]$CompletionProvider = "",
+    [string]$CompletionModel = "",
     [int]$TimeoutSeconds = 180,
     [switch]$KeepCollection
 )
@@ -53,7 +57,28 @@ function Get-SmokeCollection {
 
 Write-Output "Проверка ApeRAG graph smoke..."
 
-.\scripts\configure_aperag.ps1 -EnvFile $EnvFile | Write-Output
+if (-not $CompletionProvider) {
+    $CompletionProvider = if ($CompletionBackend -eq "free_deepseek") {
+        "stat-arb-free-deepseek"
+    }
+    else {
+        "stat-arb-omniroute"
+    }
+}
+if (-not $CompletionModel) {
+    $CompletionModel = if ($CompletionBackend -eq "free_deepseek") {
+        "deepseek-chat"
+    }
+    else {
+        "my-ai"
+    }
+}
+
+.\scripts\configure_aperag.ps1 `
+    -EnvFile $EnvFile `
+    -CompletionBackend $CompletionBackend `
+    -CompletionProvider $CompletionProvider `
+    -CompletionModel $CompletionModel | Write-Output
 
 $existing = Get-SmokeCollection
 if ($existing) {
@@ -80,8 +105,8 @@ $config = @{
         timeout = 60
     }
     completion = @{
-        model = "my-ai"
-        model_service_provider = "stat-arb-omniroute"
+        model = $CompletionModel
+        model_service_provider = $CompletionProvider
         custom_llm_provider = "openai"
         temperature = 0.1
         max_tokens = 2048

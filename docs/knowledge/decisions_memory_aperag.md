@@ -143,6 +143,13 @@ service changes. The start script must fail fast when `deepseek-auth.json` is mi
 Docker does not enter a noisy restart loop. Treat this backend as experimental until
 `scripts/check_free_deepseek.ps1` and an ApeRAG graph rebuild smoke pass.
 
+Benchmark result: `deepseek-chat` remains the preferred FreeDeepseekAPI fallback model for
+curated ApeRAG graph rebuilds. A full rebuild with sequential FreeDeepseek mode completed
+in about 169 seconds and produced 230 nodes / 241 edges. A full rebuild with
+`deepseek-v3` completed but took about 587 seconds and produced 203 nodes / 206 edges.
+Short chat latency alone is not enough to choose the model because ApeRAG graph extraction
+is a different workload.
+
 ## DEC-0009: Use curated knowledge shards instead of seeding large Kiro specs directly
 
 Status: accepted
