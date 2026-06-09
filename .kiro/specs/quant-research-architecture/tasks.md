@@ -513,8 +513,14 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 18.8_
 
 
-- [ ] 14. Checkpoint - Ensure all agents work together
+- [x] 14. Checkpoint - Ensure all agents work together
   - Ensure all tests pass, ask the user if questions arise.
+  - Added `scripts/check_agents_checkpoint.ps1` as the Task 14 checkpoint command.
+  - The checkpoint runs data, memory, hypothesis, statistical testing, backtest,
+    critic, report, and coordinator pipeline guards.
+  - Added local cross-agent integration smoke covering shared registry IDs,
+    registry references, report artifacts, final Coordinator decision, and
+    Memory Agent policy summaries.
 
 - [ ] 15. Build CLI tools and scripted workflows
   - [ ] 15.1 Create CLI for data ingestion

@@ -63,6 +63,37 @@ Verification:
 - `tests/unit/test_check_coordinator_pipeline.py`
 - `scripts/check_coordinator_pipeline.ps1`
 
+## DEC-0064: Use a Task 14 all-agents checkpoint before CLI workflows
+
+Status: accepted
+
+Decision: Before building CLI/workflow commands, Task 14 introduces
+`scripts/check_agents_checkpoint.ps1` as the local checkpoint that composes implemented
+agent boundaries from Tasks 1-13. The command runs existing pipeline guards and a local
+cross-agent integration smoke through Hypothesis, Statistical Testing, Backtest, Critic,
+Report, and Coordinator boundaries using one in-memory registry and a fake Memory Agent
+service.
+
+Rationale: The project now has several reliable but separate agent boundaries. Moving
+straight to CLI workflows without a cross-agent checkpoint would risk discovering registry
+ID mismatches, memory-policy bypasses, or final-decision inconsistencies too late. The
+checkpoint is intentionally not a full workflow runner; it proves compatibility while
+keeping orchestration behavior for the next stage.
+
+Rules:
+- Task 14 must stay deterministic and local; no live ApeRAG, Docker, exchange, or LLM
+  dependency is allowed in the cross-agent smoke.
+- Agent memory writes must use `MemoryAgentService`-compatible requests with registry
+  references.
+- Structured details remain in the registry; memory receives concise summaries only.
+- CLI/workflow tasks should extend this checkpoint rather than creating a disconnected
+  validation path.
+
+Verification:
+- `scripts/check_agents_checkpoint.ps1`
+- `tests/integration/test_agents_checkpoint_integration.py`
+- `tests/unit/test_check_agents_checkpoint.py`
+
 ## DEC-0062: Enforce agent tool permissions with an explicit allow list
 
 Status: accepted
