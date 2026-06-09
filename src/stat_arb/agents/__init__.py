@@ -45,6 +45,11 @@ from stat_arb.agents.hypothesis import (
     HypothesisUniverseAsset,
     generate_rule_based_hypotheses,
 )
+from stat_arb.agents.report import (
+    ReportAgentInput,
+    ReportAgentRunResult,
+    run_report_agent,
+)
 from stat_arb.agents.statistical_testing import (
     StatisticalTestingInput,
     StatisticalTestingRunResult,
@@ -82,6 +87,8 @@ __all__ = [
     "HypothesisNoveltyAssessment",
     "HypothesisNoveltyConfig",
     "HypothesisUniverseAsset",
+    "ReportAgentInput",
+    "ReportAgentRunResult",
     "StatisticalTestingInput",
     "StatisticalTestingRunResult",
     "decide_critic_review",
@@ -91,6 +98,7 @@ __all__ = [
     "detect_overfitting",
     "detect_weak_assumptions",
     "generate_rule_based_hypotheses",
+    "run_report_agent",
     "run_backtest_agent_persistence",
     "run_critic_agent_persistence",
     "run_statistical_testing",

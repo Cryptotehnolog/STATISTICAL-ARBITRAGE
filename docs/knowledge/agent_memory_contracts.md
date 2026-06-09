@@ -72,7 +72,9 @@ through `MemoryAgentService`.
 
 The Report Agent writes report artifact links and structured report metadata to the
 registry. It writes human-readable summaries and manual review notes to operational memory
-through `MemoryAgentService`.
+through `MemoryAgentService`. The registry remains the source of truth for report artifact
+paths, formats, metrics, and experiment links. ApeRAG receives only concise report
+summaries with registry references, not raw tables or metric-heavy payloads.
 
 ## Memory Agent
 

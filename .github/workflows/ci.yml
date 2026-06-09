@@ -68,6 +68,10 @@ jobs:
         shell: pwsh
         run: ./scripts/check_critic_pipeline.ps1
 
+      - name: Check Report Agent pipeline
+        shell: pwsh
+        run: ./scripts/check_report_pipeline.ps1
+
       - name: Check property and integration smoke tests
         shell: pwsh
         run: ./scripts/check_property_integration.ps1

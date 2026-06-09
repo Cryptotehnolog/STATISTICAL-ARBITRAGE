@@ -20,6 +20,8 @@ regular memory updates do not reprocess one oversized document.
   tracking, cost attribution, performance metrics, and reproducibility boundaries.
 - `docs/knowledge/decisions_critic_agent.md`: Critic Agent policies and review
   boundaries.
+- `docs/knowledge/decisions_reporting.md`: Report Agent artifact generation, registry
+  persistence, and memory-summary boundaries.
 - `docs/knowledge/decisions_expert_review_hardening.md`: external expert review outcomes,
   explicit threshold policy, memory backend resilience, and research hardening scope.
 

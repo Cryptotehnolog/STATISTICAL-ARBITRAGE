@@ -92,7 +92,7 @@ vector_store/
 *.index
 
 # Reports and outputs
-reports/
+/reports/
 outputs/
 logs/
 *.html

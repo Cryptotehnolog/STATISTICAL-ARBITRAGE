@@ -415,6 +415,10 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 18.8_
 
 - [ ] 12. Build Report Agent
+  - Prerequisite boundary implemented: deterministic HTML/JSON backtest artifacts are
+    generated from registry-derived snapshots, persisted as `ReportArtifact` rows, and
+    summarized through the Memory Agent policy layer. Full Task 12 remains open until
+    PDF/charts/data-quality pages/content-completeness coverage are implemented.
   - [ ] 12.1 Implement backtest report generation
     - Generate HTML/PDF reports with all required content
     - Include equity curves, drawdown charts, cost attribution
