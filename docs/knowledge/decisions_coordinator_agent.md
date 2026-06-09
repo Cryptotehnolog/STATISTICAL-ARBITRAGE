@@ -35,6 +35,34 @@ Verification:
 - `scripts/check_coordinator_agent_boundaries.ps1`
 - `scripts/check_coordinator_pipeline.ps1`
 
+## DEC-0063: Treat Coordinator integration smoke as the Task 13 checkpoint
+
+Status: accepted
+
+Decision: `check_coordinator_pipeline.ps1` is the single local checkpoint for Task 13.
+It must run the Coordinator boundary guard, unit contracts, its own static guard, and a
+local SQLite integration smoke that exercises queue claim, tool permission enforcement,
+final decision persistence, and Memory Agent policy summary in one scenario.
+
+Rationale: The Coordinator has several small boundaries that are individually tested, but
+future workflow code needs confidence that they work together. A local integration smoke is
+fast, deterministic, and does not depend on Docker, ApeRAG runtime, or external LLM
+providers. It gives us end-to-end confidence without turning Task 13 into a full
+multi-agent runner.
+
+Rules:
+- Coordinator integration tests must use local registry state and a fake Memory Agent
+  service, not live ApeRAG.
+- The checkpoint must include `tests/integration/test_coordinator_agent_integration.py`.
+- The checkpoint must stay in pre-commit and CI.
+- New Coordinator workflow behavior should extend this checkpoint instead of creating a
+  separate untracked script.
+
+Verification:
+- `tests/integration/test_coordinator_agent_integration.py`
+- `tests/unit/test_check_coordinator_pipeline.py`
+- `scripts/check_coordinator_pipeline.ps1`
+
 ## DEC-0062: Enforce agent tool permissions with an explicit allow list
 
 Status: accepted

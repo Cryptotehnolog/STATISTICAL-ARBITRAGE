@@ -501,10 +501,15 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Added fail-closed enforcement for unknown agents and missing scopes
     - _Requirements: 12.10_
   
-  - [ ]* 13.6 Write integration tests for Coordinator Agent
+  - [x]* 13.6 Write integration tests for Coordinator Agent
     - Test full experiment lifecycle
     - Test state machine transitions
     - Test error handling and quarantine logic
+    - Added local SQLite integration smoke for queue claim, permission enforcement,
+      final decision persistence, and Memory Agent policy summary
+    - Promoted `check_coordinator_pipeline.ps1` to the Task 13 checkpoint command
+      covering lifecycle, queue, resource policy, final decision, tool permissions,
+      and integration smoke
     - _Requirements: 18.8_
 
 
