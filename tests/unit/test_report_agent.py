@@ -16,6 +16,7 @@ from stat_arb.storage import Base, Hypothesis, ReportArtifact
 from stat_arb.storage.models import (
     BacktestResult,
     CriticReview,
+    DataQualityReportRecord,
     Dataset,
     Experiment,
     StatisticalTestResult,
@@ -65,10 +66,18 @@ def test_report_agent_generates_artifacts_registry_rows_and_memory_summary(
     )
 
     stored = session.query(ReportArtifact).order_by(ReportArtifact.artifact_type).all()
-    assert len(stored) == 2
-    assert {row.artifact_type for row in stored} == {"backtest_report", "json_summary"}
+    assert len(stored) == 4
+    assert {row.artifact_type for row in stored} == {
+        "backtest_report",
+        "backtest_report_pdf",
+        "data_quality_report",
+        "json_summary",
+    }
     assert all(Path(row.file_path).exists() for row in stored)
-    assert len(result.artifacts) == 2
+    assert len(result.artifacts) == 4
+    data_quality_row = next(row for row in stored if row.artifact_type == "data_quality_report")
+    assert "AAA" in Path(data_quality_row.file_path).read_text(encoding="utf-8")
+    assert "BBB" in Path(data_quality_row.file_path).read_text(encoding="utf-8")
     assert result.memory_written is True
     assert len(memory.requests) == 1
     assert memory.requests[0].record_type == "report_summary"
@@ -157,6 +166,56 @@ def _seed_report_prerequisites(session: Session) -> tuple[UUID, UUID]:
                 bar_count=240,
                 adjustment_mode="none",
                 file_path="/tmp/b.parquet",
+            ),
+        ]
+    )
+    session.add_all(
+        [
+            DataQualityReportRecord(
+                report_id=str(uuid4()),
+                dataset_id=str(dataset_a_id),
+                symbol="AAA",
+                source="unit-test",
+                timeframe="15m",
+                start_date=start,
+                end_date=end,
+                bar_count=240,
+                expected_bar_count=240,
+                missing_bars=0,
+                duplicate_timestamps=0,
+                outlier_count=0,
+                zero_price_count=0,
+                impossible_candle_count=0,
+                abnormal_volume_count=0,
+                timezone_normalized=True,
+                alignment_score=1.0,
+                quality_score=1.0,
+                passed=True,
+                issues=[],
+                report_path="/tmp/a.quality.json",
+            ),
+            DataQualityReportRecord(
+                report_id=str(uuid4()),
+                dataset_id=str(dataset_b_id),
+                symbol="BBB",
+                source="unit-test",
+                timeframe="15m",
+                start_date=start,
+                end_date=end,
+                bar_count=240,
+                expected_bar_count=240,
+                missing_bars=0,
+                duplicate_timestamps=0,
+                outlier_count=0,
+                zero_price_count=0,
+                impossible_candle_count=0,
+                abnormal_volume_count=0,
+                timezone_normalized=True,
+                alignment_score=1.0,
+                quality_score=1.0,
+                passed=True,
+                issues=[],
+                report_path="/tmp/b.quality.json",
             ),
         ]
     )

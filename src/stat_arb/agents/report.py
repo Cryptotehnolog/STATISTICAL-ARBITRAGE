@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
 from stat_arb.reports import (
     BacktestReportSnapshot,
+    DataQualityReportSnapshot,
     GeneratedReportArtifact,
     generate_backtest_report_artifacts,
 )
@@ -20,6 +21,9 @@ from stat_arb.storage.models import (
 )
 from stat_arb.storage.models import (
     CriticReview as StoredCriticReview,
+)
+from stat_arb.storage.models import (
+    DataQualityReportRecord as StoredDataQualityReportRecord,
 )
 from stat_arb.storage.models import (
     Experiment as StoredExperiment,
@@ -66,8 +70,9 @@ def run_report_agent(
         raise ValueError("experiment/backtest hypothesis mismatch")
 
     critic = _latest_critic_review(session, backtest_id=request.backtest_id)
+    data_quality_reports = _data_quality_reports_for(session, backtest)
     generated = generate_backtest_report_artifacts(
-        _snapshot_from(backtest, critic),
+        _snapshot_from(backtest, critic, data_quality_reports),
         output_dir=request.output_dir,
     )
     stored = _persist_artifacts(
@@ -115,9 +120,27 @@ def _latest_critic_review(session: Session, *, backtest_id: UUID) -> StoredCriti
     )
 
 
+def _data_quality_reports_for(
+    session: Session,
+    backtest: StoredBacktestResult,
+) -> tuple[StoredDataQualityReportRecord, ...]:
+    rows = (
+        session.query(StoredDataQualityReportRecord)
+        .filter(
+            StoredDataQualityReportRecord.dataset_id.in_(
+                [backtest.dataset_a_id, backtest.dataset_b_id]
+            )
+        )
+        .order_by(StoredDataQualityReportRecord.symbol.asc())
+        .all()
+    )
+    return tuple(rows)
+
+
 def _snapshot_from(
     backtest: StoredBacktestResult,
     critic: StoredCriticReview | None,
+    data_quality_reports: tuple[StoredDataQualityReportRecord, ...],
 ) -> BacktestReportSnapshot:
     return BacktestReportSnapshot(
         backtest_id=backtest.backtest_id,
@@ -144,6 +167,22 @@ def _snapshot_from(
         critic_status=critic.status if critic is not None else None,
         critic_objections=critic.objections if critic is not None else None,
         tested_at=backtest.tested_at,
+        data_quality_reports=tuple(
+            DataQualityReportSnapshot(
+                dataset_id=report.dataset_id,
+                symbol=report.symbol,
+                timeframe=report.timeframe,
+                passed=report.passed,
+                quality_score=report.quality_score,
+                missing_bars=report.missing_bars,
+                duplicate_timestamps=report.duplicate_timestamps,
+                outlier_count=report.outlier_count,
+                alignment_score=report.alignment_score,
+                issues=tuple(str(issue) for issue in (report.issues or [])),
+                report_path=report.report_path,
+            )
+            for report in data_quality_reports
+        ),
     )
 
 

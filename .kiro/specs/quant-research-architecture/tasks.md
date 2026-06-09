@@ -414,37 +414,46 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Added `scripts/check_memory_agent_pipeline.ps1` as the deterministic Task 11 checkpoint
     - _Requirements: 18.8_
 
-- [ ] 12. Build Report Agent
-  - Prerequisite boundary implemented: deterministic HTML/JSON backtest artifacts are
-    generated from registry-derived snapshots, persisted as `ReportArtifact` rows, and
-    summarized through the Memory Agent policy layer. Full Task 12 remains open until
-    PDF/charts/data-quality pages/content-completeness coverage are implemented.
-  - [ ] 12.1 Implement backtest report generation
+- [x] 12. Build Report Agent
+  - Report Agent generates deterministic HTML/PDF/JSON report artifacts from
+    registry-derived snapshots, persists `ReportArtifact` rows, and summarizes reports
+    through the Memory Agent policy layer. Visualization artifacts are generated when
+    chart-ready series are provided; registry-only snapshots explicitly state that source
+    series are unavailable instead of fabricating charts.
+  - [x] 12.1 Implement backtest report generation
     - Generate HTML/PDF reports with all required content
     - Include equity curves, drawdown charts, cost attribution
     - Include all metrics from requirements 6.1-6.12
+    - Implemented deterministic HTML, minimal PDF, and JSON summary artifacts
     - _Requirements: 6.1-6.12, 11.9_
   
-  - [ ] 12.2 Implement data quality report generation
+  - [x] 12.2 Implement data quality report generation
     - Summarize validation results, missing bars, outliers, alignment
+    - Report Agent reads registry `data_quality_reports` for the backtest datasets and
+      renders a data-quality HTML artifact
     - _Requirements: 2.7-2.9_
   
-  - [ ] 12.3 Implement visualization generation
+  - [x] 12.3 Implement visualization generation
     - Equity curve with drawdown overlay
     - Z-score signals with entry/exit markers
     - Cost attribution pie chart
     - Rolling Sharpe ratio
     - Trade distribution histogram
+    - Implemented deterministic lightweight SVG visual artifacts for chart-ready series
     - _Requirements: 11.4, 11.5_
   
-  - [ ] 12.4 Integrate Report Agent with registry and ApeRAG
+  - [x] 12.4 Integrate Report Agent with registry and ApeRAG
     - Write report artifact links to SQLite registry
     - Write human-readable summaries through Memory Agent policy boundary
+    - Report Agent persists artifact rows and writes only a concise policy-safe memory
+      summary with registry references
     - _Requirements: 11.10, 11.11_
 
-  - [ ]* 12.5 Write unit tests for report generation
+  - [x]* 12.5 Write unit tests for report generation
     - Test report content completeness
     - Test visualization generation
+    - `scripts/check_report_pipeline.ps1` covers report generation, registry/memory
+      boundary integration, and CI/pre-commit wiring
     - _Requirements: 18.8_
 
 - [ ] 13. Build Coordinator Agent
