@@ -9,6 +9,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.agents.coordinator import (
+    AgentToolPermissionPolicy,
+    AgentToolPermissionRequest,
+    AgentToolPermissionScope,
     CoordinatorFinalDecisionEvidence,
     CoordinatorFinalDecisionPolicy,
     CoordinatorResourcePolicy,
@@ -20,6 +23,7 @@ from stat_arb.agents.coordinator import (
     claim_next_coordinator_task,
     complete_coordinator_task,
     decide_coordinator_final_decision,
+    enforce_agent_tool_permission,
     enqueue_coordinator_task,
     fail_coordinator_task,
     list_recoverable_coordinator_tasks,
@@ -177,6 +181,8 @@ def test_coordinator_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "CoordinatorFinalDecisionPolicy" in script
     assert "require_retest_justification" in script
     assert "apply_coordinator_final_decision" in script
+    assert "AgentToolPermissionPolicy" in script
+    assert "enforce_agent_tool_permission" in script
     assert "memory_service\\.write" in script
     assert "check_coordinator_agent_boundaries.ps1" in pre_commit
     assert "& $coordinatorAgentBoundaryCheckScript" in pre_commit
@@ -594,6 +600,65 @@ def test_coordinator_final_decision_integration_requires_memory_service(
         )
 
 
+def test_coordinator_agent_tool_permission_allows_explicit_scope() -> None:
+    """Agents should be allowed only when policy grants the requested tool scope."""
+    result = enforce_agent_tool_permission(
+        AgentToolPermissionRequest(
+            agent_name="data_agent",
+            scope=AgentToolPermissionScope.DATA_ARTIFACTS_WRITE,
+            reason="Persist validated OHLCV parquet artifact.",
+        ),
+        policy=_tool_permission_policy(),
+    )
+
+    assert result.allowed is True
+    assert result.agent_name == "data_agent"
+    assert result.scope == AgentToolPermissionScope.DATA_ARTIFACTS_WRITE
+    assert "allowed" in result.reason
+
+
+def test_coordinator_agent_tool_permission_denies_missing_scope() -> None:
+    """Agents must fail closed when the requested scope is absent from policy."""
+    with pytest.raises(PermissionError, match="not allowed"):
+        enforce_agent_tool_permission(
+            AgentToolPermissionRequest(
+                agent_name="report_agent",
+                scope=AgentToolPermissionScope.SECRETS_READ,
+                reason="Reports must not access secrets.",
+            ),
+            policy=_tool_permission_policy(),
+        )
+
+
+def test_coordinator_agent_tool_permission_denies_unknown_agent() -> None:
+    """Unknown agents must not inherit any default permissions."""
+    with pytest.raises(PermissionError, match="no permissions configured"):
+        enforce_agent_tool_permission(
+            AgentToolPermissionRequest(
+                agent_name="unknown_agent",
+                scope=AgentToolPermissionScope.REGISTRY_READ,
+                reason="Unknown agent should fail closed.",
+            ),
+            policy=_tool_permission_policy(),
+        )
+
+
+def test_coordinator_agent_tool_permission_request_requires_reason() -> None:
+    """Tool access should leave an operator-readable reason for audit trails."""
+    with pytest.raises(ValueError, match="reason is required"):
+        AgentToolPermissionRequest(
+            agent_name="data_agent",
+            scope=AgentToolPermissionScope.REGISTRY_READ,
+            reason=" ",
+        )
+
+
+def test_coordinator_agent_tool_permission_policy_rejects_empty_agent_scopes() -> None:
+    """Permission policies must not hide implicit default access."""
+    with pytest.raises(ValueError, match="must have at least one scope"):
+        AgentToolPermissionPolicy(agent_scopes={"data_agent": frozenset()})
+
+
 def _seed_experiment(session: Session, *, status: str) -> str:
     hypothesis_id = uuid4()
     experiment_id = uuid4()
@@ -636,4 +701,63 @@ def _final_decision_policy() -> CoordinatorFinalDecisionPolicy:
             "approved": ExperimentFinalDecision.APPROVED,
         },
         require_retest_justification=True,
+    )
+
+
+def _tool_permission_policy() -> AgentToolPermissionPolicy:
+    return AgentToolPermissionPolicy(
+        agent_scopes={
+            "data_agent": frozenset(
+                {
+                    AgentToolPermissionScope.REGISTRY_READ,
+                    AgentToolPermissionScope.REGISTRY_WRITE,
+                    AgentToolPermissionScope.DATA_ARTIFACTS_READ,
+                    AgentToolPermissionScope.DATA_ARTIFACTS_WRITE,
+                    AgentToolPermissionScope.MEMORY_WRITE,
+                    AgentToolPermissionScope.SECRETS_READ,
+                }
+            ),
+            "statistical_testing_agent": frozenset(
+                {
+                    AgentToolPermissionScope.REGISTRY_READ,
+                    AgentToolPermissionScope.REGISTRY_WRITE,
+                    AgentToolPermissionScope.DATA_ARTIFACTS_READ,
+                    AgentToolPermissionScope.MEMORY_WRITE,
+                }
+            ),
+            "backtest_agent": frozenset(
+                {
+                    AgentToolPermissionScope.REGISTRY_READ,
+                    AgentToolPermissionScope.REGISTRY_WRITE,
+                    AgentToolPermissionScope.DATA_ARTIFACTS_READ,
+                    AgentToolPermissionScope.REPORTS_WRITE,
+                    AgentToolPermissionScope.MEMORY_WRITE,
+                }
+            ),
+            "critic_agent": frozenset(
+                {
+                    AgentToolPermissionScope.REGISTRY_READ,
+                    AgentToolPermissionScope.REGISTRY_WRITE,
+                    AgentToolPermissionScope.MEMORY_READ,
+                    AgentToolPermissionScope.MEMORY_WRITE,
+                }
+            ),
+            "report_agent": frozenset(
+                {
+                    AgentToolPermissionScope.REGISTRY_READ,
+                    AgentToolPermissionScope.REGISTRY_WRITE,
+                    AgentToolPermissionScope.REPORTS_READ,
+                    AgentToolPermissionScope.REPORTS_WRITE,
+                    AgentToolPermissionScope.MEMORY_WRITE,
+                }
+            ),
+            "coordinator_agent": frozenset(
+                {
+                    AgentToolPermissionScope.REGISTRY_READ,
+                    AgentToolPermissionScope.REGISTRY_WRITE,
+                    AgentToolPermissionScope.MEMORY_READ,
+                    AgentToolPermissionScope.MEMORY_WRITE,
+                }
+            ),
+        }
     )

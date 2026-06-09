@@ -493,9 +493,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
       through `transition_experiment_lifecycle` and Memory Agent policy-compatible writer
     - _Requirements: 12.3-12.7_
   
-  - [ ] 13.5 Implement agent tool permission enforcement
+  - [x] 13.5 Implement agent tool permission enforcement
     - Define and enforce read/write permissions per agent
     - Validate agent operations against permissions
+    - Implemented explicit AgentToolPermissionPolicy/Request/Scope boundary for
+      registry, memory, data artifact, report, and secrets scopes
+    - Added fail-closed enforcement for unknown agents and missing scopes
     - _Requirements: 12.10_
   
   - [ ]* 13.6 Write integration tests for Coordinator Agent

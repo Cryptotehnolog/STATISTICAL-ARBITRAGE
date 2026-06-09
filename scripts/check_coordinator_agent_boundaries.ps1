@@ -51,6 +51,18 @@ if (
 }
 
 if (
+    $source -notmatch "AgentToolPermissionScope" -or
+    $source -notmatch "AgentToolPermissionPolicy" -or
+    $source -notmatch "AgentToolPermissionRequest" -or
+    $source -notmatch "enforce_agent_tool_permission" -or
+    $source -notmatch "SECRETS_READ" -or
+    $source -notmatch "DATA_ARTIFACTS_WRITE" -or
+    $source -notmatch "REPORTS_WRITE"
+) {
+    Write-Error "Coordinator tool permissions должны явно описывать и enforce registry/memory/artifact/report/secrets scopes."
+}
+
+if (
     $source -notmatch "apply_coordinator_final_decision" -or
     $source -notmatch 'transition_experiment_lifecycle\(' -or
     $source -notmatch "memory_service: MemoryWriter"
@@ -59,7 +71,7 @@ if (
 }
 
 if (
-    $source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =|priority: int =|max_attempts: int =|max_running_tasks: int =|max_running_tasks_per_agent: dict\[str, int\] =|policy: CoordinatorResourcePolicy \| None =|require_retest_justification: bool =|critic_status_to_decision: .* =|policy: CoordinatorFinalDecisionPolicy \| None ="
+    $source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =|priority: int =|max_attempts: int =|max_running_tasks: int =|max_running_tasks_per_agent: dict\[str, int\] =|policy: CoordinatorResourcePolicy \| None =|require_retest_justification: bool =|critic_status_to_decision: .* =|policy: CoordinatorFinalDecisionPolicy \| None =|policy: AgentToolPermissionPolicy \| None ="
 ) {
     Write-Error "Coordinator Agent не должен прятать lifecycle/task/resource defaults в request config."
 }

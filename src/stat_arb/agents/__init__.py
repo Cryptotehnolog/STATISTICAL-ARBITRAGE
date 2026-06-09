@@ -6,6 +6,10 @@ from stat_arb.agents.backtest import (
     run_backtest_agent_persistence,
 )
 from stat_arb.agents.coordinator import (
+    AgentToolPermissionPolicy,
+    AgentToolPermissionRequest,
+    AgentToolPermissionResult,
+    AgentToolPermissionScope,
     CoordinatorFinalDecisionEvidence,
     CoordinatorFinalDecisionPolicy,
     CoordinatorFinalDecisionResult,
@@ -20,6 +24,7 @@ from stat_arb.agents.coordinator import (
     claim_next_coordinator_task,
     complete_coordinator_task,
     decide_coordinator_final_decision,
+    enforce_agent_tool_permission,
     enqueue_coordinator_task,
     fail_coordinator_task,
     list_recoverable_coordinator_tasks,
@@ -79,6 +84,10 @@ from stat_arb.agents.statistical_testing import (
 __all__ = [
     "BacktestAgentInput",
     "BacktestAgentRunResult",
+    "AgentToolPermissionPolicy",
+    "AgentToolPermissionRequest",
+    "AgentToolPermissionResult",
+    "AgentToolPermissionScope",
     "CriticAgentInput",
     "CriticAgentRunResult",
     "CriticCostRealismAssessment",
@@ -131,6 +140,7 @@ __all__ = [
     "detect_lookahead_bias",
     "detect_overfitting",
     "detect_weak_assumptions",
+    "enforce_agent_tool_permission",
     "enqueue_coordinator_task",
     "fail_coordinator_task",
     "generate_rule_based_hypotheses",

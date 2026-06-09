@@ -35,6 +35,33 @@ Verification:
 - `scripts/check_coordinator_agent_boundaries.ps1`
 - `scripts/check_coordinator_pipeline.ps1`
 
+## DEC-0062: Enforce agent tool permissions with an explicit allow list
+
+Status: accepted
+
+Decision: Coordinator owns a small `AgentToolPermissionPolicy` boundary before the future
+workflow runner starts invoking tools on behalf of agents. The policy maps each agent name
+to explicit `AgentToolPermissionScope` values covering registry, memory, data artifacts,
+reports, and secrets. Every permission request must include an operator-readable reason.
+
+Rationale: Agent orchestration should fail closed. Without a dedicated permission boundary,
+future workflow code could accidentally let a reporting or critic component read secrets,
+write data artifacts, or bypass registry/memory separation. A small allow-list contract is
+enough for this stage; a broader role system would add complexity before a runner exists.
+
+Rules:
+- Unknown agents have no permissions.
+- Missing scopes raise `PermissionError`.
+- Policies must not contain empty agent scope sets.
+- Tool access requests must include a reason suitable for audit logs.
+- This boundary validates permission only; actual tool execution remains a future runner
+  concern.
+
+Verification:
+- `tests/unit/test_coordinator_agent.py`
+- `scripts/check_coordinator_agent_boundaries.ps1`
+- `scripts/check_coordinator_pipeline.ps1`
+
 ## DEC-0061: Apply Coordinator final decisions only through lifecycle transition and memory policy
 
 Status: accepted

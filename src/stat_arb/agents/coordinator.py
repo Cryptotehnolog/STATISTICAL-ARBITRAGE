@@ -56,6 +56,21 @@ class CoordinatorTaskStatus(StrEnum):
     FAILED = "failed"
 
 
+class AgentToolPermissionScope(StrEnum):
+    """Tool scopes controlled by Coordinator before agent execution."""
+
+    REGISTRY_READ = "registry_read"
+    REGISTRY_WRITE = "registry_write"
+    MEMORY_READ = "memory_read"
+    MEMORY_WRITE = "memory_write"
+    DATA_ARTIFACTS_READ = "data_artifacts_read"
+    DATA_ARTIFACTS_WRITE = "data_artifacts_write"
+    REPORTS_READ = "reports_read"
+    REPORTS_WRITE = "reports_write"
+    SECRETS_READ = "secrets_read"
+    SECRETS_WRITE = "secrets_write"
+
+
 @dataclass(frozen=True)
 class CoordinatorTransitionRequest:
     """Request to move one experiment through the lifecycle state machine."""
@@ -100,6 +115,54 @@ class CoordinatorTaskRequest:
         if self.max_attempts <= 0:
             raise ValueError("max_attempts must be positive")
         _validate_json_like_payload(self.payload)
+
+
+@dataclass(frozen=True)
+class AgentToolPermissionRequest:
+    """Request to validate one agent tool access."""
+
+    agent_name: str
+    scope: AgentToolPermissionScope
+    reason: str
+
+    def __post_init__(self) -> None:
+        if not self.agent_name.strip():
+            raise ValueError("agent_name is required")
+        if not isinstance(self.scope, AgentToolPermissionScope):
+            raise TypeError("scope must be an AgentToolPermissionScope")
+        if not self.reason.strip():
+            raise ValueError("reason is required")
+
+
+@dataclass(frozen=True)
+class AgentToolPermissionPolicy:
+    """Explicit agent-to-tool-scope allow list."""
+
+    agent_scopes: Mapping[str, frozenset[AgentToolPermissionScope]]
+
+    def __post_init__(self) -> None:
+        if not self.agent_scopes:
+            raise ValueError("agent_scopes is required")
+        for agent_name, scopes in self.agent_scopes.items():
+            if not isinstance(agent_name, str) or not agent_name.strip():
+                raise ValueError("agent names in permission policy must be non-empty strings")
+            if not isinstance(scopes, frozenset):
+                raise TypeError("agent permission scopes must be frozensets")
+            if not scopes:
+                raise ValueError(f"agent {agent_name} must have at least one scope")
+            for scope in scopes:
+                if not isinstance(scope, AgentToolPermissionScope):
+                    raise TypeError("permission scopes must be AgentToolPermissionScope values")
+
+
+@dataclass(frozen=True)
+class AgentToolPermissionResult:
+    """Result of one Coordinator tool permission check."""
+
+    allowed: bool
+    agent_name: str
+    scope: AgentToolPermissionScope
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -332,6 +395,28 @@ def list_recoverable_coordinator_tasks(*, session: Session) -> list[CoordinatorT
         .filter(CoordinatorTask.status == CoordinatorTaskStatus.RUNNING.value)
         .order_by(CoordinatorTask.priority.asc(), CoordinatorTask.started_at.asc())
         .all()
+    )
+
+
+def enforce_agent_tool_permission(
+    request: AgentToolPermissionRequest,
+    *,
+    policy: AgentToolPermissionPolicy,
+) -> AgentToolPermissionResult:
+    """Validate one agent tool access against an explicit allow list."""
+    agent_name = request.agent_name.strip()
+    allowed_scopes = policy.agent_scopes.get(agent_name)
+    if allowed_scopes is None:
+        raise PermissionError(f"no permissions configured for agent {agent_name}")
+    if request.scope not in allowed_scopes:
+        raise PermissionError(
+            f"agent {agent_name} is not allowed to use scope {request.scope.value}"
+        )
+    return AgentToolPermissionResult(
+        allowed=True,
+        agent_name=agent_name,
+        scope=request.scope,
+        reason=f"allowed: {request.reason.strip()}",
     )
 
 
