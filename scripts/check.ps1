@@ -22,6 +22,10 @@ try {
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
+    & $python -m mypy src
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
     & $unitCheck
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE

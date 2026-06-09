@@ -23,6 +23,7 @@ from stat_arb.memory.policy import (
     MemoryAgentService,
     MemoryBackend,
     MemoryPolicyViolation,
+    MemoryReadThroughCache,
     MemoryWriteAheadQueue,
     MemoryWriteResult,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "MemoryAgentPolicy",
     "MemoryAgentService",
     "MemoryPolicyViolation",
+    "MemoryReadThroughCache",
     "MemoryWriteAheadQueue",
     "MemoryWriteRequest",
     "MemoryWriteResult",

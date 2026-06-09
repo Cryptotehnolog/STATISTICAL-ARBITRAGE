@@ -13,9 +13,11 @@ import logging
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from .models import Base
@@ -50,7 +52,7 @@ def get_database_url(db_path: Path | None = None) -> str:
 
 
 @event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_conn, _connection_record):
+def set_sqlite_pragma(dbapi_conn: Any, _connection_record: Any) -> None:
     """
     Enable foreign key constraints for SQLite.
 
@@ -153,7 +155,7 @@ def get_session(
     try:
         yield session
         session.commit()
-    except Exception as e:
+    except SQLAlchemyError as e:
         session.rollback()
         logger.error(f"Database session error: {e}")
         raise
@@ -169,7 +171,7 @@ class DatabaseManager:
     connection pooling and session management.
     """
 
-    def __init__(self, db_path: Path | None = None, echo: bool = False):
+    def __init__(self, db_path: Path | None = None, echo: bool = False) -> None:
         """
         Initialize the database manager.
 
@@ -216,7 +218,7 @@ class DatabaseManager:
         try:
             yield session
             session.commit()
-        except Exception as e:
+        except SQLAlchemyError as e:
             session.rollback()
             logger.error(f"Database session error: {e}")
             raise

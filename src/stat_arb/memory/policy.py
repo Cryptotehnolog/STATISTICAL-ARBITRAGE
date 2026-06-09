@@ -38,8 +38,13 @@ class MemoryWriteResult:
 class MemoryBackend(Protocol):
     """Backend adapter boundary used by agent-facing Memory Agent code."""
 
-    project_collection_title: str
-    agent_collection_title: str
+    @property
+    def project_collection_title(self) -> str:
+        """Return the project knowledge collection title."""
+
+    @property
+    def agent_collection_title(self) -> str:
+        """Return the operational agent memory collection title."""
 
     def write_markdown_document(
         self,
@@ -103,6 +108,49 @@ class MemoryWriteAheadQueue:
             file.write(json.dumps(record, ensure_ascii=False, sort_keys=True))
             file.write("\n")
         return self.path
+
+
+class MemoryReadThroughCache:
+    """Small JSON cache for degraded memory reads when ApeRAG is temporarily unavailable."""
+
+    def __init__(self, path: Path | str) -> None:
+        """Create a read-through cache at a stable local path."""
+        self.path = Path(path)
+
+    def store(self, *, request: MemoryQueryRequest, result: MemoryQueryResult) -> None:
+        """Store the latest successful result for a normalized query request."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        data = self._load_all()
+        data[self._key_for(request)] = result.model_dump(mode="json")
+        self.path.write_text(
+            json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2),
+            encoding="utf-8",
+        )
+
+    def load(self, *, request: MemoryQueryRequest, error: Exception) -> MemoryQueryResult | None:
+        """Return a cached degraded result for a query request, if one exists."""
+        payload = self._load_all().get(self._key_for(request))
+        if payload is None:
+            return None
+        result = MemoryQueryResult.model_validate(payload)
+        return result.model_copy(
+            update={
+                "degraded": True,
+                "degraded_reason": f"{type(error).__name__}: {error}",
+            }
+        )
+
+    def _load_all(self) -> dict[str, object]:
+        if not self.path.exists():
+            return {}
+        data = json.loads(self.path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ApeRAGError(f"Memory read cache must contain a JSON object: {self.path}")
+        return data
+
+    @staticmethod
+    def _key_for(request: MemoryQueryRequest) -> str:
+        return json.dumps(request.model_dump(mode="json"), ensure_ascii=False, sort_keys=True)
 
 
 class MemoryAgentPolicy:
@@ -190,6 +238,7 @@ class MemoryAgentService:
         collection_title: str | None = None,
         project_collection_title: str | None = None,
         write_ahead_queue: MemoryWriteAheadQueue | None = None,
+        read_through_cache: MemoryReadThroughCache | None = None,
     ) -> None:
         """Create a Memory Agent service backed by ApeRAG."""
         self.client = client
@@ -197,6 +246,7 @@ class MemoryAgentService:
         self.collection_title = collection_title or self._agent_collection_title(client)
         self.project_collection_title = project_collection_title or self._project_collection_title(client)
         self.write_ahead_queue = write_ahead_queue
+        self.read_through_cache = read_through_cache
 
     def write(self, request: MemoryWriteRequest) -> MemoryWriteResult:
         """Validate and write a memory record into the operational agent memory layer."""
@@ -228,6 +278,20 @@ class MemoryAgentService:
 
     def query(self, request: MemoryQueryRequest) -> MemoryQueryResult:
         """Query project or operational memory through the backend boundary."""
+        try:
+            result = self._query_backend(request)
+        except ApeRAGError as exc:
+            if self.read_through_cache is None:
+                raise
+            cached = self.read_through_cache.load(request=request, error=exc)
+            if cached is None:
+                raise
+            return cached
+        if self.read_through_cache is not None:
+            self.read_through_cache.store(request=request, result=result)
+        return result
+
+    def _query_backend(self, request: MemoryQueryRequest) -> MemoryQueryResult:
         collection_title = self._collection_title_for_scope(request.scope)
         if request.query_type == MemoryQueryType.RELATIONSHIP:
             results = self.client.query_relationships(

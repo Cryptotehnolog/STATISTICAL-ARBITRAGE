@@ -6,7 +6,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from stat_arb.backtest import BacktestAction, SpreadPosition, run_pair_backtest_core
+from stat_arb.backtest import (
+    BacktestAction,
+    BacktestExitPolicyConfig,
+    SpreadPosition,
+    run_pair_backtest_core,
+)
 
 
 def test_pair_backtest_core_enters_and_exits_short_spread() -> None:
@@ -138,12 +143,67 @@ def test_pair_backtest_core_validates_thresholds_and_hedge_ratio() -> None:
         )
 
 
+def test_pair_backtest_core_exits_after_explicit_max_holding_bars() -> None:
+    """Max holding policy should close stale positions on the next executable bar."""
+    result = run_pair_backtest_core(
+        prices_a=[100.0, 103.0, 104.0, 105.0, 106.0],
+        prices_b=[100.0, 100.0, 100.0, 100.0, 100.0],
+        z_scores=[2.2, 1.8, 1.6, 1.4, 1.2],
+        aligned_timestamps=_timestamps(5),
+        hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
+        exit_policy=BacktestExitPolicyConfig(
+            max_holding_bars=2,
+            emergency_z_score=None,
+        ),
+    )
+
+    assert [step.action for step in result.trades] == [
+        BacktestAction.ENTER_SHORT_SPREAD,
+        BacktestAction.EXIT,
+    ]
+    assert result.steps[3].action == BacktestAction.EXIT
+    assert result.steps[3].position == SpreadPosition.FLAT
+
+
+def test_pair_backtest_core_exits_on_explicit_emergency_zscore() -> None:
+    """Emergency z-score policy should close a position before normal convergence."""
+    result = run_pair_backtest_core(
+        prices_a=[100.0, 103.0, 106.0, 107.0],
+        prices_b=[100.0, 100.0, 100.0, 100.0],
+        z_scores=[2.2, 2.4, 5.5, 4.0],
+        aligned_timestamps=_timestamps(4),
+        hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
+        exit_policy=BacktestExitPolicyConfig(
+            max_holding_bars=None,
+            emergency_z_score=5.0,
+        ),
+    )
+
+    assert [step.action for step in result.trades] == [
+        BacktestAction.ENTER_SHORT_SPREAD,
+        BacktestAction.EXIT,
+    ]
+    assert result.steps[3].action == BacktestAction.EXIT
+    assert result.steps[3].position == SpreadPosition.FLAT
+
+
+def test_pair_backtest_core_exit_policy_requires_at_least_one_rule() -> None:
+    """Exit policy must not be an empty placeholder."""
+    with pytest.raises(ValueError, match="at least one exit policy rule"):
+        BacktestExitPolicyConfig(max_holding_bars=None, emergency_z_score=None)
+
+
 def test_pair_backtest_core_requires_explicit_thresholds() -> None:
     """Trading thresholds are research assumptions and must be passed explicitly."""
     implementation = Path("src/stat_arb/backtest/core.py").read_text(encoding="utf-8")
 
     assert "entry_threshold: float = " not in implementation
     assert "exit_threshold: float = " not in implementation
+    assert "exit_policy: BacktestExitPolicyConfig = " not in implementation
 
 
 def _timestamps(count: int) -> tuple[datetime, ...]:

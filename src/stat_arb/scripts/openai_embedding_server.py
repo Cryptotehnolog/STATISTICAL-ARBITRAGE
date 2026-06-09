@@ -6,6 +6,7 @@ import os
 import time
 from typing import Any
 
+import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from sentence_transformers import SentenceTransformer
@@ -68,7 +69,7 @@ def models() -> dict[str, Any]:
 def embeddings(request: EmbeddingRequest) -> dict[str, Any]:
     texts = _normalize_input(request.input)
     model = _get_model()
-    vectors = model.encode(texts, normalize_embeddings=True).astype(float).tolist()
+    vectors = np.asarray(model.encode(texts, normalize_embeddings=True), dtype=float).tolist()
 
     return {
         "object": "list",

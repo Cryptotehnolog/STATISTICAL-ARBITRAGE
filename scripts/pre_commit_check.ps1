@@ -28,7 +28,7 @@ Write-Output "- Проверка Critic Agent pipeline: check_critic_pipeline.ps
 Write-Output "- Property/integration smoke: check_property_integration.ps1"
 Write-Output "- Проверка активной пользовательской memory surface: check_no_legacy_memory_backend_user_surface.ps1"
 Write-Output "- Проверка отсутствия legacy memory backend imports: check_no_legacy_memory_backend_imports.ps1"
-Write-Output "- Unit и lint baseline: check.ps1"
+Write-Output "- Unit, lint и typecheck baseline: check.ps1"
 Write-Output "- LLM readiness намеренно исключен; отдельно запускайте check_omniroute.ps1."
 
 Push-Location $repoRoot

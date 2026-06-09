@@ -62,8 +62,8 @@ Agents must not treat old planning examples as verified parameters.
 ## Critic Flow
 
 The Critic Agent must check for lookahead bias, future information in signals, overlapping
-walk-forward windows, overfitting, weak assumptions, insufficient test coverage, negative
-net PnL after costs, excessive turnover, and unrealistic slippage.
+walk-forward windows, overfitting, weak assumptions, residual diagnostics, insufficient
+test coverage, negative net PnL after costs, excessive turnover, and unrealistic slippage.
 
 Critical issues cause rejection. Moderate issues may quarantine the experiment. Approved
 results still require human review before any demo-trading step.

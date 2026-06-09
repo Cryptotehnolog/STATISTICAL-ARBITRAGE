@@ -10,7 +10,7 @@ import time
 from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 import pandas as pd
 
@@ -129,7 +129,7 @@ class CCXTOHLCVSource:
         exchange_class = getattr(ccxt, exchange_id, None)
         if exchange_class is None:
             raise ValueError(f"Unsupported CCXT exchange: {exchange_id}")
-        return exchange_class({"enableRateLimit": True})
+        return cast(CCXTExchange, exchange_class({"enableRateLimit": True}))
 
     def fetch_ohlcv_batch(
         self,

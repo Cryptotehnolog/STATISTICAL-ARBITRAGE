@@ -67,6 +67,13 @@ def test_check_scripts_exit_on_native_command_failure() -> None:
         assert "exit $LASTEXITCODE" in script, f"{path} must propagate native exit codes"
 
 
+def test_check_script_runs_mypy_typecheck() -> None:
+    """Local baseline should keep strict src typing aligned with CI."""
+    script = CHECK_SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "-m mypy src" in script
+
+
 def test_check_scripts_resolve_windows_and_linux_virtualenv_python() -> None:
     """PowerShell checks should work on local Windows and GitHub Ubuntu runners."""
     for path in (

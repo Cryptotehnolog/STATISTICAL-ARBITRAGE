@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from stat_arb.domain import (
     DataQualityFailureSummary,
@@ -214,7 +214,7 @@ def _timeframe_delta(timeframe: str) -> timedelta:
     return timedelta(**{_TIMEFRAME_UNITS[unit]: quantity})
 
 
-def _expected_timestamps(start, end, timeframe: str):
+def _expected_timestamps(start: datetime, end: datetime, timeframe: str) -> list[datetime]:
     delta = _timeframe_delta(timeframe)
     timestamps = []
     current = start

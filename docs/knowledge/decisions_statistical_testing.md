@@ -218,3 +218,23 @@ trust the caller's hypothesis ID. That permits provenance splicing by a faulty a
 
 Risks: The boundary now assumes dataset symbols use the same canonical asset strings as
 hypotheses. Future symbol mapping should preserve this invariant explicitly.
+
+## DEC-0040: Residual diagnostics are Critic flags, not automatic rejection
+
+Status: accepted
+
+Decision: Add residual diagnostics for Ljung-Box autocorrelation, Jarque-Bera normality,
+and excess kurtosis as explicit statistical helpers and Critic weak-assumption indicators.
+Critic policies must pass explicit thresholds for each diagnostic rule they want to check.
+
+Rationale: Residual autocorrelation and heavy tails weaken pair-trading assumptions, but
+they should not automatically reject a hypothesis without context. They are best surfaced
+as review indicators that can quarantine or request retesting according to the active
+Critic decision policy.
+
+Alternatives considered: Auto-reject every residual normality failure; ignore residual
+diagnostics until a later research phase; hide default diagnostic thresholds inside the
+Critic Agent.
+
+Risks: Residual diagnostics add more evidence that future reports must explain. Keep the
+thresholds explicit and include them in experiment reproducibility hashes.

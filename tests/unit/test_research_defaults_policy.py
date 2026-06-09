@@ -50,6 +50,7 @@ def test_research_impacting_defaults_are_not_hidden_in_runtime_boundaries() -> N
         "src/stat_arb/backtest/core.py": (
             "entry_threshold: float =",
             "exit_threshold: float =",
+            "exit_policy: BacktestExitPolicyConfig =",
         ),
     }
 

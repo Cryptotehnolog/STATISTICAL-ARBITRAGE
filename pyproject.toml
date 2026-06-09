@@ -188,7 +188,3 @@ warn_unused_ignores = true
 warn_no_return = true
 strict_equality = true
 ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "tests.*"
-disallow_untyped_defs = false

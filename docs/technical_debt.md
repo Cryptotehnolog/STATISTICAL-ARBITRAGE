@@ -8,54 +8,6 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
-### TD-0022: Pilot Ruflo read-only swarm audit after Task 11
-
-Status: open
-
-Why deferred: Ruflo can potentially improve review quality through specialized agent
-swarms, but its full install path includes MCP, hooks, daemon/background workers, and
-environment-level automation. That is too broad for the main project while secrets,
-ApeRAG, Docker runtime, and trading/backtest boundaries are active.
-
-Follow-up:
-- After Task 11 is complete and committed, run a read-only Ruflo pilot against Tasks 1-11
-  in an isolated copy or worktree, not in the main working tree.
-- Do not allow Ruflo write access, direct ApeRAG writes, Infisical secrets, Docker socket
-  access, Git push/commit, autopilot, daemon, or auto-fix.
-- Use Ruflo only as an external reviewer swarm for architecture, security, quant methods,
-  data pipeline, backtest reproducibility, CI, and documentation consistency.
-- Triage all findings through the normal Codex workflow before any change is implemented.
-
-Related tasks: 11.x, 18.1, 19.3.
-
-### TD-0021: Harden ApeRAG graph rebuild against OmniRoute provider outages
-
-Status: resolved
-
-Why deferred: During Critic Agent task 10.5, ApeRAG vector/fulltext seeding worked but
-knowledge-graph rebuild repeatedly failed because OmniRoute `my-ai` chat returned HTTP
-503 with `ALL_ACCOUNTS_INACTIVE`. The project code and local ApeRAG containers were not
-the root cause; the active LLM combo had no usable upstream account at that moment.
-
-Resolution: OmniRoute was reinstalled with a clean Docker volume, a fresh Kiro OAuth
-connection was added, `my-ai` was rebuilt without stale account-bound IDs, and
-`scripts/check_omniroute_readiness.ps1` now checks Docker health, stale state, models,
-chat, latency, provider quota/cooldown/auth status, recent log risk patterns, and token
-expiry before long ApeRAG graph rebuilds. The restored OmniRoute path passed bounded
-ApeRAG graph smoke and a full curated graph rebuild.
-
-Follow-up:
-- Keep the OmniRoute combo/account readiness check outside ordinary pre-commit checks.
-- FreeDeepseekAPI is verified as an explicit fallback, but full curated rebuilds are
-  sequential and slower than an ideal provider path.
-- FreeQwenApi is now available as a third explicit experimental fallback after local Qwen
-  Web auth and `scripts/check_free_qwen.ps1`, but it must remain non-default until a full
-  curated benchmark and dependency review are complete.
-- Keep bounded retries in `scripts/enable_aperag_curated_graph.ps1`, and fail clearly
-  after the retry budget is exhausted.
-
-Related tasks: 10.5, 11.1, 11.4, TD-0013.
-
 ### TD-0020: Add Cost Assumption Agent for verified market costs
 
 Status: open
@@ -295,6 +247,60 @@ Follow-up:
 - Confirm the next CI run remains green.
 
 Related tasks: 18.1, 18.4.
+
+## Resolved
+
+### TD-0022: Ruflo read-only swarm audit policy
+
+Status: resolved
+
+Original concern: Ruflo can improve review quality through specialized agent swarms, but
+its full install path includes MCP, hooks, daemon/background workers, and environment-level
+automation. That is too broad for the main project while secrets, ApeRAG, Docker runtime,
+and trading/backtest boundaries are active.
+
+Resolution: The first read-only swarm audit for Tasks 1-11 was completed and the accepted
+findings were triaged through the normal Codex workflow before implementation. The project
+keeps Ruflo/swarm review as a checkpoint audit method, not as an autonomous developer.
+
+Ongoing policy:
+- Use swarm audit only at explicit checkpoints: completed task groups, risky refactors,
+  security/secret changes, memory-backend changes, or pre-release review.
+- Keep swarm access read-only. Do not allow write access, direct ApeRAG writes, Infisical
+  secrets, Docker socket access, Git push/commit, autopilot, daemon, or auto-fix.
+- Treat findings as review input, not truth. Codex must verify each finding against code,
+  tests, docs, and project decisions before changing anything.
+- Prefer isolated copy/worktree execution when the audit tool needs local project files.
+
+Related tasks: 11.x, 18.1, 19.3.
+
+### TD-0021: Harden ApeRAG graph rebuild against OmniRoute provider outages
+
+Status: resolved
+
+Why deferred: During Critic Agent task 10.5, ApeRAG vector/fulltext seeding worked but
+knowledge-graph rebuild repeatedly failed because OmniRoute `my-ai` chat returned HTTP
+503 with `ALL_ACCOUNTS_INACTIVE`. The project code and local ApeRAG containers were not
+the root cause; the active LLM combo had no usable upstream account at that moment.
+
+Resolution: OmniRoute was reinstalled with a clean Docker volume, a fresh Kiro OAuth
+connection was added, `my-ai` was rebuilt without stale account-bound IDs, and
+`scripts/check_omniroute_readiness.ps1` now checks Docker health, stale state, models,
+chat, latency, provider quota/cooldown/auth status, recent log risk patterns, and token
+expiry before long ApeRAG graph rebuilds. The restored OmniRoute path passed bounded
+ApeRAG graph smoke and a full curated graph rebuild.
+
+Follow-up:
+- Keep the OmniRoute combo/account readiness check outside ordinary pre-commit checks.
+- FreeDeepseekAPI is verified as an explicit fallback, but full curated rebuilds are
+  sequential and slower than an ideal provider path.
+- FreeQwenApi is now available as a third explicit experimental fallback after local Qwen
+  Web auth and `scripts/check_free_qwen.ps1`, but it must remain non-default until a full
+  curated benchmark and dependency review are complete.
+- Keep bounded retries in `scripts/enable_aperag_curated_graph.ps1`, and fail clearly
+  after the retry budget is exhausted.
+
+Related tasks: 10.5, 11.1, 11.4, TD-0013.
 
 ## Closed
 

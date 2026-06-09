@@ -24,6 +24,7 @@ def test_ci_workflow_runs_core_python_checks() -> None:
     assert "./scripts/check_research_defaults.ps1" in workflow
     assert "./scripts/check_property_integration.ps1" in workflow
     assert "uv run ruff check --no-cache src tests" in workflow
+    assert "uv run mypy src" in workflow
     assert 'uv run pytest tests/unit -m "not slow"' in workflow
     assert "--cov=stat_arb.backtest" in workflow
     assert "--cov=stat_arb.statistical" in workflow

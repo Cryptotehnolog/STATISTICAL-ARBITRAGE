@@ -244,6 +244,26 @@ Risks: Queued writes still require a future replay workflow and operator review.
 agent answer-quality evaluation separate from retrieval readiness until a real RAG answer
 boundary exists.
 
+## DEC-0028: Memory reads may degrade through an explicit read-through cache
+
+Status: accepted
+
+Decision: `MemoryAgentService` supports an optional `MemoryReadThroughCache`. Successful
+queries can populate a local JSON cache, and temporary ApeRAG read failures can return the
+last cached result with `degraded=True` and a failure reason. If no cache is configured or
+no cached result exists, the ApeRAG error is raised.
+
+Rationale: Coordinator and future agents should not silently lose all context when ApeRAG
+has a short outage, but first-read failures must remain visible. Degraded reads are
+therefore explicit, auditable, and marked in the result instead of being treated as fresh
+memory.
+
+Alternatives considered: Always fail reads; hide backend failures behind empty results;
+store a broad persistent memory mirror.
+
+Risks: Cached results can become stale. Agent decisions must treat degraded memory as lower
+confidence and preserve the degraded flag in run artifacts when it affects a decision.
+
 ## DEC-0009: Use curated knowledge shards instead of seeding large Kiro specs directly
 
 Status: accepted

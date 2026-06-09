@@ -1,4 +1,4 @@
-"""Unit tests for Critic Agent lookahead-bias detection."""
+﻿"""Unit tests for Critic Agent lookahead-bias detection."""
 
 import pytest
 
@@ -304,6 +304,9 @@ def test_critic_weak_assumption_detection_accepts_strong_evidence() -> None:
             half_life_days=5.0,
             regime_changes_detected=False,
             hedge_ratio_r_squared=0.82,
+            residual_ljung_box_p_value=None,
+            residual_jarque_bera_p_value=None,
+            residual_excess_kurtosis=None,
         ),
         policy=CriticWeakAssumptionPolicy(
             cointegration_alpha=0.05,
@@ -312,6 +315,9 @@ def test_critic_weak_assumption_detection_accepts_strong_evidence() -> None:
             max_half_life_days=30.0,
             flag_unaddressed_regime_changes=True,
             min_hedge_ratio_r_squared=0.7,
+            min_ljung_box_p_value=None,
+            min_jarque_bera_p_value=None,
+            max_abs_excess_kurtosis=None,
         ),
     )
 
@@ -333,6 +339,9 @@ def test_critic_weak_assumption_detection_flags_p_value_proximity() -> None:
             half_life_days=5.0,
             regime_changes_detected=False,
             hedge_ratio_r_squared=0.82,
+            residual_ljung_box_p_value=None,
+            residual_jarque_bera_p_value=None,
+            residual_excess_kurtosis=None,
         ),
         policy=CriticWeakAssumptionPolicy(
             cointegration_alpha=0.05,
@@ -341,6 +350,9 @@ def test_critic_weak_assumption_detection_flags_p_value_proximity() -> None:
             max_half_life_days=30.0,
             flag_unaddressed_regime_changes=True,
             min_hedge_ratio_r_squared=0.7,
+            min_ljung_box_p_value=None,
+            min_jarque_bera_p_value=None,
+            max_abs_excess_kurtosis=None,
         ),
     )
 
@@ -358,6 +370,9 @@ def test_critic_weak_assumption_detection_flags_half_life_outside_bounds() -> No
             half_life_days=45.0,
             regime_changes_detected=False,
             hedge_ratio_r_squared=0.82,
+            residual_ljung_box_p_value=None,
+            residual_jarque_bera_p_value=None,
+            residual_excess_kurtosis=None,
         ),
         policy=CriticWeakAssumptionPolicy(
             cointegration_alpha=0.05,
@@ -366,6 +381,9 @@ def test_critic_weak_assumption_detection_flags_half_life_outside_bounds() -> No
             max_half_life_days=30.0,
             flag_unaddressed_regime_changes=True,
             min_hedge_ratio_r_squared=0.7,
+            min_ljung_box_p_value=None,
+            min_jarque_bera_p_value=None,
+            max_abs_excess_kurtosis=None,
         ),
     )
 
@@ -383,6 +401,9 @@ def test_critic_weak_assumption_detection_flags_regime_change() -> None:
             half_life_days=5.0,
             regime_changes_detected=True,
             hedge_ratio_r_squared=0.82,
+            residual_ljung_box_p_value=None,
+            residual_jarque_bera_p_value=None,
+            residual_excess_kurtosis=None,
         ),
         policy=CriticWeakAssumptionPolicy(
             cointegration_alpha=0.05,
@@ -391,6 +412,9 @@ def test_critic_weak_assumption_detection_flags_regime_change() -> None:
             max_half_life_days=30.0,
             flag_unaddressed_regime_changes=True,
             min_hedge_ratio_r_squared=0.7,
+            min_ljung_box_p_value=None,
+            min_jarque_bera_p_value=None,
+            max_abs_excess_kurtosis=None,
         ),
     )
 
@@ -408,6 +432,9 @@ def test_critic_weak_assumption_detection_flags_low_hedge_ratio_r_squared() -> N
             half_life_days=5.0,
             regime_changes_detected=False,
             hedge_ratio_r_squared=0.55,
+            residual_ljung_box_p_value=None,
+            residual_jarque_bera_p_value=None,
+            residual_excess_kurtosis=None,
         ),
         policy=CriticWeakAssumptionPolicy(
             cointegration_alpha=0.05,
@@ -416,12 +443,53 @@ def test_critic_weak_assumption_detection_flags_low_hedge_ratio_r_squared() -> N
             max_half_life_days=30.0,
             flag_unaddressed_regime_changes=True,
             min_hedge_ratio_r_squared=0.7,
+            min_ljung_box_p_value=None,
+            min_jarque_bera_p_value=None,
+            max_abs_excess_kurtosis=None,
         ),
     )
 
     assert assessment.weak_assumptions_detected is True
     assert assessment.indicators == (
         "hedge_ratio_r_squared: R2 0.550000 is below required 0.700000",
+    )
+
+
+def test_critic_weak_assumption_detection_flags_residual_diagnostics() -> None:
+    """Residual diagnostics should be explicit weak-assumption indicators."""
+    assessment = detect_weak_assumptions(
+        CriticWeakAssumptionEvidence(
+            cointegration_p_value=0.01,
+            half_life_days=5.0,
+            regime_changes_detected=False,
+            hedge_ratio_r_squared=0.82,
+            residual_ljung_box_p_value=0.002,
+            residual_jarque_bera_p_value=0.003,
+            residual_excess_kurtosis=4.5,
+        ),
+        policy=CriticWeakAssumptionPolicy(
+            cointegration_alpha=None,
+            p_value_warning_margin=None,
+            min_half_life_days=None,
+            max_half_life_days=None,
+            flag_unaddressed_regime_changes=False,
+            min_hedge_ratio_r_squared=None,
+            min_ljung_box_p_value=0.05,
+            min_jarque_bera_p_value=0.05,
+            max_abs_excess_kurtosis=3.0,
+        ),
+    )
+
+    assert assessment.weak_assumptions_detected is True
+    assert assessment.indicators == (
+        "residual_autocorrelation: Ljung-Box p-value 0.002000 is below required 0.050000",
+        "residual_normality: Jarque-Bera p-value 0.003000 is below required 0.050000",
+        "residual_excess_kurtosis: absolute excess kurtosis 4.500000 exceeds 3.000000",
+    )
+    assert assessment.checked_rules == (
+        "residual_autocorrelation",
+        "residual_normality",
+        "residual_excess_kurtosis",
     )
 
 
@@ -435,6 +503,9 @@ def test_critic_weak_assumption_policy_rejects_hidden_noop_policy() -> None:
             max_half_life_days=None,
             flag_unaddressed_regime_changes=False,
             min_hedge_ratio_r_squared=None,
+            min_ljung_box_p_value=None,
+            min_jarque_bera_p_value=None,
+            max_abs_excess_kurtosis=None,
         )
 
 
@@ -446,6 +517,9 @@ def test_critic_weak_assumption_evidence_rejects_invalid_values() -> None:
             half_life_days=5.0,
             regime_changes_detected=False,
             hedge_ratio_r_squared=0.82,
+            residual_ljung_box_p_value=None,
+            residual_jarque_bera_p_value=None,
+            residual_excess_kurtosis=None,
         )
 
 

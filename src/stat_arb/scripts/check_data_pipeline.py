@@ -15,6 +15,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from stat_arb.data_quality import OHLCVQualityConfig
+from stat_arb.domain import DataQualityReport
 from stat_arb.ingestion import CCXTOHLCVSource, OHLCVQualityError, fetch_validate_write_ohlcv
 from stat_arb.memory import MemoryAgentService, write_data_quality_failure_memory
 from stat_arb.storage import Base, DataQualityReportRecord, Dataset, persist_ohlcv_ingestion_result
@@ -96,7 +97,7 @@ def run_checkpoint() -> CheckDataPipelineResult:
         engine = create_engine("sqlite:///:memory:", echo=False)
 
         @event.listens_for(engine, "connect")
-        def set_sqlite_pragma(dbapi_conn, _connection_record):
+        def set_sqlite_pragma(dbapi_conn: Any, _connection_record: Any) -> None:
             cursor = dbapi_conn.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
@@ -184,7 +185,7 @@ def _assert_sidecars(
         raise AssertionError("Quality report sidecar parquet paths mismatch")
 
 
-def _failed_quality_report(parquet_root: Path):
+def _failed_quality_report(parquet_root: Path) -> DataQualityReport:
     try:
         fetch_validate_write_ohlcv(
             CCXTOHLCVSource(

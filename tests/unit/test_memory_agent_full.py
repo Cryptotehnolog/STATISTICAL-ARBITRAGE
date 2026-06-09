@@ -16,6 +16,7 @@ from stat_arb.memory import (
     MemoryPolicyViolation,
     MemoryQueryRequest,
     MemoryQueryType,
+    MemoryReadThroughCache,
     MemoryRecordType,
     MemoryWriteAheadQueue,
     MemoryWriteRequest,
@@ -25,10 +26,11 @@ from stat_arb.memory import (
 class FakeMemoryBackend:
     """Fake backend that records Memory Agent calls without touching ApeRAG."""
 
-    def __init__(self, *, fail_writes: bool = False) -> None:
+    def __init__(self, *, fail_writes: bool = False, fail_reads: bool = False) -> None:
         self.project_collection_title = "stat-arb-project-knowledge"
         self.agent_collection_title = "stat-arb-agent-memory"
         self.fail_writes = fail_writes
+        self.fail_reads = fail_reads
         self.writes: list[dict[str, str]] = []
         self.searches: list[dict[str, object]] = []
         self.relationship_queries: list[dict[str, object]] = []
@@ -59,6 +61,8 @@ class FakeMemoryBackend:
         keywords: list[str] | None = None,
         top_k: int | None = None,
     ) -> list[ApeRAGSearchResult]:
+        if self.fail_reads:
+            raise ApeRAGError("backend read unavailable")
         self.searches.append(
             {
                 "query": query,
@@ -83,6 +87,8 @@ class FakeMemoryBackend:
         relationship: str | None = None,
         max_depth: int | None = None,
     ) -> list[ApeRAGSearchResult]:
+        if self.fail_reads:
+            raise ApeRAGError("backend graph unavailable")
         self.relationship_queries.append(
             {
                 "entity": entity,
@@ -101,6 +107,8 @@ class FakeMemoryBackend:
         ]
 
     def get_graph_summary(self, *, collection_title: str) -> ApeRAGGraphSummary:
+        if self.fail_reads:
+            raise ApeRAGError("backend graph summary unavailable")
         return ApeRAGGraphSummary(labels=1, nodes=2, edges=1)
 
 
@@ -216,6 +224,48 @@ def test_memory_agent_queries_relationships_through_graph_boundary() -> None:
     assert result.graph_summary is not None
     assert result.results[0].source == "graph"
     assert backend.relationship_queries[0]["collection_title"] == "stat-arb-agent-memory"
+
+
+def test_memory_agent_uses_read_cache_when_backend_query_fails(tmp_path: Path) -> None:
+    """Degraded read mode should return the last successful cached query result."""
+    cache_path = tmp_path / "memory-read-cache.json"
+    request = MemoryQueryRequest(
+        query_type=MemoryQueryType.TOPIC,
+        query="memory backend decision",
+        expected_markers=["DEC-0001"],
+        scope="project",
+    )
+
+    healthy_service = MemoryAgentService(
+        FakeMemoryBackend(),
+        read_through_cache=MemoryReadThroughCache(cache_path),
+    )
+    healthy_result = healthy_service.query(request)
+
+    degraded_service = MemoryAgentService(
+        FakeMemoryBackend(fail_reads=True),
+        read_through_cache=MemoryReadThroughCache(cache_path),
+    )
+    degraded_result = degraded_service.query(request)
+
+    assert healthy_result.degraded is False
+    assert degraded_result.degraded is True
+    assert degraded_result.ready is True
+    assert degraded_result.results[0].source == "decisions_memory_aperag.md"
+    assert "ApeRAGError" in (degraded_result.degraded_reason or "")
+
+
+def test_memory_agent_read_failure_without_cache_still_fails() -> None:
+    """Read degraded mode must be explicit and must not hide first-read failures."""
+    service = MemoryAgentService(FakeMemoryBackend(fail_reads=True))
+
+    with pytest.raises(ApeRAGError, match="backend read unavailable"):
+        service.query(
+            MemoryQueryRequest(
+                query_type=MemoryQueryType.TOPIC,
+                query="memory backend decision",
+            )
+        )
 
 
 def test_memory_policy_blocks_raw_logs_and_large_dataset_like_payloads() -> None:

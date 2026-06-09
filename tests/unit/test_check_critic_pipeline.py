@@ -9,6 +9,7 @@ def test_check_critic_pipeline_runs_critic_tests() -> None:
 
     assert "test_critic_agent.py" in script
     assert "test_critic_agent_persistence.py" in script
+    assert "test_residual_diagnostics.py" in script
     assert "test_check_critic_pipeline.py" in script
     assert "uv run pytest" in script
     assert "--no-cov" in script

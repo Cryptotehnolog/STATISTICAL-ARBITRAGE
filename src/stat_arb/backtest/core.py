@@ -63,6 +63,26 @@ class BacktestCoreResult:
         return tuple(step for step in self.steps if step.action != BacktestAction.HOLD)
 
 
+@dataclass(frozen=True)
+class BacktestExitPolicyConfig:
+    """Explicit risk exits for pair-trading positions."""
+
+    max_holding_bars: int | None
+    emergency_z_score: float | None
+
+    def __post_init__(self) -> None:
+        if self.max_holding_bars is None and self.emergency_z_score is None:
+            raise ValueError("at least one exit policy rule must be enabled")
+        if self.max_holding_bars is not None and (
+            isinstance(self.max_holding_bars, bool) or self.max_holding_bars <= 0
+        ):
+            raise ValueError("max_holding_bars must be a positive integer")
+        if self.emergency_z_score is not None and (
+            not np.isfinite(self.emergency_z_score) or self.emergency_z_score <= 0.0
+        ):
+            raise ValueError("emergency_z_score must be finite and positive")
+
+
 def run_pair_backtest_core(
     *,
     prices_a: ArrayLike,
@@ -72,6 +92,7 @@ def run_pair_backtest_core(
     hedge_ratio: float,
     entry_threshold: float,
     exit_threshold: float,
+    exit_policy: BacktestExitPolicyConfig | None = None,
 ) -> BacktestCoreResult:
     """Build deterministic pair-trading positions from aligned prices and z-scores.
 
@@ -94,6 +115,7 @@ def run_pair_backtest_core(
     )
 
     position = SpreadPosition.FLAT
+    bars_held = 0
     steps: list[BacktestStep] = []
     for index, (timestamp, price_a, price_b, z_score) in enumerate(
         zip(timestamps, prices_a_array, prices_b_array, z_score_array)
@@ -105,12 +127,20 @@ def run_pair_backtest_core(
                 if signal_z_score >= entry_threshold:
                     position = SpreadPosition.SHORT_SPREAD
                     action = BacktestAction.ENTER_SHORT_SPREAD
+                    bars_held = 1
                 elif signal_z_score <= -entry_threshold:
                     position = SpreadPosition.LONG_SPREAD
                     action = BacktestAction.ENTER_LONG_SPREAD
-            elif abs(float(signal_z_score)) <= exit_threshold:
+                    bars_held = 1
+            elif _should_exit_position(
+                signal_z_score,
+                bars_held=bars_held,
+                exit_threshold=exit_threshold,
+                exit_policy=exit_policy,
+            ):
                 position = SpreadPosition.FLAT
                 action = BacktestAction.EXIT
+                bars_held = 0
 
         position_a, position_b = _position_weights(position, hedge_ratio=hedge_ratio)
         steps.append(
@@ -126,6 +156,8 @@ def run_pair_backtest_core(
                 action=action,
             )
         )
+        if position != SpreadPosition.FLAT and action == BacktestAction.HOLD:
+            bars_held += 1
 
     return BacktestCoreResult(
         steps=tuple(steps),
@@ -133,6 +165,25 @@ def run_pair_backtest_core(
         entry_threshold=float(entry_threshold),
         exit_threshold=float(exit_threshold),
     )
+
+
+def _should_exit_position(
+    signal_z_score: float,
+    *,
+    bars_held: int,
+    exit_threshold: float,
+    exit_policy: BacktestExitPolicyConfig | None,
+) -> bool:
+    if abs(float(signal_z_score)) <= exit_threshold:
+        return True
+    if exit_policy is None:
+        return False
+    if (
+        exit_policy.emergency_z_score is not None
+        and abs(float(signal_z_score)) >= exit_policy.emergency_z_score
+    ):
+        return True
+    return exit_policy.max_holding_bars is not None and bars_held >= exit_policy.max_holding_bars
 
 
 def _position_weights(position: SpreadPosition, *, hedge_ratio: float) -> tuple[float, float]:

@@ -265,3 +265,24 @@ That permits provenance splicing by mistake or by a faulty agent.
 
 Risks: Tests and future services must seed prerequisites consistently. This is intentional
 because reproducible experiments need a strict chain.
+
+## DEC-0051: Backtest risk exits are explicit policy, not hidden defaults
+
+Status: accepted
+
+Decision: `run_pair_backtest_core` supports an optional `BacktestExitPolicyConfig` with
+explicit `max_holding_bars` and `emergency_z_score` rules. The core keeps normal
+z-score convergence exits, but risk exits are enabled only when the caller passes a
+policy object.
+
+Rationale: A pair can stay open for too long or move into a broken-regime spread before
+normal convergence occurs. Risk exits belong in the core because downstream PnL and
+metrics must see the actual position lifecycle. The thresholds remain explicit research
+assumptions and must be persisted with the experiment config hash.
+
+Alternatives considered: Add hard-coded stop-loss values; leave all stale-position handling
+to future agents; let Report/Critic flag the problem after the backtest has already
+produced distorted metrics.
+
+Risks: Risk exits change trade counts and PnL. That is intentional, but reports must show
+which exit policy was used.

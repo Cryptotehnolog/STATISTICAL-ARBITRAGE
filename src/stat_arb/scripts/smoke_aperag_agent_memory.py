@@ -64,7 +64,6 @@ def smoke_aperag_agent_memory(
         api_base_url=os.environ.get("APERAG_API_BASE_URL", "http://127.0.0.1:18000"),
         api_key=os.environ.get("APERAG_API_KEY", ""),
         agent_collection_title=collection_title,
-        _env_file=None,
     )
 
     with ApeRAGMemoryClient(config) as client:

@@ -165,6 +165,8 @@ class MemoryQueryResult(MemoryModel):
     results: tuple[ApeRAGSearchResult, ...]
     missing_markers: tuple[str, ...] = ()
     graph_summary: ApeRAGGraphSummary | None = None
+    degraded: bool = False
+    degraded_reason: str | None = None
 
     @property
     def ready(self) -> bool:

@@ -13,6 +13,7 @@ from stat_arb.backtest.baseline import (
 from stat_arb.backtest.core import (
     BacktestAction,
     BacktestCoreResult,
+    BacktestExitPolicyConfig,
     BacktestStep,
     SpreadPosition,
     run_pair_backtest_core,
@@ -59,6 +60,7 @@ __all__ = [
     "BacktestAction",
     "BacktestCoreResult",
     "BacktestCostConfig",
+    "BacktestExitPolicyConfig",
     "BacktestStep",
     "BacktestWalkForwardConfig",
     "BacktestWalkForwardFold",

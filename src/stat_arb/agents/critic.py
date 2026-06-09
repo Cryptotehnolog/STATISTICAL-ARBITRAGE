@@ -150,6 +150,9 @@ class CriticWeakAssumptionPolicy:
     max_half_life_days: float | None
     flag_unaddressed_regime_changes: bool
     min_hedge_ratio_r_squared: float | None
+    min_ljung_box_p_value: float | None
+    min_jarque_bera_p_value: float | None
+    max_abs_excess_kurtosis: float | None
 
     def __post_init__(self) -> None:
         if not any(
@@ -158,6 +161,9 @@ class CriticWeakAssumptionPolicy:
                 self.min_half_life_days is not None or self.max_half_life_days is not None,
                 self.flag_unaddressed_regime_changes,
                 self.min_hedge_ratio_r_squared is not None,
+                self.min_ljung_box_p_value is not None,
+                self.min_jarque_bera_p_value is not None,
+                self.max_abs_excess_kurtosis is not None,
             )
         ):
             raise ValueError("at least one weak-assumption rule must be enabled")
@@ -185,6 +191,15 @@ class CriticWeakAssumptionPolicy:
                 self.min_hedge_ratio_r_squared,
                 label="min_hedge_ratio_r_squared",
             )
+        if self.min_ljung_box_p_value is not None:
+            _validate_probability(self.min_ljung_box_p_value, label="min_ljung_box_p_value")
+        if self.min_jarque_bera_p_value is not None:
+            _validate_probability(self.min_jarque_bera_p_value, label="min_jarque_bera_p_value")
+        if self.max_abs_excess_kurtosis is not None:
+            _validate_non_negative_float(
+                self.max_abs_excess_kurtosis,
+                label="max_abs_excess_kurtosis",
+            )
 
 
 @dataclass(frozen=True)
@@ -195,6 +210,9 @@ class CriticWeakAssumptionEvidence:
     half_life_days: float
     regime_changes_detected: bool
     hedge_ratio_r_squared: float
+    residual_ljung_box_p_value: float | None
+    residual_jarque_bera_p_value: float | None
+    residual_excess_kurtosis: float | None
 
     def __post_init__(self) -> None:
         _validate_probability(self.cointegration_p_value, label="cointegration_p_value")
@@ -202,6 +220,20 @@ class CriticWeakAssumptionEvidence:
         if not isinstance(self.regime_changes_detected, bool):
             raise TypeError("regime_changes_detected must be a bool")
         _validate_probability(self.hedge_ratio_r_squared, label="hedge_ratio_r_squared")
+        if self.residual_ljung_box_p_value is not None:
+            _validate_probability(
+                self.residual_ljung_box_p_value,
+                label="residual_ljung_box_p_value",
+            )
+        if self.residual_jarque_bera_p_value is not None:
+            _validate_probability(
+                self.residual_jarque_bera_p_value,
+                label="residual_jarque_bera_p_value",
+            )
+        if self.residual_excess_kurtosis is not None and not isfinite(
+            self.residual_excess_kurtosis
+        ):
+            raise ValueError("residual_excess_kurtosis must be finite")
 
 
 @dataclass(frozen=True)
@@ -528,6 +560,7 @@ def detect_overfitting(
     if policy.near_perfect_in_sample_sharpe is not None:
         checked_rules.append("near_perfect_in_sample")
         trade_count = evidence.in_sample_trade_count
+        assert policy.near_perfect_min_trades is not None
         if (
             trade_count is not None
             and trade_count >= policy.near_perfect_min_trades
@@ -586,6 +619,39 @@ def detect_weak_assumptions(
                 "hedge_ratio_r_squared: "
                 f"R2 {evidence.hedge_ratio_r_squared:.6f} is below required "
                 f"{policy.min_hedge_ratio_r_squared:.6f}"
+            )
+
+    if policy.min_ljung_box_p_value is not None:
+        checked_rules.append("residual_autocorrelation")
+        if evidence.residual_ljung_box_p_value is None:
+            indicators.append("residual_autocorrelation: Ljung-Box p-value is missing")
+        elif evidence.residual_ljung_box_p_value < policy.min_ljung_box_p_value:
+            indicators.append(
+                "residual_autocorrelation: "
+                f"Ljung-Box p-value {evidence.residual_ljung_box_p_value:.6f} "
+                f"is below required {policy.min_ljung_box_p_value:.6f}"
+            )
+
+    if policy.min_jarque_bera_p_value is not None:
+        checked_rules.append("residual_normality")
+        if evidence.residual_jarque_bera_p_value is None:
+            indicators.append("residual_normality: Jarque-Bera p-value is missing")
+        elif evidence.residual_jarque_bera_p_value < policy.min_jarque_bera_p_value:
+            indicators.append(
+                "residual_normality: "
+                f"Jarque-Bera p-value {evidence.residual_jarque_bera_p_value:.6f} "
+                f"is below required {policy.min_jarque_bera_p_value:.6f}"
+            )
+
+    if policy.max_abs_excess_kurtosis is not None:
+        checked_rules.append("residual_excess_kurtosis")
+        if evidence.residual_excess_kurtosis is None:
+            indicators.append("residual_excess_kurtosis: excess kurtosis is missing")
+        elif abs(evidence.residual_excess_kurtosis) > policy.max_abs_excess_kurtosis:
+            indicators.append(
+                "residual_excess_kurtosis: "
+                f"absolute excess kurtosis {abs(evidence.residual_excess_kurtosis):.6f} "
+                f"exceeds {policy.max_abs_excess_kurtosis:.6f}"
             )
 
     return CriticWeakAssumptionAssessment(

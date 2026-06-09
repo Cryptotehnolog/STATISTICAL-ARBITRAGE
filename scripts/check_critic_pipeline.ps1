@@ -10,6 +10,7 @@ try {
     uv run pytest `
         tests/unit/test_critic_agent.py `
         tests/unit/test_critic_agent_persistence.py `
+        tests/unit/test_residual_diagnostics.py `
         tests/unit/test_check_critic_pipeline.py `
         --no-cov -p no:cacheprovider
 }
