@@ -362,6 +362,30 @@ def decide_coordinator_final_decision(
     )
 
 
+def apply_coordinator_final_decision(
+    *,
+    experiment_id: str,
+    evidence: CoordinatorFinalDecisionEvidence,
+    policy: CoordinatorFinalDecisionPolicy,
+    actor: str,
+    session: Session,
+    memory_service: MemoryWriter,
+) -> CoordinatorTransitionResult:
+    """Persist one final decision through lifecycle transition and Memory Agent policy."""
+    decision = decide_coordinator_final_decision(evidence, policy=policy)
+    return transition_experiment_lifecycle(
+        CoordinatorTransitionRequest(
+            experiment_id=experiment_id,
+            target_status=ExperimentLifecycleStatus.FINAL_DECISION,
+            reason=decision.reason,
+            actor=actor,
+            final_decision=decision.final_decision,
+        ),
+        session=session,
+        memory_service=memory_service,
+    )
+
+
 def _running_task_count(session: Session, *, agent_name: str | None = None) -> int:
     query = session.query(CoordinatorTask).filter(
         CoordinatorTask.status == CoordinatorTaskStatus.RUNNING.value

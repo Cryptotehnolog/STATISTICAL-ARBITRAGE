@@ -16,6 +16,7 @@ from stat_arb.agents.coordinator import (
     CoordinatorTransitionRequest,
     ExperimentFinalDecision,
     ExperimentLifecycleStatus,
+    apply_coordinator_final_decision,
     claim_next_coordinator_task,
     complete_coordinator_task,
     decide_coordinator_final_decision,
@@ -175,6 +176,7 @@ def test_coordinator_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "max_running_tasks_per_agent" in script
     assert "CoordinatorFinalDecisionPolicy" in script
     assert "require_retest_justification" in script
+    assert "apply_coordinator_final_decision" in script
     assert "memory_service\\.write" in script
     assert "check_coordinator_agent_boundaries.ps1" in pre_commit
     assert "& $coordinatorAgentBoundaryCheckScript" in pre_commit
@@ -507,6 +509,88 @@ def test_coordinator_final_decision_rejects_unmapped_critic_status() -> None:
                 retest_justification=None,
             ),
             policy=_final_decision_policy(),
+        )
+
+
+def test_coordinator_applies_final_decision_through_transition_and_memory(
+    session: Session,
+) -> None:
+    """Final decision integration should persist via lifecycle transition and memory policy."""
+    experiment_id = _seed_experiment(session, status="reporting")
+    memory = FakeMemoryService()
+
+    result = apply_coordinator_final_decision(
+        experiment_id=experiment_id,
+        evidence=CoordinatorFinalDecisionEvidence(
+            critic_status="approved",
+            critic_objections=(),
+            hypothesis_status="testing",
+            retest_justification=None,
+        ),
+        policy=_final_decision_policy(),
+        actor="coordinator_agent",
+        session=session,
+        memory_service=memory,
+    )
+
+    stored = session.query(Experiment).one()
+    assert result.current_status == ExperimentLifecycleStatus.FINAL_DECISION
+    assert stored.status == "final_decision"
+    assert stored.final_decision == "approved"
+    assert stored.completed_at is not None
+    assert len(memory.requests) == 1
+    assert memory.requests[0].metadata["final_decision"] == "approved"
+    assert memory.requests[0].registry_reference == f"registry:experiments/{experiment_id}"
+    assert "Critic status approved" in memory.requests[0].body
+
+
+def test_coordinator_final_decision_integration_blocks_unjustified_retest_without_mutation(
+    session: Session,
+) -> None:
+    """Invalid retests should not mutate registry state or write memory."""
+    experiment_id = _seed_experiment(session, status="reporting")
+    memory = FakeMemoryService()
+
+    with pytest.raises(ValueError, match="retest_justification is required"):
+        apply_coordinator_final_decision(
+            experiment_id=experiment_id,
+            evidence=CoordinatorFinalDecisionEvidence(
+                critic_status="approved",
+                critic_objections=(),
+                hypothesis_status="retest",
+                retest_justification=None,
+            ),
+            policy=_final_decision_policy(),
+            actor="coordinator_agent",
+            session=session,
+            memory_service=memory,
+        )
+
+    stored = session.query(Experiment).one()
+    assert stored.status == "reporting"
+    assert stored.final_decision is None
+    assert stored.completed_at is None
+    assert memory.requests == []
+
+
+def test_coordinator_final_decision_integration_requires_memory_service(
+    session: Session,
+) -> None:
+    """Coordinator final decisions must not bypass the Memory Agent policy boundary."""
+    experiment_id = _seed_experiment(session, status="reporting")
+
+    with pytest.raises(TypeError):
+        apply_coordinator_final_decision(  # type: ignore[call-arg]
+            experiment_id=experiment_id,
+            evidence=CoordinatorFinalDecisionEvidence(
+                critic_status="approved",
+                critic_objections=(),
+                hypothesis_status="testing",
+                retest_justification=None,
+            ),
+            policy=_final_decision_policy(),
+            actor="coordinator_agent",
+            session=session,
         )
 
 

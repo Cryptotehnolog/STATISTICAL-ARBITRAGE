@@ -35,6 +35,34 @@ Verification:
 - `scripts/check_coordinator_agent_boundaries.ps1`
 - `scripts/check_coordinator_pipeline.ps1`
 
+## DEC-0061: Apply Coordinator final decisions only through lifecycle transition and memory policy
+
+Status: accepted
+
+Decision: Coordinator final decision integration uses `apply_coordinator_final_decision`.
+The function builds a final decision from `CoordinatorFinalDecisionEvidence` and
+`CoordinatorFinalDecisionPolicy`, then persists it only through
+`transition_experiment_lifecycle` with a required `MemoryAgentService`-compatible writer.
+
+Rationale: Final decisions affect both the structured registry and operational memory.
+Allowing direct mutation of `Experiment.final_decision` from higher-level workflows would
+create two paths for the same state change and make audit trails unreliable. Keeping one
+apply boundary preserves state-machine validation, completion timestamps, rejection reasons,
+and policy-controlled memory summaries.
+
+Rules:
+- Final decision persistence must go through `apply_coordinator_final_decision` or the lower
+  `transition_experiment_lifecycle` state-machine boundary.
+- `apply_coordinator_final_decision` must require a Memory Agent policy-compatible writer.
+- Coordinator must not call ApeRAG write APIs directly.
+- Invalid final decision evidence, including unjustified retests, must fail before registry
+  mutation and before memory writes.
+
+Verification:
+- `tests/unit/test_coordinator_agent.py`
+- `scripts/check_coordinator_agent_boundaries.ps1`
+- `scripts/check_coordinator_pipeline.ps1`
+
 ## DEC-0059: Persist Coordinator task queue state in the registry
 
 Status: accepted

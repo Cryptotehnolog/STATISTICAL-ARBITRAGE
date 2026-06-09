@@ -43,6 +43,7 @@ if (
     $source -notmatch "CoordinatorFinalDecisionPolicy" -or
     $source -notmatch "CoordinatorFinalDecisionEvidence" -or
     $source -notmatch "decide_coordinator_final_decision" -or
+    $source -notmatch "apply_coordinator_final_decision" -or
     $source -notmatch "require_retest_justification" -or
     $source -notmatch "critic_status_to_decision"
 ) {
@@ -50,9 +51,26 @@ if (
 }
 
 if (
+    $source -notmatch "apply_coordinator_final_decision" -or
+    $source -notmatch 'transition_experiment_lifecycle\(' -or
+    $source -notmatch "memory_service: MemoryWriter"
+) {
+    Write-Error "Coordinator final decision integration должен идти через transition_experiment_lifecycle и MemoryAgentService-compatible writer."
+}
+
+if (
     $source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =|priority: int =|max_attempts: int =|max_running_tasks: int =|max_running_tasks_per_agent: dict\[str, int\] =|policy: CoordinatorResourcePolicy \| None =|require_retest_justification: bool =|critic_status_to_decision: .* =|policy: CoordinatorFinalDecisionPolicy \| None ="
 ) {
     Write-Error "Coordinator Agent не должен прятать lifecycle/task/resource defaults в request config."
+}
+
+$applySignature = [regex]::Match($source, '(?s)def apply_coordinator_final_decision\((.*?)\) -> CoordinatorTransitionResult:')
+if (-not $applySignature.Success) {
+    Write-Error "Coordinator final decision apply function не найден."
+}
+
+if ($applySignature.Groups[1].Value -match 'memory_service: MemoryWriter \| None') {
+    Write-Error "Coordinator final decision apply не должен делать memory_service optional."
 }
 
 Write-Output "Проверка Coordinator Agent boundaries прошла."

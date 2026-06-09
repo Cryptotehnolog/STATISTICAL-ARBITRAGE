@@ -485,10 +485,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
       critic-status defaults and a required retest justification guard
     - _Requirements: 12.8, 12.9_
   
-  - [ ] 13.4 Integrate Coordinator Agent with registry and ApeRAG
+  - [x] 13.4 Integrate Coordinator Agent with registry and ApeRAG
     - Write task lifecycle events through Memory Agent policy boundary
     - Write final decisions to SQLite registry
     - Write rejection/promotion reasons to both stores
+    - Implemented `apply_coordinator_final_decision` to apply final decision plans only
+      through `transition_experiment_lifecycle` and Memory Agent policy-compatible writer
     - _Requirements: 12.3-12.7_
   
   - [ ] 13.5 Implement agent tool permission enforcement
