@@ -12,8 +12,12 @@ def test_ci_workflow_runs_core_python_checks() -> None:
     assert "on:" in workflow
     assert 'branches: ["master"]' in workflow
     assert "ubuntu-latest" in workflow
-    assert "actions/setup-python@v5" in workflow
-    assert "astral-sh/setup-uv@v5" in workflow
+    assert "actions/checkout@v6" in workflow
+    assert "actions/setup-python@v6" in workflow
+    assert "astral-sh/setup-uv@v8.2.0" in workflow
+    assert "actions/checkout@v4" not in workflow
+    assert "actions/setup-python@v5" not in workflow
+    assert "astral-sh/setup-uv@v5" not in workflow
     assert "uv sync --extra dev" in workflow
     assert "./scripts/check_user_facing_russian.ps1" in workflow
     assert "./scripts/check_secret_leaks.ps1" in workflow
