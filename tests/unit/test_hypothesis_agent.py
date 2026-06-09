@@ -14,6 +14,7 @@ from stat_arb.agents import (
     generate_rule_based_hypotheses,
 )
 from stat_arb.memory import MemoryWriteRequest
+from stat_arb.statistical import MultipleTestingMethod
 from stat_arb.storage import Base, Hypothesis
 
 
@@ -58,12 +59,20 @@ def test_hypothesis_agent_generates_registry_records_and_memory_summaries() -> N
             ("AAA", "DDD"): 0.89,
             ("BBB", "DDD"): 0.72,
         },
+        candidate_p_values={
+            ("AAA", "BBB"): 0.01,
+            ("AAA", "CCC"): 0.01,
+            ("AAA", "DDD"): 0.01,
+            ("BBB", "DDD"): 0.01,
+        },
         config=HypothesisGenerationConfig(
             require_same_sector=True,
             min_abs_correlation=0.85,
             min_market_cap=50_000_000_000,
             max_market_cap=150_000_000_000,
             max_pairs=5,
+            multiple_testing_method=MultipleTestingMethod.BONFERRONI,
+            candidate_alpha=0.05,
             initial_novelty_score=1.0,
             initial_status="new",
             source="rule_based",
@@ -126,6 +135,7 @@ def test_hypothesis_agent_calculates_novelty_from_registry_and_aperag() -> None:
             HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
         ),
         correlations={("AAA", "BBB"): 0.93},
+        candidate_p_values=_candidate_p_values(),
         config=_generation_config(),
         novelty_config=HypothesisNoveltyConfig(
             memory_top_k=5,
@@ -177,6 +187,7 @@ def test_hypothesis_agent_links_similar_hypotheses_and_flags_retests() -> None:
             HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
         ),
         correlations={("AAA", "BBB"): 0.93},
+        candidate_p_values=_candidate_p_values(),
         config=_generation_config(),
         novelty_config=_novelty_config(),
         linking_config=HypothesisLinkingConfig(
@@ -222,6 +233,7 @@ def test_hypothesis_agent_matches_rejected_reverse_pair_case_insensitively() -> 
             HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
         ),
         correlations={("BBB", "AAA"): 0.93},
+        candidate_p_values={("BBB", "AAA"): 0.01},
         config=_generation_config(),
         novelty_config=_novelty_config(),
         linking_config=HypothesisLinkingConfig(
@@ -270,6 +282,7 @@ def test_hypothesis_agent_deduplicates_memory_refs_and_floors_novelty() -> None:
             HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
         ),
         correlations={("AAA", "BBB"): 0.93},
+        candidate_p_values=_candidate_p_values(),
         config=_generation_config(),
         novelty_config=HypothesisNoveltyConfig(
             memory_top_k=5,
@@ -297,6 +310,7 @@ def test_hypothesis_agent_does_not_write_link_memory_without_similar_hypotheses(
             HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
         ),
         correlations={("AAA", "BBB"): 0.93},
+        candidate_p_values=_candidate_p_values(),
         config=_generation_config(),
         novelty_config=_novelty_config(),
         linking_config=HypothesisLinkingConfig(
@@ -326,6 +340,7 @@ def test_hypothesis_agent_requires_novelty_for_linking_config() -> None:
                 HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
             ),
             correlations={("AAA", "BBB"): 0.93},
+            candidate_p_values=_candidate_p_values(),
             config=_generation_config(),
             linking_config=HypothesisLinkingConfig(
                 retest_status="retest",
@@ -350,6 +365,7 @@ def test_hypothesis_agent_requires_memory_searcher_for_novelty_config() -> None:
                 HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
             ),
             correlations={("AAA", "BBB"): 0.93},
+            candidate_p_values=_candidate_p_values(),
             config=_generation_config(),
             novelty_config=HypothesisNoveltyConfig(
                 memory_top_k=5,
@@ -373,12 +389,15 @@ def test_hypothesis_agent_rejects_invalid_generation_config() -> None:
         generate_rule_based_hypotheses(
             assets=(),
             correlations={},
+            candidate_p_values={},
             config=HypothesisGenerationConfig(
                 require_same_sector=True,
                 min_abs_correlation=1.2,
                 min_market_cap=1,
                 max_market_cap=None,
                 max_pairs=1,
+                multiple_testing_method=MultipleTestingMethod.BONFERRONI,
+                candidate_alpha=0.05,
                 initial_novelty_score=1.0,
                 initial_status="new",
                 source="rule_based",
@@ -421,11 +440,17 @@ def _generation_config() -> HypothesisGenerationConfig:
         min_market_cap=50_000_000_000,
         max_market_cap=150_000_000_000,
         max_pairs=5,
+        multiple_testing_method=MultipleTestingMethod.BONFERRONI,
+        candidate_alpha=0.05,
         initial_novelty_score=1.0,
         initial_status="new",
         source="rule_based",
         created_by="hypothesis_agent",
     )
+
+
+def _candidate_p_values() -> dict[tuple[str, str], float]:
+    return {("AAA", "BBB"): 0.01}
 
 
 def _novelty_config() -> HypothesisNoveltyConfig:

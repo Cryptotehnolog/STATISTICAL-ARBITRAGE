@@ -25,6 +25,8 @@ from stat_arb.statistical import (
 )
 from stat_arb.storage.models import (
     DataQualityReportRecord,
+    Dataset,
+    Hypothesis,
 )
 from stat_arb.storage.models import (
     StatisticalTestResult as StoredStatisticalTestResult,
@@ -81,6 +83,12 @@ def run_statistical_testing(
     _require_passed_data_quality_reports(
         session,
         dataset_ids=(request.dataset_a_id, request.dataset_b_id),
+    )
+    _require_hypothesis_dataset_match(
+        session,
+        hypothesis_id=request.hypothesis_id,
+        dataset_a_id=request.dataset_a_id,
+        dataset_b_id=request.dataset_b_id,
     )
 
     split = chronological_train_test_split(
@@ -196,6 +204,30 @@ def _require_passed_data_quality_reports(
         )
         if report is None:
             raise ValueError(f"passed data quality report is required for dataset {dataset_id}")
+
+
+def _require_hypothesis_dataset_match(
+    session: Session,
+    *,
+    hypothesis_id: UUID,
+    dataset_a_id: UUID,
+    dataset_b_id: UUID,
+) -> None:
+    hypothesis = session.get(Hypothesis, str(hypothesis_id))
+    dataset_a = session.get(Dataset, str(dataset_a_id))
+    dataset_b = session.get(Dataset, str(dataset_b_id))
+    if hypothesis is None:
+        raise ValueError(f"hypothesis is required for statistical test {hypothesis_id}")
+    if dataset_a is None or dataset_b is None:
+        raise ValueError("datasets are required before statistical testing")
+
+    hypothesis_pair = (hypothesis.asset_a.strip().upper(), hypothesis.asset_b.strip().upper())
+    dataset_pair = (dataset_a.symbol.strip().upper(), dataset_b.symbol.strip().upper())
+    if dataset_pair != hypothesis_pair:
+        raise ValueError(
+            "hypothesis/dataset mismatch: dataset_a_id and dataset_b_id must match "
+            "the hypothesis asset order"
+        )
 
 
 def _rejection_reasons(

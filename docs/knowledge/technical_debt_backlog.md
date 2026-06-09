@@ -47,8 +47,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   proves a better stable provider order.
 - Data ingestion CLI: add user-facing ingestion command only after quality report generation
   and dataset provenance are wired to the registry.
-- Data-quality failure memory: route `DataQualityFailureSummary` to ApeRAG through the
-  future Memory Agent boundary, while keeping numeric report details in the registry.
+- Data-quality failure memory: keep routing `DataQualityFailureSummary` through
+  `MemoryAgentService`, while keeping numeric report details in the registry.
 - One-bar data quality reports: decide whether a single OHLCV bar should be invalid input
   or a valid diagnostic `DataQualityReport`; current domain validation rejects equal
   `start_date` and `end_date`.
@@ -71,8 +71,8 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   has vector, full-text, and graph indexes active for all 10 curated shards, and graph endpoints
   returned non-empty labels, nodes, and edges.
 - ApeRAG client boundary exists in `ApeRAGMemoryClient` with typed search/readiness/graph
-  contracts and `MemoryWriteRequest` for future Memory Agent writes.
-- Memory Agent policy layer exists in `MemoryAgentService`; future agents must write
+  contracts and `MemoryWriteRequest` for policy-controlled Memory Agent writes.
+- Memory Agent policy layer exists in `MemoryAgentService`; agents must write
   operational memory through policy checks, not directly through `ApeRAGMemoryClient`.
 - ApeRAG operational agent memory has a dedicated `stat-arb-agent-memory` collection smoke
   path through `scripts/check_aperag_agent_memory.ps1`.

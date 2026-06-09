@@ -36,7 +36,10 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - Create `.env.example` for environment variables (no secrets)
   - Set up `.gitignore` for Python, data files, and secrets
   - Create initial `README.md` with project overview and setup instructions
-  - _Requirements: 22.1, 17.1-17.8, 27.1-27.16_
+  - Current implementation uses a staged `src/stat_arb` package layout; full top-level
+    `apps/`, `services/`, `research/`, `rust/`, `reports/`, and root `docker-compose.yml`
+    organization remains deferred to repository-structure/packaging tasks.
+  - _Requirements: 22.1, 17.1-17.8, 27.1, 27.7, 27.9, 27.11, 27.14-27.16_
 
 - [x] 2. Set up core infrastructure and storage layer
   - [x] 2.1 Create SQLite database schema for Structured Registry
@@ -649,6 +652,8 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - [ ] 19.2 Document repository structure
     - Explain purpose of each directory
     - Document file naming conventions
+    - Decide and implement remaining Requirement 27 top-level directories only when there
+      is a real entrypoint/service/research/Rust/report owner
     - _Requirements: 27.1-27.16_
   
   - [ ] 19.3 Create architecture documentation

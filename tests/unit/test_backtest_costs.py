@@ -44,12 +44,12 @@ def test_calculate_pair_pnl_attributes_costs_and_preserves_net_formula() -> None
         average_portfolio_value=10_000.0,
     )
 
-    assert result.gross_pnl == pytest.approx(-1.0)
-    assert result.traded_value == pytest.approx(401.0)
-    assert result.turnover == pytest.approx(401.0 / ((3 / 96.0) * 10_000.0))
-    assert result.costs.commission_cost == pytest.approx(0.401)
-    assert result.costs.spread_cost == pytest.approx(0.2005)
-    assert result.costs.slippage_cost == pytest.approx(0.0802)
+    assert result.gross_pnl == pytest.approx(3.0)
+    assert result.traded_value == pytest.approx(403.0)
+    assert result.turnover == pytest.approx(403.0 / ((3 / 96.0) * 10_000.0))
+    assert result.costs.commission_cost == pytest.approx(0.403)
+    assert result.costs.spread_cost == pytest.approx(0.2015)
+    assert result.costs.slippage_cost == pytest.approx(0.0806)
     assert result.costs.funding_cost > 0.0
     assert result.costs.borrow_cost > 0.0
     assert result.net_pnl + result.costs.total_cost == pytest.approx(result.gross_pnl)
@@ -192,8 +192,8 @@ def test_calculate_pair_pnl_handles_single_open_trade_without_exit() -> None:
     )
 
     assert result.num_trades == 1
-    assert result.gross_pnl == pytest.approx(-4.0)
-    assert result.traded_value == pytest.approx(200.0)
+    assert result.gross_pnl == pytest.approx(-1.0)
+    assert result.traded_value == pytest.approx(203.0)
     assert result.costs.total_cost > 0.0
     assert result.net_pnl + result.costs.total_cost == pytest.approx(result.gross_pnl)
 

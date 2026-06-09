@@ -11,6 +11,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
+from stat_arb.statistical import MultipleTestingMethod, adjust_p_values
 from stat_arb.storage.models import Hypothesis
 
 
@@ -62,6 +63,8 @@ class HypothesisGenerationConfig:
     min_market_cap: int
     max_market_cap: int | None
     max_pairs: int
+    multiple_testing_method: MultipleTestingMethod
+    candidate_alpha: float
     initial_novelty_score: float
     initial_status: str
     source: str
@@ -111,6 +114,7 @@ def generate_rule_based_hypotheses(
     *,
     assets: Sequence[HypothesisUniverseAsset],
     correlations: Mapping[tuple[str, str], float],
+    candidate_p_values: Mapping[tuple[str, str], float],
     config: HypothesisGenerationConfig,
     session: Session,
     memory_service: MemoryWriter | None = None,
@@ -130,19 +134,37 @@ def generate_rule_based_hypotheses(
             raise ValueError("novelty_config is required when linking_config is provided")
     normalized_assets = tuple(_normalize_asset(asset) for asset in assets)
     normalized_correlations = _normalize_correlations(correlations)
+    normalized_p_values = _normalize_p_values(candidate_p_values)
 
     candidates: list[tuple[HypothesisUniverseAsset, HypothesisUniverseAsset, float]] = []
     skipped_count = 0
     for asset_a, asset_b in combinations(sorted(normalized_assets, key=lambda item: item.symbol), 2):
-        correlation = normalized_correlations.get(_pair_key(asset_a.symbol, asset_b.symbol))
+        pair_key = _pair_key(asset_a.symbol, asset_b.symbol)
+        correlation = normalized_correlations.get(pair_key)
         if correlation is None or not _passes_filters(asset_a, asset_b, correlation, config):
+            skipped_count += 1
+            continue
+        if pair_key not in normalized_p_values:
             skipped_count += 1
             continue
         candidates.append((asset_a, asset_b, correlation))
 
-    candidates.sort(key=lambda item: (-abs(item[2]), item[0].symbol, item[1].symbol))
-    selected = candidates[: config.max_pairs]
-    skipped_count += max(0, len(candidates) - len(selected))
+    corrected_p_values = _corrected_candidate_p_values(
+        candidates,
+        normalized_p_values=normalized_p_values,
+        method=config.multiple_testing_method,
+    )
+    statistically_screened = [
+        candidate
+        for candidate in candidates
+        if corrected_p_values[_pair_key(candidate[0].symbol, candidate[1].symbol)]
+        <= config.candidate_alpha
+    ]
+    skipped_count += len(candidates) - len(statistically_screened)
+
+    statistically_screened.sort(key=lambda item: (-abs(item[2]), item[0].symbol, item[1].symbol))
+    selected = statistically_screened[: config.max_pairs]
+    skipped_count += max(0, len(statistically_screened) - len(selected))
 
     stored: list[Hypothesis] = []
     for asset_a, asset_b, correlation in selected:
@@ -190,6 +212,10 @@ def _validate_config(config: HypothesisGenerationConfig) -> None:
         raise ValueError("max_market_cap must be greater than or equal to min_market_cap")
     if config.max_pairs <= 0:
         raise ValueError("max_pairs must be positive")
+    if not isinstance(config.multiple_testing_method, MultipleTestingMethod):
+        raise TypeError("multiple_testing_method must be a MultipleTestingMethod")
+    if not 0.0 < config.candidate_alpha <= 1.0:
+        raise ValueError("candidate_alpha must be between 0.0 and 1.0")
     if not 0.0 <= config.initial_novelty_score <= 1.0:
         raise ValueError("initial_novelty_score must be between 0.0 and 1.0")
     if not config.initial_status.strip():
@@ -241,6 +267,33 @@ def _normalize_correlations(
             raise ValueError("correlation values must be between -1.0 and 1.0")
         normalized[_pair_key(pair[0], pair[1])] = float(value)
     return normalized
+
+
+def _normalize_p_values(
+    p_values: Mapping[tuple[str, str], float],
+) -> dict[tuple[str, str], float]:
+    normalized: dict[tuple[str, str], float] = {}
+    for pair, value in p_values.items():
+        if len(pair) != 2:
+            raise ValueError("candidate_p_values keys must be two-symbol pairs")
+        if not 0.0 <= value <= 1.0:
+            raise ValueError("candidate_p_values must be between 0.0 and 1.0")
+        normalized[_pair_key(pair[0], pair[1])] = float(value)
+    return normalized
+
+
+def _corrected_candidate_p_values(
+    candidates: Sequence[tuple[HypothesisUniverseAsset, HypothesisUniverseAsset, float]],
+    *,
+    normalized_p_values: Mapping[tuple[str, str], float],
+    method: MultipleTestingMethod,
+) -> dict[tuple[str, str], float]:
+    candidate_keys = tuple(_pair_key(candidate[0].symbol, candidate[1].symbol) for candidate in candidates)
+    corrected = adjust_p_values(
+        (normalized_p_values[key] for key in candidate_keys),
+        method=method,
+    )
+    return dict(zip(candidate_keys, corrected, strict=True))
 
 
 def _pair_key(symbol_a: str, symbol_b: str) -> tuple[str, str]:

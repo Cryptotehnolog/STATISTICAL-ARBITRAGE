@@ -116,9 +116,9 @@ artifact reproducible without making Parquet directories the only durable record
 Alternatives considered: Store only JSON next to Parquet; overload `ReportArtifact` before
 an experiment exists; put registry writes directly inside the CCXT source adapter.
 
-Risks: Failed validation summaries are not yet written to ApeRAG by this helper. That
-belongs behind the future Memory Agent boundary so registry writes do not depend on an LLM
-gateway.
+Risks: Failed validation summaries must stay concise and must continue to flow through
+the implemented Memory Agent policy boundary so registry writes do not depend directly on
+an LLM gateway.
 
 Update: Failed `DataQualityReport` objects can now be converted to policy-safe
 `MemoryWriteRequest` records through `stat_arb.memory.data_quality_failure_memory_request`

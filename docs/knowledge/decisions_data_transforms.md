@@ -58,8 +58,12 @@ two batches with identical timestamp order and explicit provenance metadata.
 Alternatives considered: Align inside the Statistical Testing Agent; use pandas joins as
 the runtime contract; silently forward unmatched bars downstream.
 
-Risks: Partial overlap is allowed by default, so higher-level services should set
-`min_overlap_ratio` or `require_full_overlap` when a strategy needs stricter data quality.
+Update: Partial overlap is no longer a hidden default. Callers must pass
+`require_full_overlap` and `min_overlap_ratio` explicitly, because overlap policy is a
+research-impacting assumption before statistical testing.
+
+Risks: Call sites are more verbose. This is intentional: higher-level services and agents
+must choose and persist the overlap policy they used.
 
 ## DEC-0022: Guard statistical pair boundaries with explicit alignment
 

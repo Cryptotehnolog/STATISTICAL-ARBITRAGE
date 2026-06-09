@@ -37,8 +37,13 @@ def _batch(symbol: str, indexes: list[int]) -> OHLCVBatch:
 
 
 def test_align_ohlcv_pair_keeps_only_shared_timestamps() -> None:
-    """Partial overlap should be trimmed to identical timestamps in both assets."""
-    result = align_ohlcv_pair(_batch("BTC/USDT", [0, 1, 2, 3]), _batch("ETH/USDT", [1, 2, 4]))
+    """Explicitly allowed partial overlap should be trimmed to shared timestamps."""
+    result = align_ohlcv_pair(
+        _batch("BTC/USDT", [0, 1, 2, 3]),
+        _batch("ETH/USDT", [1, 2, 4]),
+        require_full_overlap=False,
+        min_overlap_ratio=0.5,
+    )
 
     assert result.bar_count == 2
     assert result.dropped_asset_a_bars == 2
@@ -56,23 +61,41 @@ def test_align_ohlcv_pair_can_require_full_overlap() -> None:
             _batch("BTC/USDT", [0, 1, 2]),
             _batch("ETH/USDT", [1, 2]),
             require_full_overlap=True,
+            min_overlap_ratio=0.0,
         )
 
 
 def test_align_ohlcv_pair_rejects_incompatible_or_empty_pairs() -> None:
     """Alignment should fail early for invalid pair boundaries."""
     with pytest.raises(ValueError, match="different symbols"):
-        align_ohlcv_pair(_batch("BTC/USDT", [0]), _batch("BTC/USDT", [0]))
+        align_ohlcv_pair(
+            _batch("BTC/USDT", [0]),
+            _batch("BTC/USDT", [0]),
+            require_full_overlap=False,
+            min_overlap_ratio=0.0,
+        )
 
     with pytest.raises(ValueError, match="no overlapping timestamps"):
-        align_ohlcv_pair(_batch("BTC/USDT", [0]), _batch("ETH/USDT", [1]))
+        align_ohlcv_pair(
+            _batch("BTC/USDT", [0]),
+            _batch("ETH/USDT", [1]),
+            require_full_overlap=False,
+            min_overlap_ratio=0.0,
+        )
 
     with pytest.raises(ValueError, match="min_overlap_ratio"):
         align_ohlcv_pair(
             _batch("BTC/USDT", [0, 1, 2, 3]),
             _batch("ETH/USDT", [0]),
+            require_full_overlap=False,
             min_overlap_ratio=0.5,
         )
+
+
+def test_align_ohlcv_pair_requires_explicit_overlap_policy() -> None:
+    """Overlap policy is research-impacting and must not be hidden in defaults."""
+    with pytest.raises(TypeError, match="require_full_overlap"):
+        align_ohlcv_pair(_batch("BTC/USDT", [0]), _batch("ETH/USDT", [0]))  # type: ignore[call-arg]
 
 
 @st.composite
@@ -89,7 +112,12 @@ def _overlapping_index_sets(draw) -> tuple[list[int], list[int]]:
 def test_align_ohlcv_pair_has_consistent_timestamps(index_sets: tuple[list[int], list[int]]) -> None:
     """Property 6: aligned timestamps should exist in both output series."""
     indexes_a, indexes_b = index_sets
-    result = align_ohlcv_pair(_batch("BTC/USDT", indexes_a), _batch("ETH/USDT", indexes_b))
+    result = align_ohlcv_pair(
+        _batch("BTC/USDT", indexes_a),
+        _batch("ETH/USDT", indexes_b),
+        require_full_overlap=False,
+        min_overlap_ratio=0.0,
+    )
 
     timestamps_a = tuple(bar.timestamp for bar in result.asset_a.bars)
     timestamps_b = tuple(bar.timestamp for bar in result.asset_b.bars)

@@ -184,8 +184,7 @@ without normalizing structured Python configs; defer reproducibility until regis
 integration.
 
 Risks: Callers must assemble the complete config component mapping. This is intentional:
-the future Backtest Agent service should own that assembly before writing to the registry
-or ApeRAG.
+the Backtest Agent service owns that assembly before writing to the registry or memory.
 
 ## DEC-0047: Backtest Agent writes registry first and memory through policy
 
@@ -230,3 +229,39 @@ property tests; test the whole pipeline only through the future CLI.
 Risks: The check script is still a test aggregation command, not a production backtest CLI.
 The future CLI must add real dataset loading, config parsing, registry IDs, and operator
 output.
+
+## DEC-0049: Backtest signals execute on the next bar
+
+Status: accepted
+
+Decision: `run_pair_backtest_core` treats the z-score observed at bar `t` as a signal that
+can change position only at bar `t+1`. Each step still records the current bar's z-score
+for auditability, but action decisions use the previous finite signal.
+
+Rationale: Same-bar execution can encode lookahead when the signal is computed from the
+current close. Next-bar execution is the conservative default for research correctness and
+matches the Critic Agent's strict lookahead-bias policy.
+
+Alternatives considered: Keep same-bar execution and rely on callers to shift signals.
+That is too easy for agents to misuse.
+
+Risks: Backtest results may become less optimistic after this change. That is desirable:
+the engine should not reward unavailable information.
+
+## DEC-0050: Backtest persistence verifies full statistical-test provenance
+
+Status: accepted
+
+Decision: `run_backtest_agent_persistence` now requires the passed statistical test row to
+match the requested `hypothesis_id`, `dataset_a_id`, and `dataset_b_id`, not merely the
+provided `test_id`.
+
+Rationale: A valid statistical-test row from one experiment must not authorize an
+unrelated backtest. Registry IDs form a chain of custody from hypothesis to datasets to
+statistical test to backtest.
+
+Alternatives considered: Trust foreign-key existence and the caller's request payload.
+That permits provenance splicing by mistake or by a faulty agent.
+
+Risks: Tests and future services must seed prerequisites consistently. This is intentional
+because reproducible experiments need a strict chain.

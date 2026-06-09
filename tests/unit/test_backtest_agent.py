@@ -127,6 +127,44 @@ def test_backtest_agent_requires_passed_statistical_test(session: Session, tmp_p
     assert session.query(BacktestResult).count() == 0
 
 
+def test_backtest_agent_rejects_statistical_test_provenance_mismatch(
+    session: Session,
+    tmp_path: Path,
+) -> None:
+    """A passed statistical test from one chain must not authorize another backtest."""
+    hypothesis_id, test_id, dataset_a_id, dataset_b_id = _seed_prerequisites(
+        session,
+        with_quality=True,
+        passed_test=True,
+    )
+    mismatched_hypothesis_id = uuid4()
+    session.add(
+        Hypothesis(
+            hypothesis_id=str(mismatched_hypothesis_id),
+            asset_a="AAA",
+            asset_b="BBB",
+            rationale="Mismatched backtest chain",
+            source="unit-test",
+            created_by="pytest",
+        )
+    )
+    session.commit()
+
+    with pytest.raises(ValueError, match="statistical test provenance mismatch"):
+        run_backtest_agent_persistence(
+            _agent_input(
+                tmp_path,
+                mismatched_hypothesis_id,
+                test_id,
+                dataset_a_id,
+                dataset_b_id,
+            ),
+            session=session,
+        )
+
+    assert session.query(BacktestResult).count() == 0
+
+
 def test_backtest_agent_rejects_missing_required_sensitivity_scenarios(
     session: Session,
     tmp_path: Path,

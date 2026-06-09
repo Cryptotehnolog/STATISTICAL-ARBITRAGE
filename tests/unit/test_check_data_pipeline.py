@@ -23,5 +23,7 @@ def test_check_data_pipeline_wrapper_uses_local_venv() -> None:
     script = WRAPPER_PATH.read_text(encoding="utf-8")
 
     assert ".venv\\Scripts\\python.exe" in script
+    assert ".venv/bin/python" in script
     assert "stat_arb.scripts.check_data_pipeline" in script
     assert "Проверка data pipeline checkpoint" in script
+    assert "$LASTEXITCODE -ne 0" in script

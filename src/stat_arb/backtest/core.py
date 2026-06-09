@@ -99,15 +99,16 @@ def run_pair_backtest_core(
         zip(timestamps, prices_a_array, prices_b_array, z_score_array)
     ):
         action = BacktestAction.HOLD
-        if np.isfinite(z_score):
+        signal_z_score = z_score_array[index - 1] if index > 0 else np.nan
+        if np.isfinite(signal_z_score):
             if position == SpreadPosition.FLAT:
-                if z_score >= entry_threshold:
+                if signal_z_score >= entry_threshold:
                     position = SpreadPosition.SHORT_SPREAD
                     action = BacktestAction.ENTER_SHORT_SPREAD
-                elif z_score <= -entry_threshold:
+                elif signal_z_score <= -entry_threshold:
                     position = SpreadPosition.LONG_SPREAD
                     action = BacktestAction.ENTER_LONG_SPREAD
-            elif abs(float(z_score)) <= exit_threshold:
+            elif abs(float(signal_z_score)) <= exit_threshold:
                 position = SpreadPosition.FLAT
                 action = BacktestAction.EXIT
 

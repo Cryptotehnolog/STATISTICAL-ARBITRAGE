@@ -10,7 +10,7 @@ from stat_arb.backtest import BacktestAction, SpreadPosition, run_pair_backtest_
 
 
 def test_pair_backtest_core_enters_and_exits_short_spread() -> None:
-    """Positive z-score entry should short asset A and long hedge-ratio asset B."""
+    """Positive z-score signal should execute on the next bar."""
     result = run_pair_backtest_core(
         prices_a=[101.0, 103.0, 102.0, 100.5, 100.0],
         prices_b=[100.0, 100.0, 100.0, 100.0, 100.0],
@@ -26,16 +26,17 @@ def test_pair_backtest_core_enters_and_exits_short_spread() -> None:
         BacktestAction.ENTER_SHORT_SPREAD,
         BacktestAction.EXIT,
     ]
-    entry = result.steps[1]
+    assert result.steps[1].action == BacktestAction.HOLD
+    entry = result.steps[2]
     assert entry.position == SpreadPosition.SHORT_SPREAD
     assert entry.position_a == -1.0
     assert entry.position_b == pytest.approx(1.5)
-    assert result.steps[2].position == SpreadPosition.SHORT_SPREAD
-    assert result.steps[3].position == SpreadPosition.FLAT
+    assert result.steps[3].position == SpreadPosition.SHORT_SPREAD
+    assert result.steps[4].position == SpreadPosition.FLAT
 
 
 def test_pair_backtest_core_enters_and_exits_long_spread() -> None:
-    """Negative z-score entry should long asset A and short hedge-ratio asset B."""
+    """Negative z-score signal should long asset A on the next bar."""
     result = run_pair_backtest_core(
         prices_a=[98.0, 97.0, 98.5, 99.0],
         prices_b=[100.0, 100.0, 100.0, 100.0],
@@ -46,22 +47,23 @@ def test_pair_backtest_core_enters_and_exits_long_spread() -> None:
         exit_threshold=0.5,
     )
 
-    entry = result.steps[0]
+    assert result.steps[0].action == BacktestAction.HOLD
+    entry = result.steps[1]
     assert entry.action == BacktestAction.ENTER_LONG_SPREAD
     assert entry.position == SpreadPosition.LONG_SPREAD
     assert entry.position_a == 1.0
     assert entry.position_b == pytest.approx(-0.8)
-    assert result.steps[2].action == BacktestAction.EXIT
-    assert result.steps[2].position == SpreadPosition.FLAT
+    assert result.steps[3].action == BacktestAction.EXIT
+    assert result.steps[3].position == SpreadPosition.FLAT
 
 
 def test_pair_backtest_core_ignores_undefined_zscore_until_signal_exists() -> None:
     """Rolling-window NaN z-scores should not create phantom entries."""
     result = run_pair_backtest_core(
-        prices_a=[100.0, 101.0, 102.0],
-        prices_b=[100.0, 100.0, 100.0],
-        z_scores=[np.nan, np.nan, 2.5],
-        aligned_timestamps=_timestamps(3),
+        prices_a=[100.0, 101.0, 102.0, 103.0],
+        prices_b=[100.0, 100.0, 100.0, 100.0],
+        z_scores=[np.nan, np.nan, 2.5, 1.0],
+        aligned_timestamps=_timestamps(4),
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
@@ -69,7 +71,8 @@ def test_pair_backtest_core_ignores_undefined_zscore_until_signal_exists() -> No
 
     assert result.steps[0].position == SpreadPosition.FLAT
     assert result.steps[1].position == SpreadPosition.FLAT
-    assert result.steps[2].action == BacktestAction.ENTER_SHORT_SPREAD
+    assert result.steps[2].action == BacktestAction.HOLD
+    assert result.steps[3].action == BacktestAction.ENTER_SHORT_SPREAD
 
 
 def test_pair_backtest_core_validates_aligned_inputs() -> None:

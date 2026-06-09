@@ -189,43 +189,43 @@ CRITIC_REVIEW -> REPORTING -> FINAL_DECISION
 
 Локальный pre-commit checklist без LLM-зависимостей:
 
-```bash
+```powershell
 .\scripts\pre_commit_check.ps1
 ```
 
 Проверить, что secrets не попали в tracked files, а локальные runtime `.env` остаются ignored:
 
-```bash
+```powershell
 .\scripts\check_secret_leaks.ps1
 ```
 
 Более тяжелая проверка Git history:
 
-```bash
+```powershell
 .\scripts\check_secret_leaks.ps1 -IncludeGitHistory
 ```
 
 Показать regenerable runtime/cache artifacts для безопасной чистки:
 
-```bash
+```powershell
 .\scripts\clean_runtime_artifacts.ps1
 ```
 
 Удалить найденные runtime/cache artifacts:
 
-```bash
+```powershell
 .\scripts\clean_runtime_artifacts.ps1 -Apply
 ```
 
 Проверить, что user-facing labels и messages остаются русифицированными:
 
-```bash
+```powershell
 .\scripts\check_user_facing_russian.ps1
 ```
 
 Найти большие markdown-файлы и секции-кандидаты для curated memory shards:
 
-```bash
+```powershell
 .\scripts\suggest_knowledge_shards.ps1
 ```
 
@@ -342,9 +342,7 @@ uv run pytest && uv run ruff check . && uv run mypy src/stat_arb
 │   └── property/           # Property-based tests
 ├── data/                   # Runtime data, ignored by Git
 │   ├── parquet/            # OHLCV data
-│   ├── aperag/             # ApeRAG runtime config и manifests
-│   ├── vector_store/       # Embedded vector store
-│   └── reports/            # Generated reports
+│   └── aperag/             # ApeRAG runtime config и manifests
 ├── docs/                   # Документация
 ├── scripts/                # Utility scripts
 ├── .github/                # GitHub Actions CI/CD

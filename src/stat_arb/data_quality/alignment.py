@@ -43,13 +43,13 @@ def align_ohlcv_pair(
     asset_a: OHLCVBatch,
     asset_b: OHLCVBatch,
     *,
-    require_full_overlap: bool = False,
-    min_overlap_ratio: float = 0.0,
+    require_full_overlap: bool,
+    min_overlap_ratio: float,
 ) -> PairAlignmentResult:
     """Align two OHLCV batches to their shared timestamps.
 
-    Partial overlaps are allowed by default. Callers can require full overlap or set a
-    minimum retained-share threshold before statistical testing.
+    Callers must explicitly choose full-overlap behavior and the minimum retained-share
+    threshold before statistical testing.
     """
     if asset_a.symbol == asset_b.symbol:
         raise ValueError("asset_a and asset_b must be different symbols")

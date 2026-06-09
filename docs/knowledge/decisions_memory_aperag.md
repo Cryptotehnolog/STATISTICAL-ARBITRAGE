@@ -266,13 +266,13 @@ changes. Use the shard suggestion script to find large sections that deserve ext
 Status: accepted
 
 Decision: Use `DataQualityFailureSummary` and `summarize_data_quality_failure` as a pure
-contract for future Memory Agent writes. The helper converts a failed `DataQualityReport`
+contract for policy-controlled Memory Agent writes. The helper converts a failed `DataQualityReport`
 into a concise summary with issue codes and a registry reference, without calling ApeRAG
 or writing storage state.
 
 Rationale: Data Agent and registry code should not depend directly on an LLM gateway.
-Structured metrics stay in the registry, while the future Memory Agent receives only a
-small, memory-safe failure summary.
+Structured metrics stay in the registry, while `MemoryAgentService` receives only a small,
+memory-safe failure summary.
 
 Alternatives considered: Write failed validation summaries directly to ApeRAG from the
 quality validator; store all issue details in memory; wait until Memory Agent exists

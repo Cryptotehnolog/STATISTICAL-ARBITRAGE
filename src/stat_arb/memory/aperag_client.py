@@ -45,11 +45,10 @@ class MemoryModel(BaseModel):
 
 
 class MemoryWriteRequest(MemoryModel):
-    """Contract for future Memory Agent writes into ApeRAG.
+    """Contract for policy-controlled Memory Agent writes into ApeRAG.
 
-    This is intentionally only a contract for now. Runtime writes should go through the
-    Memory Agent so agent code cannot push arbitrary raw logs, secrets, or metrics into
-    the long-term memory collection.
+    Runtime writes should go through the Memory Agent so agent code cannot push arbitrary
+    raw logs, secrets, or metrics into the long-term memory collection.
     """
 
     record_type: MemoryRecordType
@@ -68,7 +67,7 @@ class MemoryWriteRequest(MemoryModel):
         return sorted(dict.fromkeys(normalized))
 
     def to_markdown(self) -> str:
-        """Render a stable Markdown representation for future ApeRAG document writes."""
+        """Render a stable Markdown representation for ApeRAG document writes."""
         lines = [
             f"# {self.title}",
             "",

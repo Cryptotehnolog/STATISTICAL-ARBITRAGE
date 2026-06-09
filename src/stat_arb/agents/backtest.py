@@ -78,7 +78,13 @@ def run_backtest_agent_persistence(
         session,
         dataset_ids=(request.dataset_a_id, request.dataset_b_id),
     )
-    _require_passed_statistical_test(session, test_id=request.test_id)
+    _require_passed_statistical_test(
+        session,
+        test_id=request.test_id,
+        hypothesis_id=request.hypothesis_id,
+        dataset_a_id=request.dataset_a_id,
+        dataset_b_id=request.dataset_b_id,
+    )
 
     stored = _persist_backtest_result(session, request)
     memory_written = False
@@ -201,7 +207,14 @@ def _require_passed_data_quality_reports(
             raise ValueError(f"passed data quality report is required for dataset {dataset_id}")
 
 
-def _require_passed_statistical_test(session: Session, *, test_id: UUID) -> None:
+def _require_passed_statistical_test(
+    session: Session,
+    *,
+    test_id: UUID,
+    hypothesis_id: UUID,
+    dataset_a_id: UUID,
+    dataset_b_id: UUID,
+) -> None:
     test = (
         session.query(StoredStatisticalTestResult)
         .filter(
@@ -212,3 +225,12 @@ def _require_passed_statistical_test(session: Session, *, test_id: UUID) -> None
     )
     if test is None:
         raise ValueError(f"passed statistical test is required for test {test_id}")
+    if (
+        test.hypothesis_id != str(hypothesis_id)
+        or test.dataset_a_id != str(dataset_a_id)
+        or test.dataset_b_id != str(dataset_b_id)
+    ):
+        raise ValueError(
+            "statistical test provenance mismatch: test_id must match hypothesis_id, "
+            "dataset_a_id, and dataset_b_id"
+        )

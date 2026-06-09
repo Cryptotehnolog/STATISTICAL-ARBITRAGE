@@ -107,6 +107,47 @@ def test_run_statistical_testing_requires_passed_quality_reports(session: Sessio
     assert session.query(StoredStatisticalTestResult).count() == 0
 
 
+def test_run_statistical_testing_rejects_hypothesis_dataset_mismatch(session: Session) -> None:
+    """Quality reports from valid datasets must not authorize an unrelated hypothesis."""
+    hypothesis_id, dataset_a_id, dataset_b_id = _seed_prerequisites(session, with_quality=True)
+    mismatched_hypothesis_id = uuid4()
+    session.add(
+        Hypothesis(
+            hypothesis_id=str(mismatched_hypothesis_id),
+            asset_a="AAA",
+            asset_b="CCC",
+            rationale="Mismatched pair",
+            source="unit-test",
+            created_by="pytest",
+        )
+    )
+    session.commit()
+    prices_a, prices_b, timestamps = _cointegrated_pair()
+
+    with pytest.raises(ValueError, match="hypothesis/dataset mismatch"):
+        run_statistical_testing(
+            StatisticalTestingInput(
+                hypothesis_id=mismatched_hypothesis_id,
+                dataset_a_id=dataset_a_id,
+                dataset_b_id=dataset_b_id,
+                prices_a=prices_a,
+                prices_b=prices_b,
+                aligned_timestamps=timestamps,
+                train_fraction=0.7,
+                alpha=0.05,
+                adf_regression="c",
+                adf_autolag="AIC",
+                periods_per_day=96.0,
+                regime_window=60,
+                regime_mean_shift_threshold=3.0,
+                regime_volatility_ratio_threshold=2.5,
+            ),
+            session=session,
+        )
+
+    assert session.query(StoredStatisticalTestResult).count() == 0
+
+
 def test_run_statistical_testing_validates_chronological_inputs(session: Session) -> None:
     """Service should reject timestamp/order issues before registry writes."""
     hypothesis_id, dataset_a_id, dataset_b_id = _seed_prerequisites(session, with_quality=True)

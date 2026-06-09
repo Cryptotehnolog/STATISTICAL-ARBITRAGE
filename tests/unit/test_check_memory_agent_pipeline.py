@@ -13,6 +13,10 @@ def test_check_memory_agent_pipeline_runs_contract_tests_and_guards() -> None:
     assert "test_memory_policy.py" in script
     assert "check_memory_contracts.ps1" in script
     assert "check_no_legacy_memory_backend_imports.ps1" in script
+    assert ".venv\\Scripts\\python.exe" in script
+    assert ".venv/bin/python" in script
+    assert "--no-cov" in script
+    assert "-p no:cacheprovider" in script
 
 
 def test_check_memory_agent_pipeline_keeps_runtime_health_optional() -> None:

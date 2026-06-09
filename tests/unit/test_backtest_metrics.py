@@ -55,8 +55,8 @@ def test_performance_metrics_calculate_core_report_values() -> None:
     assert result.profit_factor == pytest.approx(8.0 / 2.0)
     assert result.value_at_risk > 0.0
     assert result.conditional_value_at_risk >= result.value_at_risk
-    assert result.holding_times.completed_holds == 2
-    assert result.holding_times.average_holding_time_hours == pytest.approx(0.375)
+    assert result.holding_times.completed_holds == 1
+    assert result.holding_times.average_holding_time_hours == pytest.approx(0.5)
     assert result.exposure.asset_a_short > 0.0
     assert result.exposure.asset_a_long > 0.0
 

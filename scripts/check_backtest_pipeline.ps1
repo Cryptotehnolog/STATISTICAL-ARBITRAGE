@@ -16,6 +16,9 @@ try {
         tests/unit/test_backtest_walk_forward.py `
         tests/unit/test_backtest_agent.py `
         --no-cov -p no:cacheprovider
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
 }
 finally {
     Pop-Location

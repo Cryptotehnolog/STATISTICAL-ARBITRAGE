@@ -65,6 +65,25 @@ function Get-Collection {
     return $collections.items | Where-Object { $_.title -eq $CollectionTitle } | Select-Object -First 1
 }
 
+function Test-CuratedShardSafeForUpload {
+    param([System.IO.FileInfo[]]$Files)
+
+    $blockedPatterns = @(
+        "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+        "(?i)\b(api[_-]?key|secret|token|password|client[_-]?secret)\s*[:=]\s*['\""]?[A-Za-z0-9_\-\.]{16,}",
+        "(?i)\bauthorization\s*[:=]\s*bearer\s+[A-Za-z0-9_\-\.]{16,}",
+        "(?i)\bcookie\s*[:=].*(session|auth|token)"
+    )
+    foreach ($file in $Files) {
+        $text = Get-Content -LiteralPath $file.FullName -Raw
+        foreach ($pattern in $blockedPatterns) {
+            if ($text -match $pattern) {
+                Write-Error "Curated shard похож на secret-bearing файл и не будет загружен: $($file.Name)"
+            }
+        }
+    }
+}
+
 function Upload-CuratedShard {
     param(
         [object]$Collection,
@@ -168,6 +187,7 @@ $files = Get-ChildItem -LiteralPath $knowledgePath -Filter "*.md" | Sort-Object 
 if (-not $files) {
     Write-Error "В $knowledgePath нет curated markdown shards."
 }
+Test-CuratedShardSafeForUpload -Files $files
 
 $existing = Invoke-ApeRagJson -Method "GET" -Path "/api/v1/collections/$($collection.id)/documents?page=1&page_size=100"
 $existingDocumentsByName = @{}

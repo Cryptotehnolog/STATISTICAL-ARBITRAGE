@@ -36,3 +36,15 @@ def test_seed_aperag_curated_uploads_new_or_changed_shards_without_force() -> No
     assert "Измененные или отсутствующие curated shards" in script
     assert "DELETE" in script
     assert "Upload-CuratedShard" in script
+
+
+def test_seed_aperag_curated_scans_shards_before_upload() -> None:
+    """Curated seed should block obvious secret-bearing shards before ApeRAG upload."""
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "Test-CuratedShardSafeForUpload" in script
+    assert "BEGIN [A-Z ]*PRIVATE KEY" in script
+    assert "authorization" in script.lower()
+    assert script.index("Test-CuratedShardSafeForUpload -Files $files") < script.index(
+        "Upload-CuratedShard -Collection $collection -File $file"
+    )

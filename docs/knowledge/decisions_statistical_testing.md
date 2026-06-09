@@ -200,3 +200,21 @@ to ApeRAG from the service; wait until a full autonomous agent exists.
 Risks: The current boundary validates one pair at a time and uses index/timestamp inputs
 provided by callers. Batch pair screening and richer experiment orchestration should reuse
 this service rather than bypassing it.
+
+## DEC-0039: Statistical testing verifies hypothesis and dataset provenance
+
+Status: accepted
+
+Decision: `run_statistical_testing` now verifies that the requested hypothesis exists and
+that `dataset_a_id` and `dataset_b_id` belong to the hypothesis asset symbols in the same
+order before persisting a statistical test result.
+
+Rationale: A valid data-quality report for one dataset pair must not authorize a
+statistical test for an unrelated hypothesis. The registry chain must connect hypothesis,
+datasets, statistical test, and later backtest records.
+
+Alternatives considered: Check only passed data-quality reports for the dataset IDs and
+trust the caller's hypothesis ID. That permits provenance splicing by a faulty agent.
+
+Risks: The boundary now assumes dataset symbols use the same canonical asset strings as
+hypotheses. Future symbol mapping should preserve this invariant explicitly.

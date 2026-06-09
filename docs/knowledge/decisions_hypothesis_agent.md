@@ -110,3 +110,25 @@ checks; move them to slow property tests.
 Risks: The tests cover deterministic boundaries, not semantic quality of ApeRAG retrieval.
 Future answer-quality or retrieval-quality evaluation should stay separate from these
 unit tests.
+
+## DEC-0046: Hypothesis batch screening requires explicit p-value correction
+
+Status: accepted
+
+Decision: `generate_rule_based_hypotheses` requires caller-supplied candidate p-values and
+an explicit `MultipleTestingMethod` plus `candidate_alpha` in `HypothesisGenerationConfig`.
+The agent applies correction across the screened candidate batch and persists only
+candidates whose corrected p-value is within the explicit alpha.
+
+Rationale: Correlation, sector, and market-cap filters are screening heuristics, not
+statistical approval. If a batch of candidate pairs is persisted as generated hypotheses,
+the multiple-testing correction decision must be visible and reproducible instead of
+hidden in planning text.
+
+Alternatives considered: Let Hypothesis Agent compute p-values from correlation alone;
+skip p-values until Statistical Testing Agent; persist all correlation-screened pairs.
+Correlation alone is not enough, and skipping correction made Task 9.1 look complete while
+the statistical gate was missing.
+
+Risks: Upstream pair-screening workflows must provide candidate p-values. That is
+intentional: p-value provenance belongs to the workflow that computed them.
