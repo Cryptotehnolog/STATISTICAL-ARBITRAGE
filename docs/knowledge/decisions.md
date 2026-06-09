@@ -22,6 +22,8 @@ regular memory updates do not reprocess one oversized document.
   boundaries.
 - `docs/knowledge/decisions_reporting.md`: Report Agent artifact generation, registry
   persistence, and memory-summary boundaries.
+- `docs/knowledge/decisions_coordinator_agent.md`: Coordinator Agent lifecycle,
+  registry persistence, and memory-policy boundaries.
 - `docs/knowledge/decisions_expert_review_hardening.md`: external expert review outcomes,
   explicit threshold policy, memory backend resilience, and research hardening scope.
 

@@ -68,6 +68,14 @@ jobs:
         shell: pwsh
         run: ./scripts/check_critic_pipeline.ps1
 
+      - name: Check Coordinator Agent boundaries
+        shell: pwsh
+        run: ./scripts/check_coordinator_agent_boundaries.ps1
+
+      - name: Check Coordinator Agent pipeline
+        shell: pwsh
+        run: ./scripts/check_coordinator_pipeline.ps1
+
       - name: Check Report Agent pipeline
         shell: pwsh
         run: ./scripts/check_report_pipeline.ps1

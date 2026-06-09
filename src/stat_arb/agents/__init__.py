@@ -5,6 +5,13 @@ from stat_arb.agents.backtest import (
     BacktestAgentRunResult,
     run_backtest_agent_persistence,
 )
+from stat_arb.agents.coordinator import (
+    CoordinatorTransitionRequest,
+    CoordinatorTransitionResult,
+    ExperimentFinalDecision,
+    ExperimentLifecycleStatus,
+    transition_experiment_lifecycle,
+)
 from stat_arb.agents.critic import (
     CriticAgentInput,
     CriticAgentRunResult,
@@ -80,6 +87,10 @@ __all__ = [
     "CriticWeakAssumptionAssessment",
     "CriticWeakAssumptionEvidence",
     "CriticWeakAssumptionPolicy",
+    "CoordinatorTransitionRequest",
+    "CoordinatorTransitionResult",
+    "ExperimentFinalDecision",
+    "ExperimentLifecycleStatus",
     "HypothesisGenerationConfig",
     "HypothesisGenerationResult",
     "HypothesisLinkingConfig",
@@ -102,4 +113,5 @@ __all__ = [
     "run_backtest_agent_persistence",
     "run_critic_agent_persistence",
     "run_statistical_testing",
+    "transition_experiment_lifecycle",
 ]

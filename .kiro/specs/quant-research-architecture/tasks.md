@@ -465,9 +465,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Define explicit retry limits and resource-aware parallelism limits
     - _Requirements: 12.1_
   
-  - [ ] 13.2 Implement experiment lifecycle state machine
+  - [x] 13.2 Implement experiment lifecycle state machine
     - States: NEW → DATA_VALIDATION → STATISTICAL_TESTING → BACKTESTING → CRITIC_REVIEW → REPORTING → FINAL_DECISION
     - Implement state transitions and validation
+    - Implemented small Coordinator lifecycle boundary over registry `experiments`
+    - Added Memory Agent policy write boundary and Coordinator boundary guard
     - _Requirements: 12.2_
   
   - [ ] 13.3 Implement final decision logic

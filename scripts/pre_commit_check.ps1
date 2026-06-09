@@ -11,6 +11,8 @@ $hypothesisAgentBoundaryCheckScript = Join-Path $PSScriptRoot "check_hypothesis_
 $backtestAgentBoundaryCheckScript = Join-Path $PSScriptRoot "check_backtest_agent_boundaries.ps1"
 $criticAgentBoundaryCheckScript = Join-Path $PSScriptRoot "check_critic_agent_boundaries.ps1"
 $criticPipelineCheckScript = Join-Path $PSScriptRoot "check_critic_pipeline.ps1"
+$coordinatorAgentBoundaryCheckScript = Join-Path $PSScriptRoot "check_coordinator_agent_boundaries.ps1"
+$coordinatorPipelineCheckScript = Join-Path $PSScriptRoot "check_coordinator_pipeline.ps1"
 $reportPipelineCheckScript = Join-Path $PSScriptRoot "check_report_pipeline.ps1"
 $propertyIntegrationCheckScript = Join-Path $PSScriptRoot "check_property_integration.ps1"
 $legacyMemoryBackendSurfaceCheckScript = Join-Path $PSScriptRoot "check_no_legacy_memory_backend_user_surface.ps1"
@@ -26,6 +28,8 @@ Write-Output "- Проверка Hypothesis Agent boundaries: check_hypothesis_a
 Write-Output "- Проверка Backtest Agent boundaries: check_backtest_agent_boundaries.ps1"
 Write-Output "- Проверка Critic Agent boundaries: check_critic_agent_boundaries.ps1"
 Write-Output "- Проверка Critic Agent pipeline: check_critic_pipeline.ps1"
+Write-Output "- Проверка Coordinator Agent boundaries: check_coordinator_agent_boundaries.ps1"
+Write-Output "- Проверка Coordinator Agent pipeline: check_coordinator_pipeline.ps1"
 Write-Output "- Проверка Report Agent pipeline: check_report_pipeline.ps1"
 Write-Output "- Property/integration smoke: check_property_integration.ps1"
 Write-Output "- Проверка активной пользовательской memory surface: check_no_legacy_memory_backend_user_surface.ps1"
@@ -44,6 +48,8 @@ try {
     & $backtestAgentBoundaryCheckScript
     & $criticAgentBoundaryCheckScript
     & $criticPipelineCheckScript
+    & $coordinatorAgentBoundaryCheckScript
+    & $coordinatorPipelineCheckScript
     & $reportPipelineCheckScript
     & $propertyIntegrationCheckScript
     & $legacyMemoryBackendSurfaceCheckScript

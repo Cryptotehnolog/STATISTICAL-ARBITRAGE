@@ -8,6 +8,26 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0023: Persist chart-ready report series sidecars
+
+Status: open
+
+Why deferred: Task 12 can generate deterministic report charts when equity, drawdown,
+z-score, cost, and trade series are explicitly provided. The current registry-backed
+Report Agent path correctly refuses to fabricate charts from aggregate metrics, but the
+future end-to-end experiment runner does not yet persist those full series as durable
+artifacts.
+
+Follow-up:
+- When the first end-to-end experiment runner exists, persist actual equity, drawdown,
+  z-score, cost attribution, rolling metric, and trade series beside the backtest result as
+  registry-linked artifact sidecars.
+- Make Report Agent load those sidecars automatically so full visual reports can be built
+  from factual data without requiring callers to pass series manually.
+- Keep aggregate registry metrics separate from chart-ready time series.
+
+Related tasks: 12.1, 12.4, 13.x, 14.x.
+
 ### TD-0020: Add Cost Assumption Agent for verified market costs
 
 Status: open
