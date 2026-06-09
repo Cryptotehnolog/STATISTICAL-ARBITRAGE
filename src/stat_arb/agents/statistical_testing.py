@@ -19,6 +19,7 @@ from stat_arb.statistical import (
     adf_stationarity_test,
     chronological_train_test_split,
     detect_regime_changes,
+    diagnose_residuals,
     engle_granger_cointegration_test,
     estimate_half_life,
     estimate_hedge_ratio,
@@ -55,6 +56,7 @@ class StatisticalTestingInput:
     adf_regression: str
     adf_autolag: str | None
     periods_per_day: float
+    residual_diagnostics_lags: int
     regime_window: int
     regime_mean_shift_threshold: float
     regime_volatility_ratio_threshold: float
@@ -116,6 +118,10 @@ def run_statistical_testing(
         autolag=request.adf_autolag,
     )
     half_life = estimate_half_life(residuals, periods_per_day=request.periods_per_day)
+    residual_diagnostics = diagnose_residuals(
+        residuals,
+        ljung_box_lags=request.residual_diagnostics_lags,
+    )
     regime = detect_regime_changes(
         residuals,
         window=min(request.regime_window, max(5, residuals.size // 2)),
@@ -144,6 +150,10 @@ def run_statistical_testing(
         hedge_ratio=hedge_ratio.hedge_ratio,
         hedge_ratio_r_squared=hedge_ratio.r_squared,
         half_life_days=half_life.half_life_days,
+        residual_ljung_box_p_value=residual_diagnostics.ljung_box_p_value,
+        residual_jarque_bera_p_value=residual_diagnostics.jarque_bera_p_value,
+        residual_excess_kurtosis=residual_diagnostics.excess_kurtosis,
+        residual_diagnostics_lags=residual_diagnostics.lags,
         regime_changes_detected=regime.has_regime_change,
         passed=passed,
         rejection_reason="; ".join(rejection_reasons) if rejection_reasons else None,
@@ -266,6 +276,10 @@ def _persist_statistical_result(
         hedge_ratio=result.hedge_ratio,
         hedge_ratio_r_squared=result.hedge_ratio_r_squared,
         half_life_days=result.half_life_days,
+        residual_ljung_box_p_value=result.residual_ljung_box_p_value,
+        residual_jarque_bera_p_value=result.residual_jarque_bera_p_value,
+        residual_excess_kurtosis=result.residual_excess_kurtosis,
+        residual_diagnostics_lags=result.residual_diagnostics_lags,
         regime_changes_detected=result.regime_changes_detected,
         passed=result.passed,
         rejection_reason=result.rejection_reason,

@@ -401,6 +401,10 @@ class StatisticalTestResult(DomainModel):
     hedge_ratio: float
     hedge_ratio_r_squared: float = Field(ge=0.0, le=1.0)
     half_life_days: float = Field(gt=0.0)
+    residual_ljung_box_p_value: float = Field(ge=0.0, le=1.0)
+    residual_jarque_bera_p_value: float = Field(ge=0.0, le=1.0)
+    residual_excess_kurtosis: float
+    residual_diagnostics_lags: int = Field(gt=0)
     regime_changes_detected: bool = False
     passed: bool
     rejection_reason: str | None = None
@@ -444,6 +448,8 @@ class BacktestResult(DomainModel):
     entry_threshold: float = Field(gt=0.0)
     exit_threshold: float = Field(ge=0.0)
     hedge_ratio: float
+    risk_exit_policy: dict[str, Any] | None = None
+    risk_exit_policy_disabled_reason: str | None = None
     gross_pnl: float
     net_pnl: float
     commission_cost: float = Field(ge=0.0)
@@ -481,6 +487,14 @@ class BacktestResult(DomainModel):
             raise ValueError("execution_command must not contain empty values")
         if self.exit_threshold >= self.entry_threshold:
             raise ValueError("exit_threshold must be lower than entry_threshold")
+        if self.risk_exit_policy is None and not self.risk_exit_policy_disabled_reason:
+            raise ValueError(
+                "risk_exit_policy_disabled_reason is required when risk_exit_policy is absent"
+            )
+        if self.risk_exit_policy is not None and self.risk_exit_policy_disabled_reason is not None:
+            raise ValueError(
+                "risk_exit_policy_disabled_reason must be absent when risk_exit_policy is present"
+            )
 
         total_cost = (
             self.commission_cost

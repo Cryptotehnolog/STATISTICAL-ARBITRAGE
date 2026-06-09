@@ -51,6 +51,8 @@ class BacktestCoreResult:
     hedge_ratio: float
     entry_threshold: float
     exit_threshold: float
+    exit_policy: BacktestExitPolicyConfig | None
+    risk_exit_policy_disabled_reason: str | None
 
     @property
     def observations(self) -> int:
@@ -92,7 +94,8 @@ def run_pair_backtest_core(
     hedge_ratio: float,
     entry_threshold: float,
     exit_threshold: float,
-    exit_policy: BacktestExitPolicyConfig | None = None,
+    exit_policy: BacktestExitPolicyConfig | None,
+    risk_exit_policy_disabled_reason: str | None,
 ) -> BacktestCoreResult:
     """Build deterministic pair-trading positions from aligned prices and z-scores.
 
@@ -112,6 +115,8 @@ def run_pair_backtest_core(
         hedge_ratio=hedge_ratio,
         entry_threshold=entry_threshold,
         exit_threshold=exit_threshold,
+        exit_policy=exit_policy,
+        risk_exit_policy_disabled_reason=risk_exit_policy_disabled_reason,
     )
 
     position = SpreadPosition.FLAT
@@ -164,6 +169,8 @@ def run_pair_backtest_core(
         hedge_ratio=float(hedge_ratio),
         entry_threshold=float(entry_threshold),
         exit_threshold=float(exit_threshold),
+        exit_policy=exit_policy,
+        risk_exit_policy_disabled_reason=risk_exit_policy_disabled_reason,
     )
 
 
@@ -217,6 +224,8 @@ def _validate_core_inputs(
     hedge_ratio: float,
     entry_threshold: float,
     exit_threshold: float,
+    exit_policy: BacktestExitPolicyConfig | None,
+    risk_exit_policy_disabled_reason: str | None,
 ) -> None:
     if prices_a.shape != prices_b.shape or prices_a.shape != z_scores.shape:
         raise ValueError("prices_a, prices_b, and z_scores must have the same length")
@@ -241,3 +250,8 @@ def _validate_core_inputs(
         raise ValueError("exit_threshold must be finite and non-negative")
     if exit_threshold >= entry_threshold:
         raise ValueError("exit_threshold must be lower than entry_threshold")
+    if exit_policy is None:
+        if risk_exit_policy_disabled_reason is None or not risk_exit_policy_disabled_reason.strip():
+            raise ValueError("risk_exit_policy_disabled_reason is required when exit_policy is disabled")
+    elif risk_exit_policy_disabled_reason is not None:
+        raise ValueError("risk_exit_policy_disabled_reason must be None when exit_policy is enabled")

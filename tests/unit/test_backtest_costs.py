@@ -35,6 +35,8 @@ def test_calculate_pair_pnl_attributes_costs_and_preserves_net_formula() -> None
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     result = calculate_pair_pnl(
@@ -112,6 +114,8 @@ def test_calculate_pair_pnl_rejects_invalid_periods_per_day() -> None:
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     with pytest.raises(ValueError, match="periods_per_day"):
@@ -131,6 +135,8 @@ def test_calculate_pair_pnl_requires_portfolio_value_for_positive_turnover() -> 
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     with pytest.raises(ValueError, match="average_portfolio_value"):
@@ -151,6 +157,8 @@ def test_calculate_pair_pnl_handles_empty_trade_sequence_without_fake_activity()
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     result = calculate_pair_pnl(
@@ -182,6 +190,8 @@ def test_calculate_pair_pnl_handles_single_open_trade_without_exit() -> None:
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     result = calculate_pair_pnl(
@@ -212,6 +222,8 @@ def test_calculate_pair_pnl_extreme_costs_remain_explicit_and_conserved() -> Non
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
     cost_config = BacktestCostConfig(
         commission_rate=0.5,
@@ -355,6 +367,8 @@ def test_pair_pnl_conservation_property(
         hedge_ratio=hedge_ratio,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
     cost_config = BacktestCostConfig(
         commission_rate=commission_rate,

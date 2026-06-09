@@ -32,6 +32,8 @@ def test_cost_sensitivity_analysis_compares_explicit_cost_multipliers() -> None:
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     result = run_cost_sensitivity_analysis(
@@ -70,6 +72,8 @@ def test_cost_sensitivity_requires_explicit_scenarios() -> None:
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     with pytest.raises(TypeError):
@@ -109,6 +113,8 @@ def test_cost_sensitivity_validates_scenarios() -> None:
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     with pytest.raises(ValueError, match="unique"):

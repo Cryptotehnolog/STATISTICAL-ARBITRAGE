@@ -55,6 +55,7 @@ def session() -> Session:
         yield db_session
     finally:
         db_session.close()
+        engine.dispose()
 
 
 def test_coordinator_persists_valid_lifecycle_transition_and_memory_event(
@@ -185,7 +186,7 @@ def test_coordinator_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "enforce_agent_tool_permission" in script
     assert "memory_service\\.write" in script
     assert "check_coordinator_agent_boundaries.ps1" in pre_commit
-    assert "& $coordinatorAgentBoundaryCheckScript" in pre_commit
+    assert "Invoke-RequiredCheck $coordinatorAgentBoundaryCheckScript" in pre_commit
     assert "Check Coordinator Agent boundaries" in ci
     assert "./scripts/check_coordinator_agent_boundaries.ps1" in ci
 

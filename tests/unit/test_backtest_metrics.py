@@ -29,6 +29,8 @@ def test_performance_metrics_calculate_core_report_values() -> None:
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
     returns = np.asarray([0.02, -0.01, 0.015, 0.005])
     equity = np.asarray([100.0, 102.0, 100.98, 102.4947, 103.0071735])
@@ -93,6 +95,8 @@ def test_performance_metrics_handle_no_trades_without_fake_profitability() -> No
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
     result = calculate_performance_metrics(
         equity_curve=[100.0, 100.0, 100.0],
@@ -126,6 +130,8 @@ def test_performance_metrics_validate_inputs() -> None:
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     with pytest.raises(ValueError, match="positive"):

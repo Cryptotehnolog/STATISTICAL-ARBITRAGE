@@ -14,6 +14,9 @@ try {
         -q `
         --no-cov `
         -p no:cacheprovider
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
 }
 finally {
     Pop-Location

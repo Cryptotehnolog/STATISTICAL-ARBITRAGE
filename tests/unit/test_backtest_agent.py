@@ -52,6 +52,7 @@ def session() -> Session:
         yield db_session
     finally:
         db_session.close()
+        engine.dispose()
 
 
 def test_backtest_agent_persists_registry_result_and_memory_summary(
@@ -83,6 +84,8 @@ def test_backtest_agent_persists_registry_result_and_memory_summary(
     assert stored.execution_command == ["stat-arb", "backtest"]
     assert stored.run_timestamp == datetime(2024, 1, 2, tzinfo=UTC)
     assert stored.lock_file_hash
+    assert stored.risk_exit_policy is None
+    assert stored.risk_exit_policy_disabled_reason == "unit test uses convergence-only exits"
     assert stored.gross_pnl == pytest.approx(result.stored_result.gross_pnl)
     assert stored.net_pnl + stored.commission_cost + stored.spread_cost + stored.slippage_cost + stored.funding_cost + stored.borrow_cost == pytest.approx(stored.gross_pnl)
     assert stored.net_pnl_2x_costs < stored.net_pnl_half_costs
@@ -208,7 +211,7 @@ def test_backtest_agent_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "StoredBacktestResult" in script
     assert "DataQualityReportRecord" in script
     assert "check_backtest_agent_boundaries.ps1" in pre_commit
-    assert "& $backtestAgentBoundaryCheckScript" in pre_commit
+    assert "Invoke-RequiredCheck $backtestAgentBoundaryCheckScript" in pre_commit
     assert "Check Backtest Agent boundaries" in ci
     assert "./scripts/check_backtest_agent_boundaries.ps1" in ci
 
@@ -234,6 +237,8 @@ def _agent_input(
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
     cost_config = _verified_cost_config()
     sensitivity = run_cost_sensitivity_analysis(
@@ -370,6 +375,10 @@ def _seed_prerequisites(
                 hedge_ratio=1.0,
                 hedge_ratio_r_squared=0.9,
                 half_life_days=2.0,
+                residual_ljung_box_p_value=0.4,
+                residual_jarque_bera_p_value=0.5,
+                residual_excess_kurtosis=0.1,
+                residual_diagnostics_lags=10,
                 regime_changes_detected=False,
                 passed=passed_test,
                 rejection_reason=None if passed_test else "failed unit-test prerequisite",

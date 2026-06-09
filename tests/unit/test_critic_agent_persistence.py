@@ -52,6 +52,7 @@ def session() -> Session:
         yield db_session
     finally:
         db_session.close()
+        engine.dispose()
 
 
 def test_critic_agent_persists_registry_review_and_memory_summary(session: Session) -> None:
@@ -102,7 +103,7 @@ def test_critic_agent_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "StoredCriticReview" in script
     assert "memory_service\\.write" in script
     assert "check_critic_agent_boundaries.ps1" in pre_commit
-    assert "& $criticAgentBoundaryCheckScript" in pre_commit
+    assert "Invoke-RequiredCheck $criticAgentBoundaryCheckScript" in pre_commit
     assert "Check Critic Agent boundaries" in ci
     assert "./scripts/check_critic_agent_boundaries.ps1" in ci
 
@@ -205,6 +206,10 @@ def _seed_backtest(session: Session) -> UUID:
             hedge_ratio=1.0,
             hedge_ratio_r_squared=0.9,
             half_life_days=2.0,
+            residual_ljung_box_p_value=0.4,
+            residual_jarque_bera_p_value=0.5,
+            residual_excess_kurtosis=0.1,
+            residual_diagnostics_lags=10,
             regime_changes_detected=False,
             passed=True,
             rejection_reason=None,

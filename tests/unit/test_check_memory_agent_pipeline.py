@@ -15,6 +15,10 @@ def test_check_memory_agent_pipeline_runs_contract_tests_and_guards() -> None:
     assert "check_no_legacy_memory_backend_imports.ps1" in script
     assert ".venv\\Scripts\\python.exe" in script
     assert ".venv/bin/python" in script
+    assert "tests/unit/test_memory_agent_full.py" in script
+    assert "tests\\unit\\test_memory_agent_full.py" not in script
+    assert "Invoke-RequiredCheck $memoryContractsCheckScript" in script
+    assert "Invoke-RequiredCheck $legacyMemoryImportsCheckScript" in script
     assert "--no-cov" in script
     assert "-p no:cacheprovider" in script
 

@@ -45,6 +45,7 @@ def session() -> Session:
         yield db_session
     finally:
         db_session.close()
+        engine.dispose()
 
 
 def test_report_agent_generates_artifacts_registry_rows_and_memory_summary(
@@ -236,6 +237,10 @@ def _seed_report_prerequisites(session: Session) -> tuple[UUID, UUID]:
             hedge_ratio=1.0,
             hedge_ratio_r_squared=0.9,
             half_life_days=2.0,
+            residual_ljung_box_p_value=0.4,
+            residual_jarque_bera_p_value=0.5,
+            residual_excess_kurtosis=0.1,
+            residual_diagnostics_lags=10,
             regime_changes_detected=False,
             passed=True,
             rejection_reason=None,

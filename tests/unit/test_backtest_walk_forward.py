@@ -22,6 +22,8 @@ def test_walk_forward_backtest_runs_only_on_test_windows() -> None:
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
         config=BacktestWalkForwardConfig(train_size=4, test_size=2, step_size=2, min_folds=3),
     )
 
@@ -56,6 +58,8 @@ def test_walk_forward_backtest_requires_minimum_fold_count() -> None:
             hedge_ratio=1.0,
             entry_threshold=2.0,
             exit_threshold=0.5,
+            exit_policy=None,
+            risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
             config=BacktestWalkForwardConfig(train_size=6, test_size=2, step_size=2, min_folds=3),
         )
 

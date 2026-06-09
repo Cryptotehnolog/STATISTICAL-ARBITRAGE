@@ -62,6 +62,16 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   registry-linked artifacts so Report Agent can build full visuals from factual data.
 - ApeRAG human graph view: ApeRAG UI is the default inspection path; build a local viewer only
   if the UI proves insufficient.
+- Queue concurrency: before enabling real multi-worker execution, add atomic Coordinator
+  task claiming, a race-condition test, and a composite queue index.
+- Ingestion watermarks and gap repair: Task 15.1 should track dataset freshness and fetch
+  missing ranges instead of only taking a caller-provided `since`.
+- Regime-break exits: keep them out of backtest behavior until an explicit research policy
+  and provenance path exist.
+- Performance work: parallel pair scanning, regime vectorization, walk-forward caching, and
+  backtest core storage changes must be driven by profiling after a workflow runner exists.
+- Hypothesis novelty caching: add only when repeated ApeRAG novelty lookups become a real
+  workflow bottleneck, with explicit cache keys and invalidation.
 
 ## Closed Follow-up
 

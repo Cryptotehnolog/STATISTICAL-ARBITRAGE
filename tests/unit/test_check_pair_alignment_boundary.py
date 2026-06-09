@@ -30,6 +30,6 @@ def test_pair_alignment_boundary_guard_is_in_fast_checks_and_ci() -> None:
     ci = CI_PATH.read_text(encoding="utf-8")
 
     assert "check_pair_alignment_boundary.ps1" in pre_commit
-    assert "& $pairAlignmentBoundaryCheckScript" in pre_commit
+    assert "Invoke-RequiredCheck $pairAlignmentBoundaryCheckScript" in pre_commit
     assert "Check pair alignment boundary" in ci
     assert "./scripts/check_pair_alignment_boundary.ps1" in ci

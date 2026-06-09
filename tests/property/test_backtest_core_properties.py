@@ -33,6 +33,8 @@ def test_backtest_core_preserves_aligned_observation_count(
         hedge_ratio=hedge_ratio,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     assert result.observations == count

@@ -125,6 +125,8 @@ def _persist_backtest_result(
         entry_threshold=request.core_result.entry_threshold,
         exit_threshold=request.core_result.exit_threshold,
         hedge_ratio=request.core_result.hedge_ratio,
+        risk_exit_policy=_risk_exit_policy_payload(request.core_result),
+        risk_exit_policy_disabled_reason=request.core_result.risk_exit_policy_disabled_reason,
         gross_pnl=request.pnl.gross_pnl,
         net_pnl=request.pnl.net_pnl,
         commission_cost=request.pnl.costs.commission_cost,
@@ -150,6 +152,15 @@ def _persist_backtest_result(
     session.add(stored)
     session.flush()
     return stored
+
+
+def _risk_exit_policy_payload(result: BacktestCoreResult) -> dict[str, object] | None:
+    if result.exit_policy is None:
+        return None
+    return {
+        "max_holding_bars": result.exit_policy.max_holding_bars,
+        "emergency_z_score": result.exit_policy.emergency_z_score,
+    }
 
 
 def _memory_request_for(result: StoredBacktestResult) -> MemoryWriteRequest:

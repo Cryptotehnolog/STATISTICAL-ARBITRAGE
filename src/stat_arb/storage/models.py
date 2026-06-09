@@ -221,6 +221,12 @@ class StatisticalTestResult(Base):
     # Mean reversion
     half_life_days: Mapped[float] = mapped_column(Float, nullable=False)
 
+    # Residual diagnostics
+    residual_ljung_box_p_value: Mapped[float] = mapped_column(Float, nullable=False)
+    residual_jarque_bera_p_value: Mapped[float] = mapped_column(Float, nullable=False)
+    residual_excess_kurtosis: Mapped[float] = mapped_column(Float, nullable=False)
+    residual_diagnostics_lags: Mapped[int] = mapped_column(Integer, nullable=False)
+
     # Regime detection
     regime_changes_detected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
@@ -280,6 +286,8 @@ class BacktestResult(Base):
     entry_threshold: Mapped[float] = mapped_column(Float, nullable=False)  # Z-score
     exit_threshold: Mapped[float] = mapped_column(Float, nullable=False)
     hedge_ratio: Mapped[float] = mapped_column(Float, nullable=False)
+    risk_exit_policy: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    risk_exit_policy_disabled_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Performance metrics - PnL
     gross_pnl: Mapped[float] = mapped_column(Float, nullable=False)

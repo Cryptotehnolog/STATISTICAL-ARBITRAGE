@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -16,6 +17,19 @@ from stat_arb.agents import (
 from stat_arb.memory import MemoryWriteRequest
 from stat_arb.statistical import MultipleTestingMethod
 from stat_arb.storage import Base, Hypothesis
+
+_OPEN_SESSIONS: list[Session] = []
+
+
+@pytest.fixture(autouse=True)
+def close_helper_sessions() -> object:
+    """Close helper-created SQLite sessions and dispose their engines."""
+    yield
+    while _OPEN_SESSIONS:
+        session = _OPEN_SESSIONS.pop()
+        bind = session.get_bind()
+        session.close()
+        bind.dispose()
 
 
 class FakeMemoryService:
@@ -421,7 +435,7 @@ def test_hypothesis_agent_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "Hypothesis" in script
     assert "session.add" in script
     assert "check_hypothesis_agent_boundaries.ps1" in pre_commit
-    assert "& $hypothesisAgentBoundaryCheckScript" in pre_commit
+    assert "Invoke-RequiredCheck $hypothesisAgentBoundaryCheckScript" in pre_commit
     assert "Check Hypothesis Agent boundaries" in ci
     assert "./scripts/check_hypothesis_agent_boundaries.ps1" in ci
 
@@ -430,7 +444,9 @@ def _session() -> Session:
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine)
-    return session_factory()
+    db_session = session_factory()
+    _OPEN_SESSIONS.append(db_session)
+    return db_session
 
 
 def _generation_config() -> HypothesisGenerationConfig:

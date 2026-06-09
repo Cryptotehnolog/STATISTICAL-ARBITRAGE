@@ -112,6 +112,7 @@ def test_task_14_agents_share_registry_and_memory_boundaries(
                 adf_regression="c",
                 adf_autolag="AIC",
                 periods_per_day=96.0,
+                residual_diagnostics_lags=10,
                 regime_window=60,
                 regime_mean_shift_threshold=3.0,
                 regime_volatility_ratio_threshold=2.5,
@@ -174,7 +175,9 @@ def test_task_14_agents_share_registry_and_memory_boundaries(
         assert all(request.registry_reference for request in memory.requests)
         assert not any("api_key" in request.body.lower() for request in memory.requests)
     finally:
+        bind = session.get_bind()
         session.close()
+        bind.dispose()
 
 
 def _create_session() -> Session:
@@ -310,6 +313,8 @@ def _backtest_input(
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
     cost_config = _verified_cost_config()
     sensitivity = run_cost_sensitivity_analysis(

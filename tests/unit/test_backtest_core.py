@@ -24,6 +24,8 @@ def test_pair_backtest_core_enters_and_exits_short_spread() -> None:
         hedge_ratio=1.5,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     assert result.observations == 5
@@ -50,6 +52,8 @@ def test_pair_backtest_core_enters_and_exits_long_spread() -> None:
         hedge_ratio=0.8,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     assert result.steps[0].action == BacktestAction.HOLD
@@ -72,6 +76,8 @@ def test_pair_backtest_core_ignores_undefined_zscore_until_signal_exists() -> No
         hedge_ratio=1.0,
         entry_threshold=2.0,
         exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
     )
 
     assert result.steps[0].position == SpreadPosition.FLAT
@@ -91,6 +97,8 @@ def test_pair_backtest_core_validates_aligned_inputs() -> None:
             hedge_ratio=1.0,
             entry_threshold=2.0,
             exit_threshold=0.5,
+            exit_policy=None,
+            risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
         )
 
     timestamps = list(_timestamps(3))
@@ -104,6 +112,8 @@ def test_pair_backtest_core_validates_aligned_inputs() -> None:
             hedge_ratio=1.0,
             entry_threshold=2.0,
             exit_threshold=0.5,
+            exit_policy=None,
+            risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
         )
 
 
@@ -118,6 +128,8 @@ def test_pair_backtest_core_validates_thresholds_and_hedge_ratio() -> None:
             hedge_ratio=0.0,
             entry_threshold=2.0,
             exit_threshold=0.5,
+            exit_policy=None,
+            risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
         )
 
     with pytest.raises(ValueError, match="exit_threshold"):
@@ -129,6 +141,8 @@ def test_pair_backtest_core_validates_thresholds_and_hedge_ratio() -> None:
             hedge_ratio=1.0,
             entry_threshold=1.0,
             exit_threshold=1.0,
+            exit_policy=None,
+            risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
         )
 
     with pytest.raises(ValueError, match="not infinity"):
@@ -140,6 +154,8 @@ def test_pair_backtest_core_validates_thresholds_and_hedge_ratio() -> None:
             hedge_ratio=1.0,
             entry_threshold=2.0,
             exit_threshold=0.5,
+            exit_policy=None,
+            risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
         )
 
 
@@ -157,6 +173,7 @@ def test_pair_backtest_core_exits_after_explicit_max_holding_bars() -> None:
             max_holding_bars=2,
             emergency_z_score=None,
         ),
+        risk_exit_policy_disabled_reason=None,
     )
 
     assert [step.action for step in result.trades] == [
@@ -181,6 +198,7 @@ def test_pair_backtest_core_exits_on_explicit_emergency_zscore() -> None:
             max_holding_bars=None,
             emergency_z_score=5.0,
         ),
+        risk_exit_policy_disabled_reason=None,
     )
 
     assert [step.action for step in result.trades] == [
@@ -203,7 +221,42 @@ def test_pair_backtest_core_requires_explicit_thresholds() -> None:
 
     assert "entry_threshold: float = " not in implementation
     assert "exit_threshold: float = " not in implementation
-    assert "exit_policy: BacktestExitPolicyConfig = " not in implementation
+    assert "exit_policy: BacktestExitPolicyConfig | None = " not in implementation
+    assert "risk_exit_policy_disabled_reason: str | None = " not in implementation
+
+
+def test_pair_backtest_core_requires_reason_when_risk_exit_is_disabled() -> None:
+    """Disabling risk exits is a research decision and must leave provenance."""
+    with pytest.raises(ValueError, match="risk_exit_policy_disabled_reason"):
+        run_pair_backtest_core(
+            prices_a=[100.0, 101.0],
+            prices_b=[100.0, 100.0],
+            z_scores=[0.0, 1.0],
+            aligned_timestamps=_timestamps(2),
+            hedge_ratio=1.0,
+            entry_threshold=2.0,
+            exit_threshold=0.5,
+            exit_policy=None,
+            risk_exit_policy_disabled_reason=None,
+        )
+
+
+def test_pair_backtest_core_records_risk_exit_provenance() -> None:
+    """Core result should carry the exact risk-exit decision into downstream storage."""
+    result = run_pair_backtest_core(
+        prices_a=[100.0, 101.0],
+        prices_b=[100.0, 100.0],
+        z_scores=[0.0, 1.0],
+        aligned_timestamps=_timestamps(2),
+        hedge_ratio=1.0,
+        entry_threshold=2.0,
+        exit_threshold=0.5,
+        exit_policy=None,
+        risk_exit_policy_disabled_reason="unit test validates disabled provenance",
+    )
+
+    assert result.exit_policy is None
+    assert result.risk_exit_policy_disabled_reason == "unit test validates disabled provenance"
 
 
 def _timestamps(count: int) -> tuple[datetime, ...]:

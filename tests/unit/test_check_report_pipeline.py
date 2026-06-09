@@ -20,7 +20,7 @@ def test_check_report_pipeline_is_in_pre_commit_and_ci() -> None:
     ci = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 
     assert "check_report_pipeline.ps1" in pre_commit
-    assert "& $reportPipelineCheckScript" in pre_commit
+    assert "Invoke-RequiredCheck $reportPipelineCheckScript" in pre_commit
     assert "Check Report Agent pipeline" in ci
     assert "./scripts/check_report_pipeline.ps1" in ci
 

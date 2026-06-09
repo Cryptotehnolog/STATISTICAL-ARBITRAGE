@@ -19,6 +19,19 @@ $propertyIntegrationCheckScript = Join-Path $PSScriptRoot "check_property_integr
 $legacyMemoryBackendSurfaceCheckScript = Join-Path $PSScriptRoot "check_no_legacy_memory_backend_user_surface.ps1"
 $legacyMemoryBackendImportsCheckScript = Join-Path $PSScriptRoot "check_no_legacy_memory_backend_imports.ps1"
 
+function Invoke-RequiredCheck {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptPath
+    )
+
+    $global:LASTEXITCODE = 0
+    & $ScriptPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Проверка завершилась с ошибкой: $ScriptPath (exit code $LASTEXITCODE)"
+    }
+}
+
 Write-Output "Запуск локального pre-commit checklist..."
 Write-Output "- Русификация user-facing текста: check_user_facing_russian.ps1"
 Write-Output "- Secret leak guard: check_secret_leaks.ps1"
@@ -41,24 +54,24 @@ Write-Output "- LLM readiness намеренно исключен; отдель�
 
 Push-Location $repoRoot
 try {
-    & $russianCheckScript
-    & $secretLeakCheckScript
-    & $memoryContractsCheckScript
-    & $researchDefaultsCheckScript
-    & $pairAlignmentBoundaryCheckScript
-    & $hypothesisAgentBoundaryCheckScript
-    & $backtestAgentBoundaryCheckScript
-    & $criticAgentBoundaryCheckScript
-    & $criticPipelineCheckScript
-    & $coordinatorAgentBoundaryCheckScript
-    & $coordinatorPipelineCheckScript
-    & $reportPipelineCheckScript
-    & $agentsCheckpointScript
-    & $propertyIntegrationCheckScript
-    & $legacyMemoryBackendSurfaceCheckScript
-    & $legacyMemoryBackendImportsCheckScript
-    & $checkScript
-    exit $LASTEXITCODE
+    Invoke-RequiredCheck $russianCheckScript
+    Invoke-RequiredCheck $secretLeakCheckScript
+    Invoke-RequiredCheck $memoryContractsCheckScript
+    Invoke-RequiredCheck $researchDefaultsCheckScript
+    Invoke-RequiredCheck $pairAlignmentBoundaryCheckScript
+    Invoke-RequiredCheck $hypothesisAgentBoundaryCheckScript
+    Invoke-RequiredCheck $backtestAgentBoundaryCheckScript
+    Invoke-RequiredCheck $criticAgentBoundaryCheckScript
+    Invoke-RequiredCheck $criticPipelineCheckScript
+    Invoke-RequiredCheck $coordinatorAgentBoundaryCheckScript
+    Invoke-RequiredCheck $coordinatorPipelineCheckScript
+    Invoke-RequiredCheck $reportPipelineCheckScript
+    Invoke-RequiredCheck $agentsCheckpointScript
+    Invoke-RequiredCheck $propertyIntegrationCheckScript
+    Invoke-RequiredCheck $legacyMemoryBackendSurfaceCheckScript
+    Invoke-RequiredCheck $legacyMemoryBackendImportsCheckScript
+    Invoke-RequiredCheck $checkScript
+    exit 0
 }
 finally {
     Pop-Location

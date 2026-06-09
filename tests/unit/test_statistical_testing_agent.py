@@ -36,6 +36,7 @@ def session() -> Session:
         yield db_session
     finally:
         db_session.close()
+        engine.dispose()
 
 
 def test_run_statistical_testing_persists_registry_result_and_memory(session: Session) -> None:
@@ -57,6 +58,7 @@ def test_run_statistical_testing_persists_registry_result_and_memory(session: Se
             adf_regression="c",
             adf_autolag="AIC",
             periods_per_day=96.0,
+            residual_diagnostics_lags=10,
             regime_window=60,
             regime_mean_shift_threshold=3.0,
             regime_volatility_ratio_threshold=2.5,
@@ -71,6 +73,12 @@ def test_run_statistical_testing_persists_registry_result_and_memory(session: Se
     assert stored.dataset_a_id == str(dataset_a_id)
     assert stored.dataset_b_id == str(dataset_b_id)
     assert stored.train_end < stored.test_start
+    assert 0.0 <= stored.residual_ljung_box_p_value <= 1.0
+    assert 0.0 <= stored.residual_jarque_bera_p_value <= 1.0
+    assert stored.residual_diagnostics_lags == 10
+    assert result.domain_result.residual_excess_kurtosis == pytest.approx(
+        stored.residual_excess_kurtosis
+    )
     assert stored.passed is True
     assert result.memory_written is True
     assert len(memory.requests) == 1
@@ -97,6 +105,7 @@ def test_run_statistical_testing_requires_passed_quality_reports(session: Sessio
                 adf_regression="c",
                 adf_autolag="AIC",
                 periods_per_day=96.0,
+            residual_diagnostics_lags=10,
                 regime_window=60,
                 regime_mean_shift_threshold=3.0,
                 regime_volatility_ratio_threshold=2.5,
@@ -138,6 +147,7 @@ def test_run_statistical_testing_rejects_hypothesis_dataset_mismatch(session: Se
                 adf_regression="c",
                 adf_autolag="AIC",
                 periods_per_day=96.0,
+            residual_diagnostics_lags=10,
                 regime_window=60,
                 regime_mean_shift_threshold=3.0,
                 regime_volatility_ratio_threshold=2.5,
@@ -169,6 +179,7 @@ def test_run_statistical_testing_validates_chronological_inputs(session: Session
                 adf_regression="c",
                 adf_autolag="AIC",
                 periods_per_day=96.0,
+            residual_diagnostics_lags=10,
                 regime_window=60,
                 regime_mean_shift_threshold=3.0,
                 regime_volatility_ratio_threshold=2.5,

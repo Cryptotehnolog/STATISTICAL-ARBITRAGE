@@ -8,6 +8,88 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0031: Add durable queue concurrency controls before multi-worker execution
+
+Status: open
+
+Why deferred: Coordinator queue claiming is currently a local MVP boundary backed by
+SQLite and no real parallel worker runner exists yet. The current read-then-write claim is
+acceptable for deterministic local checks, but it is not enough for multiple independent
+worker processes.
+
+Follow-up:
+- Before enabling real multi-process or distributed workers, add atomic task claiming.
+- Use optimistic locking/version checks or a database-specific row lock strategy.
+- Add a race-condition test that proves two workers cannot claim the same pending task.
+- Add a composite queue index for `(agent_name, status, priority, created_at)` as part of
+  the same storage/migration hardening.
+
+Related tasks: 13.1, 13.5, 14, 15.x.
+
+### TD-0030: Add ingestion watermarks and gap repair
+
+Status: open
+
+Why deferred: The CCXT source and service pipeline can fetch a bounded batch and validate
+missing bars, but the user-facing ingestion workflow does not yet maintain dataset
+freshness, watermarks, or automatic repair of detected gaps.
+
+Follow-up:
+- Add registry-backed ingestion watermarks per symbol/source/timeframe.
+- Detect missing ranges before and after fetches.
+- Add explicit gap-repair commands that fetch only missing windows.
+- Keep live exchange checks outside ordinary pre-commit.
+
+Related tasks: 4.x, 15.1.
+
+### TD-0029: Add regime-break exit only through explicit research policy
+
+Status: open
+
+Why deferred: Regime detection exists as a statistical/critic signal, but using regime
+breaks to exit positions changes strategy behavior and must not be hidden inside the
+backtest core.
+
+Follow-up:
+- Add a named regime-exit policy only after the research workflow has explicit policy,
+  provenance, and tests for how regime breaks affect entries/exits.
+- Store the policy in the backtest reproducibility manifest and registry-side provenance.
+- Keep current regime detection as diagnostic evidence until that policy exists.
+
+Related tasks: 6.x, 7.x, 10.3, 15.6.
+
+### TD-0028: Add profile-guided performance work after workflow runner exists
+
+Status: open
+
+Why deferred: Parallel pair scanning, rolling-window caching, regime vectorization, and
+columnar backtest result storage can improve performance, but optimizing before a real
+workflow runner and profiler output risks making the code harder to trust.
+
+Follow-up:
+- Add profiling around pair screening, statistical tests, walk-forward windows, regime
+  detection, and backtest core after the first workflow runner exists.
+- Use the results to decide whether to add ProcessPool/joblib parallelism, vectorize
+  `regime.py`, cache overlapping walk-forward calculations, or change backtest core storage.
+- Keep Python reference behavior and property tests before any Rust or columnar rewrite.
+
+Related tasks: 13.x, 15.x, 18.x, TD-0010.
+
+### TD-0027: Cache hypothesis novelty lookups after real agent workflow exists
+
+Status: open
+
+Why deferred: Hypothesis novelty checks can query ApeRAG, but there is no long-running
+agent workflow that repeatedly asks the same novelty questions yet.
+
+Follow-up:
+- Add a bounded cache keyed by normalized pair, query, memory backend, and curated
+  collection/version when repeated novelty lookups become measurable latency.
+- Do not silently cache LLM reasoning outputs without provenance and invalidation rules.
+- Keep OmniRoute/FreeDeepseek/FreeQwen fallback behavior explicit.
+
+Related tasks: 9.x, 11.x, 15.x, TD-0013.
+
 ### TD-0023: Persist chart-ready report series sidecars
 
 Status: open

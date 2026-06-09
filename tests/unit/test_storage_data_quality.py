@@ -62,8 +62,11 @@ def session() -> Session:
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine)
     db_session = session_factory()
-    yield db_session
-    db_session.close()
+    try:
+        yield db_session
+    finally:
+        db_session.close()
+        engine.dispose()
     engine.dispose()
 
 

@@ -28,6 +28,6 @@ def test_check_agents_checkpoint_is_in_pre_commit_and_ci() -> None:
     ci = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 
     assert "check_agents_checkpoint.ps1" in pre_commit
-    assert "& $agentsCheckpointScript" in pre_commit
+    assert "Invoke-RequiredCheck $agentsCheckpointScript" in pre_commit
     assert "Check agents checkpoint" in ci
     assert "./scripts/check_agents_checkpoint.ps1" in ci

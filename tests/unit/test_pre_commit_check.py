@@ -15,7 +15,7 @@ def test_pre_commit_check_includes_memory_contract_guard() -> None:
 
     assert "check_memory_contracts.ps1" in script
     assert "$memoryContractsCheckScript" in script
-    assert "& $memoryContractsCheckScript" in script
+    assert "Invoke-RequiredCheck $memoryContractsCheckScript" in script
 
 
 def test_pre_commit_check_includes_research_defaults_guard() -> None:
@@ -24,7 +24,7 @@ def test_pre_commit_check_includes_research_defaults_guard() -> None:
 
     assert "check_research_defaults.ps1" in script
     assert "$researchDefaultsCheckScript" in script
-    assert "& $researchDefaultsCheckScript" in script
+    assert "Invoke-RequiredCheck $researchDefaultsCheckScript" in script
 
 
 def test_pre_commit_check_includes_legacy_backend_import_guard() -> None:
@@ -33,7 +33,7 @@ def test_pre_commit_check_includes_legacy_backend_import_guard() -> None:
 
     assert "check_no_legacy_memory_backend_imports.ps1" in script
     assert "$legacyMemoryBackendImportsCheckScript" in script
-    assert "& $legacyMemoryBackendImportsCheckScript" in script
+    assert "Invoke-RequiredCheck $legacyMemoryBackendImportsCheckScript" in script
 
 
 def test_pre_commit_check_includes_backtest_agent_boundary_guard() -> None:
@@ -42,7 +42,7 @@ def test_pre_commit_check_includes_backtest_agent_boundary_guard() -> None:
 
     assert "check_backtest_agent_boundaries.ps1" in script
     assert "$backtestAgentBoundaryCheckScript" in script
-    assert "& $backtestAgentBoundaryCheckScript" in script
+    assert "Invoke-RequiredCheck $backtestAgentBoundaryCheckScript" in script
 
 
 def test_pre_commit_check_includes_property_integration_smoke() -> None:
@@ -51,7 +51,7 @@ def test_pre_commit_check_includes_property_integration_smoke() -> None:
 
     assert "check_property_integration.ps1" in script
     assert "$propertyIntegrationCheckScript" in script
-    assert "& $propertyIntegrationCheckScript" in script
+    assert "Invoke-RequiredCheck $propertyIntegrationCheckScript" in script
 
 
 def test_check_scripts_exit_on_native_command_failure() -> None:

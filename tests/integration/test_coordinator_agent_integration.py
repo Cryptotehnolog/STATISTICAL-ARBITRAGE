@@ -103,7 +103,9 @@ def test_coordinator_agent_boundary_runs_lifecycle_queue_permissions_and_memory(
         assert memory.requests[0].registry_reference == f"registry:experiments/{experiment_id}"
         assert memory.requests[0].metadata["final_decision"] == "approved"
     finally:
+        bind = session.get_bind()
         session.close()
+        bind.dispose()
 
 
 def _create_session() -> Session:

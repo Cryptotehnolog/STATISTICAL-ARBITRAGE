@@ -22,6 +22,6 @@ def test_check_critic_pipeline_is_in_pre_commit_and_ci() -> None:
     ci = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 
     assert "check_critic_pipeline.ps1" in pre_commit
-    assert "& $criticPipelineCheckScript" in pre_commit
+    assert "Invoke-RequiredCheck $criticPipelineCheckScript" in pre_commit
     assert "Check Critic Agent pipeline" in ci
     assert "./scripts/check_critic_pipeline.ps1" in ci

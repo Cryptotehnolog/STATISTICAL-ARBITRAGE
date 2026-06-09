@@ -41,7 +41,10 @@ def engine():
         cursor.close()
 
     Base.metadata.create_all(engine)
-    return engine
+    try:
+        yield engine
+    finally:
+        engine.dispose()
 
 
 @pytest.fixture
@@ -49,8 +52,10 @@ def session(engine):
     """Create a database session for testing."""
     SessionFactory = sessionmaker(bind=engine)
     session = SessionFactory()
-    yield session
-    session.close()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 def test_hypothesis_creation(session: Session):
@@ -208,6 +213,10 @@ def test_statistical_test_result_creation(session: Session):
         hedge_ratio=1.5,
         hedge_ratio_r_squared=0.85,
         half_life_days=5.2,
+        residual_ljung_box_p_value=0.4,
+        residual_jarque_bera_p_value=0.5,
+        residual_excess_kurtosis=0.1,
+        residual_diagnostics_lags=10,
         regime_changes_detected=False,
         passed=True,
     )
@@ -272,6 +281,10 @@ def test_backtest_result_creation(session: Session):
         hedge_ratio=1.5,
         hedge_ratio_r_squared=0.85,
         half_life_days=5.2,
+        residual_ljung_box_p_value=0.4,
+        residual_jarque_bera_p_value=0.5,
+        residual_excess_kurtosis=0.1,
+        residual_diagnostics_lags=10,
         passed=True,
     )
 
@@ -387,6 +400,10 @@ def test_critic_review_creation(session: Session):
         hedge_ratio=1.5,
         hedge_ratio_r_squared=0.85,
         half_life_days=5.2,
+        residual_ljung_box_p_value=0.4,
+        residual_jarque_bera_p_value=0.5,
+        residual_excess_kurtosis=0.1,
+        residual_diagnostics_lags=10,
         passed=True,
     )
     backtest = BacktestResult(

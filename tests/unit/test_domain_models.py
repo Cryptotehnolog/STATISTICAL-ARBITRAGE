@@ -281,6 +281,10 @@ def test_statistical_test_requires_ordered_windows_and_rejection_reason() -> Non
         hedge_ratio=1.2,
         hedge_ratio_r_squared=0.8,
         half_life_days=5.0,
+        residual_ljung_box_p_value=0.4,
+        residual_jarque_bera_p_value=0.5,
+        residual_excess_kurtosis=0.1,
+        residual_diagnostics_lags=10,
         passed=True,
     )
 
@@ -302,6 +306,10 @@ def test_statistical_test_requires_ordered_windows_and_rejection_reason() -> Non
             hedge_ratio=1.0,
             hedge_ratio_r_squared=0.1,
             half_life_days=5.0,
+            residual_ljung_box_p_value=0.4,
+            residual_jarque_bera_p_value=0.5,
+            residual_excess_kurtosis=0.1,
+            residual_diagnostics_lags=10,
             passed=False,
         )
 
@@ -329,6 +337,8 @@ def test_backtest_validates_cost_attribution() -> None:
         "entry_threshold": 2.0,
         "exit_threshold": 0.5,
         "hedge_ratio": 1.2,
+        "risk_exit_policy": None,
+        "risk_exit_policy_disabled_reason": "unit test uses convergence-only exits",
         "gross_pnl": 100.0,
         "commission_cost": 10.0,
         "spread_cost": 5.0,
@@ -596,6 +606,10 @@ def test_all_domain_models_round_trip_through_json() -> None:
             hedge_ratio=1.4,
             hedge_ratio_r_squared=0.82,
             half_life_days=4.5,
+            residual_ljung_box_p_value=0.4,
+            residual_jarque_bera_p_value=0.5,
+            residual_excess_kurtosis=0.1,
+            residual_diagnostics_lags=10,
             passed=True,
         ),
         BacktestResult(
@@ -618,6 +632,8 @@ def test_all_domain_models_round_trip_through_json() -> None:
             entry_threshold=2.0,
             exit_threshold=0.5,
             hedge_ratio=1.4,
+            risk_exit_policy=None,
+            risk_exit_policy_disabled_reason="unit test uses convergence-only exits",
             gross_pnl=100.0,
             net_pnl=80.0,
             commission_cost=10.0,

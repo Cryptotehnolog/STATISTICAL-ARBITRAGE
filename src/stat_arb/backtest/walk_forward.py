@@ -8,7 +8,11 @@ from datetime import datetime
 import numpy as np
 from numpy.typing import ArrayLike
 
-from stat_arb.backtest.core import BacktestCoreResult, run_pair_backtest_core
+from stat_arb.backtest.core import (
+    BacktestCoreResult,
+    BacktestExitPolicyConfig,
+    run_pair_backtest_core,
+)
 from stat_arb.statistical.validation import (
     WalkForwardWindow,
     assert_no_lookahead,
@@ -78,6 +82,8 @@ def run_walk_forward_backtest_core(
     hedge_ratio: float,
     entry_threshold: float,
     exit_threshold: float,
+    exit_policy: BacktestExitPolicyConfig | None,
+    risk_exit_policy_disabled_reason: str | None,
     config: BacktestWalkForwardConfig,
 ) -> BacktestWalkForwardResult:
     """Run pure pair backtest core on chronological walk-forward test windows."""
@@ -105,6 +111,8 @@ def run_walk_forward_backtest_core(
                 hedge_ratio=hedge_ratio,
                 entry_threshold=entry_threshold,
                 exit_threshold=exit_threshold,
+                exit_policy=exit_policy,
+                risk_exit_policy_disabled_reason=risk_exit_policy_disabled_reason,
             ),
         )
         for window in windows
