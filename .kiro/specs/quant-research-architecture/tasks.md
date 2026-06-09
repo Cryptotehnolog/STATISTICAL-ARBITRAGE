@@ -457,7 +457,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 18.8_
 
 - [ ] 13. Build Coordinator Agent
-  - [ ] 13.1 Implement task queue management
+  - [x] 13.1 Implement task queue management
     - Create task queue with priority support
     - Implement task assignment to agents
     - Track task status and completion
@@ -465,7 +465,8 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Define explicit retry limits and resource-aware parallelism limits
     - Implemented registry-backed queue records with priority, agent assignment, status,
       retry accounting, and recovery listing for running tasks
-    - Remaining before closing 13.1: resource-aware parallelism limits
+    - Implemented explicit CoordinatorResourcePolicy with global and per-agent running-task
+      limits enforced at the claim boundary
     - _Requirements: 12.1_
   
   - [x] 13.2 Implement experiment lifecycle state machine

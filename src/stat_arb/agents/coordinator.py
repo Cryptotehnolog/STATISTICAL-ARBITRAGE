@@ -102,6 +102,31 @@ class CoordinatorTaskRequest:
 
 
 @dataclass(frozen=True)
+class CoordinatorResourcePolicy:
+    """Explicit resource limits for claiming Coordinator queue work."""
+
+    max_running_tasks: int
+    max_running_tasks_per_agent: dict[str, int]
+
+    def __post_init__(self) -> None:
+        if isinstance(self.max_running_tasks, bool) or not isinstance(
+            self.max_running_tasks, int
+        ):
+            raise TypeError("max_running_tasks must be an integer")
+        if self.max_running_tasks <= 0:
+            raise ValueError("max_running_tasks must be positive")
+        if not self.max_running_tasks_per_agent:
+            raise ValueError("max_running_tasks_per_agent is required")
+        for agent_name, limit in self.max_running_tasks_per_agent.items():
+            if not isinstance(agent_name, str) or not agent_name.strip():
+                raise ValueError("agent names in resource policy must be non-empty strings")
+            if isinstance(limit, bool) or not isinstance(limit, int):
+                raise TypeError("per-agent running task limits must be integers")
+            if limit <= 0:
+                raise ValueError("per-agent running task limits must be positive")
+
+
+@dataclass(frozen=True)
 class CoordinatorTransitionResult:
     """Result of a registry-backed Coordinator lifecycle transition."""
 
@@ -178,15 +203,24 @@ def enqueue_coordinator_task(
 def claim_next_coordinator_task(
     *,
     agent_name: str,
+    policy: CoordinatorResourcePolicy,
     session: Session,
 ) -> CoordinatorTask | None:
     """Claim the highest-priority pending task for one agent."""
     if not agent_name.strip():
         raise ValueError("agent_name is required")
+    normalized_agent = agent_name.strip()
+    _validate_agent_has_resource_policy(normalized_agent, policy)
+    if _running_task_count(session) >= policy.max_running_tasks:
+        return None
+    if _running_task_count(session, agent_name=normalized_agent) >= policy.max_running_tasks_per_agent[
+        normalized_agent
+    ]:
+        return None
     task = (
         session.query(CoordinatorTask)
         .filter(
-            CoordinatorTask.agent_name == agent_name.strip(),
+            CoordinatorTask.agent_name == normalized_agent,
             CoordinatorTask.status == CoordinatorTaskStatus.PENDING.value,
         )
         .order_by(CoordinatorTask.priority.asc(), CoordinatorTask.created_at.asc())
@@ -249,6 +283,23 @@ def list_recoverable_coordinator_tasks(*, session: Session) -> list[CoordinatorT
         .order_by(CoordinatorTask.priority.asc(), CoordinatorTask.started_at.asc())
         .all()
     )
+
+
+def _running_task_count(session: Session, *, agent_name: str | None = None) -> int:
+    query = session.query(CoordinatorTask).filter(
+        CoordinatorTask.status == CoordinatorTaskStatus.RUNNING.value
+    )
+    if agent_name is not None:
+        query = query.filter(CoordinatorTask.agent_name == agent_name)
+    return int(query.count())
+
+
+def _validate_agent_has_resource_policy(
+    agent_name: str,
+    policy: CoordinatorResourcePolicy,
+) -> None:
+    if agent_name not in policy.max_running_tasks_per_agent:
+        raise ValueError(f"resource policy is required for agent {agent_name}")
 
 
 def transition_experiment_lifecycle(

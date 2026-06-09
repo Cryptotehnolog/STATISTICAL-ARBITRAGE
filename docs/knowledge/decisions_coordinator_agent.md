@@ -42,19 +42,22 @@ Status: accepted
 Decision: Coordinator task queue state is represented by durable `coordinator_tasks`
 registry rows. Each task stores experiment link, task type, assigned agent, explicit
 priority, explicit retry budget, attempt count, status, payload, last error, and timestamps.
+Claiming work also requires an explicit `CoordinatorResourcePolicy` with global and
+per-agent running-task limits.
 
 Rationale: The Coordinator must recover after process restarts and must not hide retry or
 priority assumptions in runtime defaults. The first Task 13.1 boundary is intentionally a
-small queue contract, not a full scheduler. It supports priority-based claim, completion,
-retryable failure, exhausted failure, and listing running tasks that need recovery after a
-restart.
+small queue contract, not a full scheduler. It supports priority-based claim, resource
+limit checks, completion, retryable failure, exhausted failure, and listing running tasks
+that need recovery after a restart.
 
 Rules:
 - Task requests must provide priority and max attempts explicitly.
+- Claiming tasks must provide `CoordinatorResourcePolicy` explicitly.
+- The queue must block claims that exceed either global or per-agent running-task limits.
 - Queue state belongs in the structured registry, not in ApeRAG.
 - ApeRAG receives only policy-safe Coordinator lifecycle summaries, not raw queue payloads.
-- Resource-aware parallelism limits remain a separate Task 13.1 follow-up before the
-  entire queue management task can be marked complete.
+- Background scheduler behavior is intentionally out of scope for this boundary.
 
 Verification:
 - `tests/unit/test_coordinator_agent.py`

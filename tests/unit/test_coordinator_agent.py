@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.agents.coordinator import (
+    CoordinatorResourcePolicy,
     CoordinatorTaskRequest,
     CoordinatorTransitionRequest,
     ExperimentFinalDecision,
@@ -167,6 +168,8 @@ def test_coordinator_boundary_guard_is_in_pre_commit_and_ci() -> None:
 
     assert "ApeRAGMemoryClient" in script
     assert "Experiment" in script
+    assert "CoordinatorResourcePolicy" in script
+    assert "max_running_tasks_per_agent" in script
     assert "memory_service\\.write" in script
     assert "check_coordinator_agent_boundaries.ps1" in pre_commit
     assert "& $coordinatorAgentBoundaryCheckScript" in pre_commit
@@ -201,7 +204,11 @@ def test_coordinator_queue_claims_highest_priority_pending_task(session: Session
         session=session,
     )
 
-    claimed = claim_next_coordinator_task(agent_name="data_agent", session=session)
+    claimed = claim_next_coordinator_task(
+        agent_name="data_agent",
+        policy=_resource_policy(data_agent=1),
+        session=session,
+    )
 
     assert claimed is not None
     assert claimed.task_id == high.task_id
@@ -228,7 +235,11 @@ def test_coordinator_queue_records_retryable_failure_and_exhausted_failure(
         session=session,
     )
 
-    claimed = claim_next_coordinator_task(agent_name="statistical_testing_agent", session=session)
+    claimed = claim_next_coordinator_task(
+        agent_name="statistical_testing_agent",
+        policy=_resource_policy(statistical_testing_agent=1),
+        session=session,
+    )
     assert claimed is not None
     retryable = fail_coordinator_task(
         task_id=claimed.task_id,
@@ -240,6 +251,7 @@ def test_coordinator_queue_records_retryable_failure_and_exhausted_failure(
 
     claimed_again = claim_next_coordinator_task(
         agent_name="statistical_testing_agent",
+        policy=_resource_policy(statistical_testing_agent=1),
         session=session,
     )
     assert claimed_again is not None
@@ -266,7 +278,11 @@ def test_coordinator_queue_recovers_running_tasks_after_restart(session: Session
         ),
         session=session,
     )
-    claimed = claim_next_coordinator_task(agent_name="backtest_agent", session=session)
+    claimed = claim_next_coordinator_task(
+        agent_name="backtest_agent",
+        policy=_resource_policy(backtest_agent=1, report_agent=1),
+        session=session,
+    )
     assert claimed is not None
     enqueue_coordinator_task(
         CoordinatorTaskRequest(
@@ -279,7 +295,11 @@ def test_coordinator_queue_recovers_running_tasks_after_restart(session: Session
         ),
         session=session,
     )
-    completed = claim_next_coordinator_task(agent_name="report_agent", session=session)
+    completed = claim_next_coordinator_task(
+        agent_name="report_agent",
+        policy=_resource_policy(backtest_agent=1, report_agent=1),
+        session=session,
+    )
     assert completed is not None
     complete_coordinator_task(task_id=completed.task_id, session=session)
 
@@ -299,6 +319,97 @@ def test_coordinator_task_request_requires_explicit_retry_and_priority() -> None
             agent_name="backtest_agent",
             payload={},
         )
+
+
+def test_coordinator_resource_policy_blocks_per_agent_parallelism_limit(
+    session: Session,
+) -> None:
+    """Per-agent limits should prevent claiming more running tasks for one agent."""
+    experiment_id = _seed_experiment(session, status="data_validation")
+    policy = CoordinatorResourcePolicy(
+        max_running_tasks=3,
+        max_running_tasks_per_agent={"data_agent": 1, "report_agent": 1},
+    )
+    for symbol in ("AAA", "BBB"):
+        enqueue_coordinator_task(
+            CoordinatorTaskRequest(
+                experiment_id=experiment_id,
+                task_type="validate_data",
+                agent_name="data_agent",
+                priority=1,
+                max_attempts=1,
+                payload={"symbol": symbol},
+            ),
+            session=session,
+        )
+
+    first = claim_next_coordinator_task(agent_name="data_agent", policy=policy, session=session)
+    second = claim_next_coordinator_task(agent_name="data_agent", policy=policy, session=session)
+
+    assert first is not None
+    assert second is None
+    assert session.query(CoordinatorTask).filter_by(status="running").count() == 1
+    assert session.query(CoordinatorTask).filter_by(status="pending").count() == 1
+
+
+def test_coordinator_resource_policy_blocks_global_parallelism_limit(
+    session: Session,
+) -> None:
+    """Global limits should prevent claiming work even when an agent has free capacity."""
+    experiment_id = _seed_experiment(session, status="backtesting")
+    policy = CoordinatorResourcePolicy(
+        max_running_tasks=1,
+        max_running_tasks_per_agent={"backtest_agent": 1, "report_agent": 1},
+    )
+    enqueue_coordinator_task(
+        CoordinatorTaskRequest(
+            experiment_id=experiment_id,
+            task_type="run_backtest",
+            agent_name="backtest_agent",
+            priority=1,
+            max_attempts=1,
+            payload={},
+        ),
+        session=session,
+    )
+    enqueue_coordinator_task(
+        CoordinatorTaskRequest(
+            experiment_id=experiment_id,
+            task_type="write_report",
+            agent_name="report_agent",
+            priority=1,
+            max_attempts=1,
+            payload={},
+        ),
+        session=session,
+    )
+
+    first = claim_next_coordinator_task(agent_name="backtest_agent", policy=policy, session=session)
+    second = claim_next_coordinator_task(agent_name="report_agent", policy=policy, session=session)
+
+    assert first is not None
+    assert second is None
+    assert session.query(CoordinatorTask).filter_by(status="running").count() == 1
+    assert session.query(CoordinatorTask).filter_by(status="pending").count() == 1
+
+
+def test_coordinator_claim_requires_explicit_resource_policy(session: Session) -> None:
+    """Claiming work without resource policy should fail at the API boundary."""
+    experiment_id = _seed_experiment(session, status="data_validation")
+    enqueue_coordinator_task(
+        CoordinatorTaskRequest(
+            experiment_id=experiment_id,
+            task_type="validate_data",
+            agent_name="data_agent",
+            priority=1,
+            max_attempts=1,
+            payload={},
+        ),
+        session=session,
+    )
+
+    with pytest.raises(TypeError):
+        claim_next_coordinator_task(agent_name="data_agent", session=session)  # type: ignore[call-arg]
 
 
 def _seed_experiment(session: Session, *, status: str) -> str:
@@ -326,3 +437,10 @@ def _seed_experiment(session: Session, *, status: str) -> str:
     )
     session.commit()
     return str(experiment_id)
+
+
+def _resource_policy(**per_agent: int) -> CoordinatorResourcePolicy:
+    return CoordinatorResourcePolicy(
+        max_running_tasks=sum(per_agent.values()),
+        max_running_tasks_per_agent=per_agent,
+    )

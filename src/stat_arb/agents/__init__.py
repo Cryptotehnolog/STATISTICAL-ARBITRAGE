@@ -6,6 +6,7 @@ from stat_arb.agents.backtest import (
     run_backtest_agent_persistence,
 )
 from stat_arb.agents.coordinator import (
+    CoordinatorResourcePolicy,
     CoordinatorTaskRequest,
     CoordinatorTaskStatus,
     CoordinatorTransitionRequest,
@@ -95,6 +96,7 @@ __all__ = [
     "CriticWeakAssumptionEvidence",
     "CriticWeakAssumptionPolicy",
     "CoordinatorTaskRequest",
+    "CoordinatorResourcePolicy",
     "CoordinatorTaskStatus",
     "CoordinatorTransitionRequest",
     "CoordinatorTransitionResult",

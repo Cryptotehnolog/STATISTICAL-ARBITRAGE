@@ -31,9 +31,18 @@ if ($source -notmatch "max_attempts" -or $source -notmatch "attempt_count" -or $
 }
 
 if (
-    $source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =|priority: int =|max_attempts: int ="
+    $source -notmatch "CoordinatorResourcePolicy" -or
+    $source -notmatch "max_running_tasks" -or
+    $source -notmatch "max_running_tasks_per_agent" -or
+    $source -notmatch "_running_task_count"
 ) {
-    Write-Error "Coordinator Agent не должен прятать lifecycle/task defaults в request config."
+    Write-Error "Coordinator task queue должен явно ограничивать global/per-agent parallelism через resource policy."
+}
+
+if (
+    $source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =|priority: int =|max_attempts: int =|max_running_tasks: int =|max_running_tasks_per_agent: dict\[str, int\] =|policy: CoordinatorResourcePolicy \| None ="
+) {
+    Write-Error "Coordinator Agent не должен прятать lifecycle/task/resource defaults в request config."
 }
 
 Write-Output "Проверка Coordinator Agent boundaries прошла."
