@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -20,10 +20,22 @@ class MemoryRecordType(StrEnum):
 
     DECISION = "decision"
     LESSON = "lesson"
+    MARKET_KNOWLEDGE = "market_knowledge"
+    DEVELOPMENT_KNOWLEDGE = "development_knowledge"
+    AGENT_DECISION = "agent_decision"
     HYPOTHESIS = "hypothesis"
     DATA_QUALITY_FAILURE = "data_quality_failure"
     CRITIC_REVIEW = "critic_review"
     REPORT_SUMMARY = "report_summary"
+    MANUAL_NOTE = "manual_note"
+
+
+class MemoryQueryType(StrEnum):
+    """High-level query patterns supported by the Memory Agent."""
+
+    TOPIC = "topic"
+    ENTITY = "entity"
+    RELATIONSHIP = "relationship"
 
 
 class MemoryModel(BaseModel):
@@ -73,6 +85,26 @@ class MemoryWriteRequest(MemoryModel):
                 lines.append(f"- {key}: {self.metadata[key]}")
         lines.extend(["", self.body.strip(), ""])
         return "\n".join(lines)
+
+
+class MemoryQueryRequest(MemoryModel):
+    """Contract for agent-facing memory queries."""
+
+    query_type: MemoryQueryType
+    query: str = Field(min_length=1, max_length=500)
+    scope: Literal["project", "agent"] = "agent"
+    keywords: list[str] = Field(default_factory=list)
+    expected_markers: list[str] = Field(default_factory=list)
+    relationship: str | None = Field(default=None, min_length=1, max_length=100)
+    top_k: int | None = Field(default=None, ge=1, le=50)
+    max_depth: int | None = Field(default=None, ge=1, le=5)
+
+    @field_validator("keywords", "expected_markers")
+    @classmethod
+    def normalize_string_list(cls, value: list[str]) -> list[str]:
+        """Normalize query helper lists for stable matching."""
+        normalized = [item.strip() for item in value if item.strip()]
+        return list(dict.fromkeys(normalized))
 
 
 class ApeRAGCollection(MemoryModel):
@@ -128,6 +160,19 @@ class ApeRAGGraphSummary(MemoryModel):
         return self.labels > 0 and self.nodes > 0 and self.edges > 0
 
 
+class MemoryQueryResult(MemoryModel):
+    """Result of a Memory Agent query with retrieval-quality markers."""
+
+    results: tuple[ApeRAGSearchResult, ...]
+    missing_markers: tuple[str, ...] = ()
+    graph_summary: ApeRAGGraphSummary | None = None
+
+    @property
+    def ready(self) -> bool:
+        """Return True when query results contain all required markers."""
+        return len(self.missing_markers) == 0
+
+
 class ApeRAGMemoryClient:
     """Small HTTP client for the active ApeRAG memory backend."""
 
@@ -161,6 +206,16 @@ class ApeRAGMemoryClient:
         if self.config.api_key:
             headers["Authorization"] = f"Bearer {self.config.api_key}"
         return headers
+
+    @property
+    def project_collection_title(self) -> str:
+        """Return the project knowledge collection title."""
+        return self.config.collection_title
+
+    @property
+    def agent_collection_title(self) -> str:
+        """Return the operational agent memory collection title."""
+        return self.config.agent_collection_title
 
     def _request(
         self,
@@ -312,12 +367,13 @@ class ApeRAGMemoryClient:
         self,
         query: str,
         *,
+        collection_title: str | None = None,
         collection_id: str | None = None,
         keywords: list[str] | None = None,
         top_k: int | None = None,
     ) -> list[ApeRAGSearchResult]:
         """Search active ApeRAG memory with vector and full-text retrieval."""
-        resolved_collection_id = collection_id or self.get_collection().id
+        resolved_collection_id = collection_id or self.get_collection(collection_title).id
         resolved_top_k = top_k or self.config.search_top_k
         payload: dict[str, Any] = {
             "query": query,
@@ -339,9 +395,14 @@ class ApeRAGMemoryClient:
         )
         return [self._parse_search_result(item) for item in data.get("items", [])]
 
-    def get_graph_summary(self, collection_id: str | None = None) -> ApeRAGGraphSummary:
+    def get_graph_summary(
+        self,
+        *,
+        collection_title: str | None = None,
+        collection_id: str | None = None,
+    ) -> ApeRAGGraphSummary:
         """Return label/node/edge counts from ApeRAG graph endpoints."""
-        resolved_collection_id = collection_id or self.get_collection().id
+        resolved_collection_id = collection_id or self.get_collection(collection_title).id
         labels = self._request("GET", f"/api/v1/collections/{resolved_collection_id}/graphs/labels")
         graph = self._request(
             "GET",
@@ -352,6 +413,51 @@ class ApeRAGMemoryClient:
             nodes=len(graph.get("nodes") or []),
             edges=len(graph.get("edges") or []),
         )
+
+    def query_relationships(
+        self,
+        entity: str,
+        *,
+        collection_title: str | None = None,
+        relationship: str | None = None,
+        max_depth: int | None = None,
+    ) -> list[ApeRAGSearchResult]:
+        """Query ApeRAG graph relationships around an entity."""
+        resolved_collection_id = self.get_collection(collection_title).id
+        depth = max_depth or 2
+        graph = self._request(
+            "GET",
+            f"/api/v1/collections/{resolved_collection_id}/graphs?max_nodes=1000&max_depth={depth}",
+        )
+        entity_lower = entity.lower()
+        relationship_lower = relationship.lower() if relationship else None
+        results: list[ApeRAGSearchResult] = []
+        for edge in graph.get("edges") or []:
+            edge_text = " ".join(str(edge.get(key, "")) for key in sorted(edge))
+            if entity_lower not in edge_text.lower():
+                continue
+            if relationship_lower and relationship_lower not in edge_text.lower():
+                continue
+            results.append(
+                ApeRAGSearchResult(
+                    text=edge_text,
+                    source="graph",
+                    metadata={"edge": edge},
+                )
+            )
+        if results:
+            return results
+        for node in graph.get("nodes") or []:
+            node_text = " ".join(str(node.get(key, "")) for key in sorted(node))
+            if entity_lower in node_text.lower():
+                results.append(
+                    ApeRAGSearchResult(
+                        text=node_text,
+                        source="graph",
+                        metadata={"node": node},
+                    )
+                )
+        return results
 
     def write_markdown_document(
         self,

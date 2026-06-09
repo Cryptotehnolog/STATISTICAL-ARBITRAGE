@@ -374,37 +374,41 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Expanded `scripts/check_critic_pipeline.ps1` to cover 10.1-10.8 in one checkpoint
     - _Requirements: 18.8_
 
-- [ ] 11. Build full Memory Agent on top of the existing ApeRAG boundary
-  - [ ] 11.1 Complete policy-controlled ApeRAG write operations
+- [x] 11. Build full Memory Agent on top of the existing ApeRAG boundary
+  - [x] 11.1 Complete policy-controlled ApeRAG write operations
     - Store market knowledge (sectors, relationships)
     - Store development knowledge (architecture decisions)
     - Store agent decisions (hypotheses, test summaries, backtest conclusions)
     - Store manual notes from users
     - Require all agent writes to pass through Memory Agent policy rules
     - Introduce a `MemoryBackend` adapter boundary so ApeRAG can be replaced without changing agent-facing modules
+    - Implemented typed record routing for project knowledge vs operational agent memory
     - _Requirements: 8.2-8.10, 8.15_
 
-  - [ ] 11.2 Complete ApeRAG query operations
+  - [x] 11.2 Complete ApeRAG query operations
     - Query by topic (retrieve relevant context)
     - Query by entity (find all info about asset/hypothesis/experiment)
     - Query by relationship (traverse graph for related hypotheses)
     - Keep project knowledge and operational agent memory as separate collections
     - Add curated retrieval-quality checks with expected registry IDs, decision IDs, or topic markers
     - Keep retrieval readiness checks separate from full agent answer-quality evaluation
+    - Implemented `MemoryQueryRequest` / `MemoryQueryResult` with topic, entity, and relationship query modes
     - _Requirements: 8.2-8.10, 8.13, 8.14_
   
-  - [ ] 11.3 Harden memory filtering rules
+  - [x] 11.3 Harden memory filtering rules
     - Prevent storing raw logs, prompts, large datasets, secrets
     - Reference registry IDs instead of duplicating numeric metrics
     - Prevent direct agent-facing ApeRAG writes that bypass policy boundary
     - Implement degraded memory write handling through explicit safe mode or a durable write-ahead queue
+    - Added raw-log and dataset-dump filters plus durable JSONL write-ahead queue for backend outages
     - _Requirements: 8.11, 8.12, 8.15_
   
-  - [ ]* 11.4 Write integration tests for Memory Agent
+  - [x]* 11.4 Write integration tests for Memory Agent
     - Test write and query operations
     - Test memory filtering rules
     - Test graph traversal
     - Test that agent-facing modules use Memory Agent policy instead of direct ApeRAG writes
+    - Added `scripts/check_memory_agent_pipeline.ps1` as the deterministic Task 11 checkpoint
     - _Requirements: 18.8_
 
 - [ ] 12. Build Report Agent

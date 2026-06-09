@@ -8,6 +8,26 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0022: Pilot Ruflo read-only swarm audit after Task 11
+
+Status: open
+
+Why deferred: Ruflo can potentially improve review quality through specialized agent
+swarms, but its full install path includes MCP, hooks, daemon/background workers, and
+environment-level automation. That is too broad for the main project while secrets,
+ApeRAG, Docker runtime, and trading/backtest boundaries are active.
+
+Follow-up:
+- After Task 11 is complete and committed, run a read-only Ruflo pilot against Tasks 1-11
+  in an isolated copy or worktree, not in the main working tree.
+- Do not allow Ruflo write access, direct ApeRAG writes, Infisical secrets, Docker socket
+  access, Git push/commit, autopilot, daemon, or auto-fix.
+- Use Ruflo only as an external reviewer swarm for architecture, security, quant methods,
+  data pipeline, backtest reproducibility, CI, and documentation consistency.
+- Triage all findings through the normal Codex workflow before any change is implemented.
+
+Related tasks: 11.x, 18.1, 19.3.
+
 ### TD-0021: Harden ApeRAG graph rebuild against OmniRoute provider outages
 
 Status: resolved
@@ -276,23 +296,18 @@ Follow-up:
 
 Related tasks: 18.1, 18.4.
 
-### TD-0017: Write data-quality validation failures to ApeRAG through Memory Agent
-
-Status: open
-
-Why deferred: Dataset registry persistence now stores passed quality reports and JSON
-sidecars, but failed validation summaries should be written through the Memory Agent
-boundary rather than coupling storage helpers directly to ApeRAG.
-
-Follow-up:
-- Route `DataQualityFailureSummary` through the Memory Agent when that agent owns ApeRAG
-  writes.
-- Keep structured numeric metrics and report IDs in the registry; store only concise
-  lessons, rejection reasons, and links in ApeRAG.
-
-Related tasks: 4.9, 11.1, 11.4.
-
 ## Closed
+
+### TD-CLOSED-0010: Write data-quality validation failures through Memory Agent
+
+Status: closed
+
+Resolution: `write_data_quality_failure_memory` routes concise `DataQualityFailureSummary`
+content through `MemoryAgentService`. Task 11 now owns the agent-facing Memory Agent
+boundary, record filtering, collection routing, and degraded write queue contracts.
+Structured numeric metrics and report IDs remain in the registry.
+
+Closed by: Task 11 Memory Agent boundary.
 
 ### TD-CLOSED-0001: Make coverage artifacts part of runtime cleanup
 

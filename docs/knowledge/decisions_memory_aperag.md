@@ -210,6 +210,40 @@ Risks: OmniRoute can still fail when Kiro quota expires or AWS/Kiro auth changes
 fallbacks can fail when upstream sites change their UI or session model. Keep backend
 selection explicit so failures are visible and reproducible.
 
+## DEC-0027: Make Memory Agent the agent-facing memory boundary
+
+Status: accepted
+
+Decision: Agent-facing modules must depend on `MemoryAgentService` and the `MemoryBackend`
+adapter boundary instead of calling ApeRAG write APIs directly. `ApeRAGMemoryClient`
+remains the concrete v1 backend, but the Memory Agent owns record typing, collection
+routing, retrieval-quality checks, filtering, and degraded write handling.
+
+Rationale: Project knowledge and operational agent memory have different lifecycles.
+Architecture decisions, market knowledge, and manual notes belong in
+`stat-arb-project-knowledge`; hypotheses, test summaries, backtest conclusions, critic
+reviews, and lessons belong in `stat-arb-agent-memory`. Keeping this routing inside
+Memory Agent prevents future agents from duplicating policy logic or writing raw data into
+ApeRAG.
+
+Operational policy: Memory writes must be concise and reference registry IDs for precise
+metrics. The policy blocks secrets, raw prompts, raw logs, large dataset dumps, and
+metric-heavy payloads. If ApeRAG write operations fail after a request passes policy, the
+request may be written to a durable JSONL write-ahead queue for later operator-controlled
+replay instead of being silently dropped.
+
+Verification: `scripts/check_memory_agent_pipeline.ps1` runs deterministic Memory Agent
+contract tests and boundary guards without requiring ApeRAG runtime health. Use
+`-IncludeRuntimeHealth` only when an operator wants to include the external ApeRAG smoke.
+
+Alternatives considered: Let every agent call ApeRAG directly; store all memory in one
+collection; drop failed memory writes and rely only on registry records; couple ordinary
+commit checks to ApeRAG runtime availability.
+
+Risks: Queued writes still require a future replay workflow and operator review. Keep
+agent answer-quality evaluation separate from retrieval readiness until a real RAG answer
+boundary exists.
+
 ## DEC-0009: Use curated knowledge shards instead of seeding large Kiro specs directly
 
 Status: accepted

@@ -169,6 +169,18 @@ CRITIC_REVIEW -> REPORTING -> FINAL_DECISION
 .\scripts\check_aperag_agent_memory.ps1
 ```
 
+Проверить deterministic Memory Agent contracts без зависимости от внешней LLM/ApeRAG runtime:
+
+```powershell
+.\scripts\check_memory_agent_pipeline.ps1
+```
+
+При необходимости добавить runtime smoke для ApeRAG:
+
+```powershell
+.\scripts\check_memory_agent_pipeline.ps1 -IncludeRuntimeHealth
+```
+
 Проверить OmniRoute container, API и короткий chat route:
 
 ```powershell
