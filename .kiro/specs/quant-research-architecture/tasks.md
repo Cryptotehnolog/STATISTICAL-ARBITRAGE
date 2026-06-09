@@ -476,11 +476,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Added Memory Agent policy write boundary and Coordinator boundary guard
     - _Requirements: 12.2_
   
-  - [ ] 13.3 Implement final decision logic
+  - [x] 13.3 Implement final decision logic
     - Reject: critical issues detected
     - Quarantine: moderate issues detected
     - Approve: no critical issues, eligible for demo review
     - Prevent retesting rejected hypotheses without justification
+    - Implemented explicit CoordinatorFinalDecisionPolicy/Evidence boundary with no hidden
+      critic-status defaults and a required retest justification guard
     - _Requirements: 12.8, 12.9_
   
   - [ ] 13.4 Integrate Coordinator Agent with registry and ApeRAG

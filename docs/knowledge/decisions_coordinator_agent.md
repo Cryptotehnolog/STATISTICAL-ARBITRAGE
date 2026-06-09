@@ -62,3 +62,30 @@ Rules:
 Verification:
 - `tests/unit/test_coordinator_agent.py`
 - `scripts/check_coordinator_pipeline.ps1`
+
+## DEC-0060: Keep Coordinator final decision logic explicit before persistence wiring
+
+Status: accepted
+
+Decision: Coordinator final decisions use a separate `CoordinatorFinalDecisionPolicy` and
+`CoordinatorFinalDecisionEvidence` boundary. The policy maps explicit Critic statuses to
+`rejected`, `quarantined`, or `approved` decisions. Retests of previously rejected
+hypotheses require a non-empty justification before any final decision can be planned.
+
+Rationale: The Critic Agent detects and classifies research issues, but the Coordinator owns
+the final experiment-level decision. A separate decision boundary prevents hidden defaults,
+keeps retest approval auditable, and avoids mixing final-decision policy with registry or
+ApeRAG persistence before Task 13.4.
+
+Rules:
+- Coordinator final decisions must be derived from explicit policy, not built-in status
+  defaults.
+- Unknown Critic statuses must fail closed instead of being silently approved.
+- Retest hypotheses require a human or agent-provided justification when policy requires it.
+- The decision boundary returns a plan; registry and memory writes remain a separate
+  integration boundary.
+
+Verification:
+- `tests/unit/test_coordinator_agent.py`
+- `scripts/check_coordinator_agent_boundaries.ps1`
+- `scripts/check_coordinator_pipeline.ps1`

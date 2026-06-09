@@ -9,6 +9,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.agents.coordinator import (
+    CoordinatorFinalDecisionEvidence,
+    CoordinatorFinalDecisionPolicy,
     CoordinatorResourcePolicy,
     CoordinatorTaskRequest,
     CoordinatorTransitionRequest,
@@ -16,6 +18,7 @@ from stat_arb.agents.coordinator import (
     ExperimentLifecycleStatus,
     claim_next_coordinator_task,
     complete_coordinator_task,
+    decide_coordinator_final_decision,
     enqueue_coordinator_task,
     fail_coordinator_task,
     list_recoverable_coordinator_tasks,
@@ -170,6 +173,8 @@ def test_coordinator_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "Experiment" in script
     assert "CoordinatorResourcePolicy" in script
     assert "max_running_tasks_per_agent" in script
+    assert "CoordinatorFinalDecisionPolicy" in script
+    assert "require_retest_justification" in script
     assert "memory_service\\.write" in script
     assert "check_coordinator_agent_boundaries.ps1" in pre_commit
     assert "& $coordinatorAgentBoundaryCheckScript" in pre_commit
@@ -412,6 +417,99 @@ def test_coordinator_claim_requires_explicit_resource_policy(session: Session) -
         claim_next_coordinator_task(agent_name="data_agent", session=session)  # type: ignore[call-arg]
 
 
+def test_coordinator_final_decision_rejects_critical_critic_status() -> None:
+    """Coordinator should convert explicit critical Critic status into final rejection."""
+    result = decide_coordinator_final_decision(
+        CoordinatorFinalDecisionEvidence(
+            critic_status="rejected",
+            critic_objections=("lookahead_bias: signal used future data",),
+            hypothesis_status="testing",
+            retest_justification=None,
+        ),
+        policy=_final_decision_policy(),
+    )
+
+    assert result.final_decision == ExperimentFinalDecision.REJECTED
+    assert "lookahead_bias" in result.reason
+    assert result.checked_rules == ("critic_status_mapping", "retest_justification")
+
+
+def test_coordinator_final_decision_quarantines_moderate_critic_status() -> None:
+    """Coordinator should quarantine moderate issues without silently approving them."""
+    result = decide_coordinator_final_decision(
+        CoordinatorFinalDecisionEvidence(
+            critic_status="quarantined",
+            critic_objections=("weak_assumption: p-value too close to threshold",),
+            hypothesis_status="testing",
+            retest_justification=None,
+        ),
+        policy=_final_decision_policy(),
+    )
+
+    assert result.final_decision == ExperimentFinalDecision.QUARANTINED
+    assert "weak_assumption" in result.reason
+
+
+def test_coordinator_final_decision_approves_clean_critic_status() -> None:
+    """Coordinator should approve only when policy maps the Critic status to approval."""
+    result = decide_coordinator_final_decision(
+        CoordinatorFinalDecisionEvidence(
+            critic_status="approved",
+            critic_objections=(),
+            hypothesis_status="testing",
+            retest_justification=None,
+        ),
+        policy=_final_decision_policy(),
+    )
+
+    assert result.final_decision == ExperimentFinalDecision.APPROVED
+    assert "Critic status approved" in result.reason
+
+
+def test_coordinator_final_decision_requires_retest_justification() -> None:
+    """Retests of rejected hypotheses should not pass final decision without justification."""
+    with pytest.raises(ValueError, match="retest_justification is required"):
+        decide_coordinator_final_decision(
+            CoordinatorFinalDecisionEvidence(
+                critic_status="approved",
+                critic_objections=(),
+                hypothesis_status="retest",
+                retest_justification=" ",
+            ),
+            policy=_final_decision_policy(),
+        )
+
+
+def test_coordinator_final_decision_allows_justified_retest() -> None:
+    """A justified retest can proceed while preserving the operator rationale."""
+    result = decide_coordinator_final_decision(
+        CoordinatorFinalDecisionEvidence(
+            critic_status="approved",
+            critic_objections=(),
+            hypothesis_status="retest",
+            retest_justification="New six-month data window after structural market change.",
+        ),
+        policy=_final_decision_policy(),
+    )
+
+    assert result.final_decision == ExperimentFinalDecision.APPROVED
+    assert "New six-month data window" in result.reason
+
+
+def test_coordinator_final_decision_rejects_unmapped_critic_status() -> None:
+    """Unknown Critic statuses must not be converted into hidden defaults."""
+    with pytest.raises(ValueError, match="no final decision mapping"):
+        decide_coordinator_final_decision(
+            CoordinatorFinalDecisionEvidence(
+                critic_status="needs_manual_review",
+                critic_objections=("operator_review: ambiguous result",),
+                hypothesis_status="testing",
+                retest_justification=None,
+            ),
+            policy=_final_decision_policy(),
+        )
+
+
 def _seed_experiment(session: Session, *, status: str) -> str:
     hypothesis_id = uuid4()
     experiment_id = uuid4()
@@ -443,4 +541,15 @@ def _resource_policy(**per_agent: int) -> CoordinatorResourcePolicy:
     return CoordinatorResourcePolicy(
         max_running_tasks=sum(per_agent.values()),
         max_running_tasks_per_agent=per_agent,
+    )
+
+
+def _final_decision_policy() -> CoordinatorFinalDecisionPolicy:
+    return CoordinatorFinalDecisionPolicy(
+        critic_status_to_decision={
+            "rejected": ExperimentFinalDecision.REJECTED,
+            "quarantined": ExperimentFinalDecision.QUARANTINED,
+            "approved": ExperimentFinalDecision.APPROVED,
+        },
+        require_retest_justification=True,
     )

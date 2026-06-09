@@ -40,7 +40,17 @@ if (
 }
 
 if (
-    $source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =|priority: int =|max_attempts: int =|max_running_tasks: int =|max_running_tasks_per_agent: dict\[str, int\] =|policy: CoordinatorResourcePolicy \| None ="
+    $source -notmatch "CoordinatorFinalDecisionPolicy" -or
+    $source -notmatch "CoordinatorFinalDecisionEvidence" -or
+    $source -notmatch "decide_coordinator_final_decision" -or
+    $source -notmatch "require_retest_justification" -or
+    $source -notmatch "critic_status_to_decision"
+) {
+    Write-Error "Coordinator final decision должен иметь explicit policy/evidence boundary и retest justification guard."
+}
+
+if (
+    $source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =|priority: int =|max_attempts: int =|max_running_tasks: int =|max_running_tasks_per_agent: dict\[str, int\] =|policy: CoordinatorResourcePolicy \| None =|require_retest_justification: bool =|critic_status_to_decision: .* =|policy: CoordinatorFinalDecisionPolicy \| None ="
 ) {
     Write-Error "Coordinator Agent не должен прятать lifecycle/task/resource defaults в request config."
 }

@@ -6,6 +6,7 @@ multi-agent workflow yet; task queues and tool permissions remain separate Task 
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -124,6 +125,55 @@ class CoordinatorResourcePolicy:
                 raise TypeError("per-agent running task limits must be integers")
             if limit <= 0:
                 raise ValueError("per-agent running task limits must be positive")
+
+
+@dataclass(frozen=True)
+class CoordinatorFinalDecisionPolicy:
+    """Explicit policy for converting Critic status into Coordinator final decisions."""
+
+    critic_status_to_decision: Mapping[str, ExperimentFinalDecision]
+    require_retest_justification: bool
+
+    def __post_init__(self) -> None:
+        if not self.critic_status_to_decision:
+            raise ValueError("critic_status_to_decision is required")
+        if not isinstance(self.require_retest_justification, bool):
+            raise TypeError("require_retest_justification must be a bool")
+        for critic_status, final_decision in self.critic_status_to_decision.items():
+            if not isinstance(critic_status, str) or not critic_status.strip():
+                raise ValueError("critic status mappings must use non-empty strings")
+            if not isinstance(final_decision, ExperimentFinalDecision):
+                raise TypeError("critic status mappings must map to ExperimentFinalDecision")
+
+
+@dataclass(frozen=True)
+class CoordinatorFinalDecisionEvidence:
+    """Evidence used by Coordinator to choose a final experiment decision."""
+
+    critic_status: str
+    critic_objections: tuple[str, ...]
+    hypothesis_status: str
+    retest_justification: str | None
+
+    def __post_init__(self) -> None:
+        if not self.critic_status.strip():
+            raise ValueError("critic_status is required")
+        if not self.hypothesis_status.strip():
+            raise ValueError("hypothesis_status is required")
+        _validate_non_empty_texts(self.critic_objections, label="critic_objections")
+        if self.retest_justification is not None and not isinstance(
+            self.retest_justification, str
+        ):
+            raise TypeError("retest_justification must be a string or None")
+
+
+@dataclass(frozen=True)
+class CoordinatorFinalDecisionResult:
+    """Coordinator final decision plan before persistence."""
+
+    final_decision: ExperimentFinalDecision
+    reason: str
+    checked_rules: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -285,6 +335,33 @@ def list_recoverable_coordinator_tasks(*, session: Session) -> list[CoordinatorT
     )
 
 
+def decide_coordinator_final_decision(
+    evidence: CoordinatorFinalDecisionEvidence,
+    *,
+    policy: CoordinatorFinalDecisionPolicy,
+) -> CoordinatorFinalDecisionResult:
+    """Choose a final Coordinator decision without writing registry or memory state."""
+    checked_rules = ["critic_status_mapping"]
+    normalized_status = evidence.critic_status.strip()
+    final_decision = policy.critic_status_to_decision.get(normalized_status)
+    if final_decision is None:
+        raise ValueError(f"no final decision mapping for critic status {normalized_status}")
+
+    if policy.require_retest_justification:
+        checked_rules.append("retest_justification")
+        if _is_retest(evidence.hypothesis_status) and not (
+            evidence.retest_justification and evidence.retest_justification.strip()
+        ):
+            raise ValueError("retest_justification is required for retest hypotheses")
+
+    reason = _final_decision_reason(evidence, final_decision)
+    return CoordinatorFinalDecisionResult(
+        final_decision=final_decision,
+        reason=reason,
+        checked_rules=tuple(checked_rules),
+    )
+
+
 def _running_task_count(session: Session, *, agent_name: str | None = None) -> int:
     query = session.query(CoordinatorTask).filter(
         CoordinatorTask.status == CoordinatorTaskStatus.RUNNING.value
@@ -300,6 +377,24 @@ def _validate_agent_has_resource_policy(
 ) -> None:
     if agent_name not in policy.max_running_tasks_per_agent:
         raise ValueError(f"resource policy is required for agent {agent_name}")
+
+
+def _is_retest(hypothesis_status: str) -> bool:
+    return hypothesis_status.strip().casefold() == "retest"
+
+
+def _final_decision_reason(
+    evidence: CoordinatorFinalDecisionEvidence,
+    final_decision: ExperimentFinalDecision,
+) -> str:
+    reason_parts = [
+        f"Critic status {evidence.critic_status.strip()} mapped to {final_decision.value}."
+    ]
+    if evidence.critic_objections:
+        reason_parts.append("Critic objections: " + "; ".join(evidence.critic_objections))
+    if evidence.retest_justification and evidence.retest_justification.strip():
+        reason_parts.append(f"Retest justification: {evidence.retest_justification.strip()}")
+    return " ".join(reason_parts)
 
 
 def transition_experiment_lifecycle(
@@ -459,3 +554,11 @@ def _validate_json_like_value(value: object) -> None:
         _validate_json_like_payload(value)
         return
     raise TypeError("payload values must be JSON-like")
+
+
+def _validate_non_empty_texts(values: tuple[str, ...], *, label: str) -> None:
+    if not isinstance(values, tuple):
+        raise TypeError(f"{label} must be a tuple")
+    for value in values:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{label} must contain only non-empty strings")
