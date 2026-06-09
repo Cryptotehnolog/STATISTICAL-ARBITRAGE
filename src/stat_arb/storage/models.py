@@ -9,6 +9,7 @@ This module defines SQLAlchemy ORM models for all entities in the system:
 - Backtest Results: Performance metrics and cost attribution
 - Critic Reviews: Validation and objection tracking
 - Experiments: Full lifecycle tracking from hypothesis to decision
+- Coordinator Tasks: Durable task queue records for agent assignment and recovery
 
 Requirements: 9.1-9.11, 27.14
 """
@@ -405,6 +406,40 @@ class Experiment(Base):
 
     # Relationships
     hypothesis: Mapped["Hypothesis"] = relationship("Hypothesis", back_populates="experiments")
+    coordinator_tasks: Mapped[list["CoordinatorTask"]] = relationship(
+        "CoordinatorTask", back_populates="experiment"
+    )
+
+
+class CoordinatorTask(Base):
+    """
+    Coordinator task queue record.
+
+    Stores durable agent work items so unfinished tasks can be recovered after restart.
+    Requirements: 12.1
+    """
+
+    __tablename__ = "coordinator_tasks"
+
+    task_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    experiment_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("experiments.experiment_id"), nullable=False, index=True
+    )
+    task_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    agent_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    experiment: Mapped["Experiment"] = relationship(
+        "Experiment", back_populates="coordinator_tasks"
+    )
 
 
 class ReportArtifact(Base):
@@ -448,5 +483,6 @@ __all__ = [
     "BacktestResult",
     "CriticReview",
     "Experiment",
+    "CoordinatorTask",
     "ReportArtifact",
 ]

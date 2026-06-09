@@ -19,14 +19,21 @@ if ($source -notmatch "MemoryWriteRequest" -or $source -notmatch "memory_service
 
 if (
     $source -notmatch "Experiment" -or
+    $source -notmatch "CoordinatorTask" -or
     $source -notmatch "session\.flush\(\)" -or
     $source -notmatch "ALLOWED_TRANSITIONS"
 ) {
     Write-Error "Coordinator Agent должен валидировать transitions и сохранять state в registry."
 }
 
-if ($source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =") {
-    Write-Error "Coordinator Agent не должен прятать lifecycle/default decisions в request config."
+if ($source -notmatch "max_attempts" -or $source -notmatch "attempt_count" -or $source -notmatch "priority") {
+    Write-Error "Coordinator task queue должен явно хранить priority и retry accounting."
+}
+
+if (
+    $source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =|priority: int =|max_attempts: int ="
+) {
+    Write-Error "Coordinator Agent не должен прятать lifecycle/task defaults в request config."
 }
 
 Write-Output "Проверка Coordinator Agent boundaries прошла."

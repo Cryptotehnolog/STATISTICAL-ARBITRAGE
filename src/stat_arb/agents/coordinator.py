@@ -9,12 +9,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
+from math import isfinite
 from typing import Protocol
 
 from sqlalchemy.orm import Session
 
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
-from stat_arb.storage.models import Experiment
+from stat_arb.storage.models import CoordinatorTask, Experiment
 
 
 class MemoryWriter(Protocol):
@@ -45,6 +46,15 @@ class ExperimentFinalDecision(StrEnum):
     ELIGIBLE_FOR_DEMO = "eligible_for_demo"
 
 
+class CoordinatorTaskStatus(StrEnum):
+    """Allowed durable task queue statuses."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 @dataclass(frozen=True)
 class CoordinatorTransitionRequest:
     """Request to move one experiment through the lifecycle state machine."""
@@ -60,6 +70,35 @@ class CoordinatorTransitionRequest:
             raise ValueError("experiment_id is required")
         if not self.actor.strip():
             raise ValueError("actor is required")
+
+
+@dataclass(frozen=True)
+class CoordinatorTaskRequest:
+    """Request to enqueue one durable Coordinator task."""
+
+    experiment_id: str
+    task_type: str
+    agent_name: str
+    priority: int
+    max_attempts: int
+    payload: dict[str, object]
+
+    def __post_init__(self) -> None:
+        if not str(self.experiment_id).strip():
+            raise ValueError("experiment_id is required")
+        if not self.task_type.strip():
+            raise ValueError("task_type is required")
+        if not self.agent_name.strip():
+            raise ValueError("agent_name is required")
+        if isinstance(self.priority, bool) or not isinstance(self.priority, int):
+            raise TypeError("priority must be an integer")
+        if isinstance(self.max_attempts, bool) or not isinstance(self.max_attempts, int):
+            raise TypeError("max_attempts must be an integer")
+        if self.priority < 0:
+            raise ValueError("priority must be non-negative")
+        if self.max_attempts <= 0:
+            raise ValueError("max_attempts must be positive")
+        _validate_json_like_payload(self.payload)
 
 
 @dataclass(frozen=True)
@@ -113,6 +152,105 @@ AGENT_BY_STATUS: dict[ExperimentLifecycleStatus, str | None] = {
 }
 
 
+def enqueue_coordinator_task(
+    request: CoordinatorTaskRequest,
+    *,
+    session: Session,
+) -> CoordinatorTask:
+    """Persist one pending task for the Coordinator queue."""
+    _require_experiment(session, experiment_id=request.experiment_id)
+    task = CoordinatorTask(
+        experiment_id=str(request.experiment_id),
+        task_type=request.task_type.strip(),
+        agent_name=request.agent_name.strip(),
+        priority=request.priority,
+        status=CoordinatorTaskStatus.PENDING.value,
+        attempt_count=0,
+        max_attempts=request.max_attempts,
+        payload=request.payload,
+        last_error=None,
+    )
+    session.add(task)
+    session.flush()
+    return task
+
+
+def claim_next_coordinator_task(
+    *,
+    agent_name: str,
+    session: Session,
+) -> CoordinatorTask | None:
+    """Claim the highest-priority pending task for one agent."""
+    if not agent_name.strip():
+        raise ValueError("agent_name is required")
+    task = (
+        session.query(CoordinatorTask)
+        .filter(
+            CoordinatorTask.agent_name == agent_name.strip(),
+            CoordinatorTask.status == CoordinatorTaskStatus.PENDING.value,
+        )
+        .order_by(CoordinatorTask.priority.asc(), CoordinatorTask.created_at.asc())
+        .first()
+    )
+    if task is None:
+        return None
+    task.status = CoordinatorTaskStatus.RUNNING.value
+    task.attempt_count += 1
+    task.started_at = _utc_now()
+    task.completed_at = None
+    session.flush()
+    return task
+
+
+def fail_coordinator_task(
+    *,
+    task_id: str,
+    error_summary: str,
+    session: Session,
+) -> CoordinatorTask:
+    """Record a task failure and either retry or exhaust it."""
+    task = _require_task(session, task_id=task_id)
+    if task.status != CoordinatorTaskStatus.RUNNING.value:
+        raise ValueError("only running Coordinator tasks can fail")
+    if not error_summary.strip():
+        raise ValueError("error_summary is required")
+    task.last_error = error_summary.strip()
+    task.started_at = None
+    if task.attempt_count < task.max_attempts:
+        task.status = CoordinatorTaskStatus.PENDING.value
+        task.completed_at = None
+    else:
+        task.status = CoordinatorTaskStatus.FAILED.value
+        task.completed_at = _utc_now()
+    session.flush()
+    return task
+
+
+def complete_coordinator_task(
+    *,
+    task_id: str,
+    session: Session,
+) -> CoordinatorTask:
+    """Mark one running Coordinator task as completed."""
+    task = _require_task(session, task_id=task_id)
+    if task.status != CoordinatorTaskStatus.RUNNING.value:
+        raise ValueError("only running Coordinator tasks can complete")
+    task.status = CoordinatorTaskStatus.COMPLETED.value
+    task.completed_at = _utc_now()
+    session.flush()
+    return task
+
+
+def list_recoverable_coordinator_tasks(*, session: Session) -> list[CoordinatorTask]:
+    """Return unfinished running tasks that may need recovery after process restart."""
+    return (
+        session.query(CoordinatorTask)
+        .filter(CoordinatorTask.status == CoordinatorTaskStatus.RUNNING.value)
+        .order_by(CoordinatorTask.priority.asc(), CoordinatorTask.started_at.asc())
+        .all()
+    )
+
+
 def transition_experiment_lifecycle(
     request: CoordinatorTransitionRequest,
     *,
@@ -153,6 +291,17 @@ def _require_experiment(session: Session, *, experiment_id: str) -> Experiment:
     if experiment is None:
         raise ValueError(f"experiment is required for Coordinator transition {experiment_id}")
     return experiment
+
+
+def _require_task(session: Session, *, task_id: str) -> CoordinatorTask:
+    task = (
+        session.query(CoordinatorTask)
+        .filter(CoordinatorTask.task_id == str(task_id))
+        .first()
+    )
+    if task is None:
+        raise ValueError(f"Coordinator task is required: {task_id}")
+    return task
 
 
 def _parse_status(status: str) -> ExperimentLifecycleStatus:
@@ -229,3 +378,33 @@ def _memory_request_for(
         tags=["coordinator", "experiment-lifecycle", request.target_status.value],
         metadata=metadata,
     )
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _validate_json_like_payload(payload: object) -> None:
+    if not isinstance(payload, dict):
+        raise TypeError("payload must be a dictionary")
+    for key, value in payload.items():
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError("payload keys must be non-empty strings")
+        _validate_json_like_value(value)
+
+
+def _validate_json_like_value(value: object) -> None:
+    if value is None or isinstance(value, str | bool | int):
+        return
+    if isinstance(value, float):
+        if not isfinite(value):
+            raise ValueError("payload floats must be finite")
+        return
+    if isinstance(value, list):
+        for item in value:
+            _validate_json_like_value(item)
+        return
+    if isinstance(value, dict):
+        _validate_json_like_payload(value)
+        return
+    raise TypeError("payload values must be JSON-like")

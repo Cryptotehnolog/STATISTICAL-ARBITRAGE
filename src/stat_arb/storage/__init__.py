@@ -12,6 +12,7 @@ The Structured Registry stores:
 - Backtest Results: Performance metrics and cost attribution
 - Critic Reviews: Validation and objection tracking
 - Experiments: Full lifecycle tracking from hypothesis to decision
+- Coordinator Tasks: Durable task queue records for agent assignment and recovery
 - Report Artifacts: Links to generated reports
 
 Requirements: 9.1-9.11, 27.14
@@ -45,6 +46,7 @@ from .migrations import (
 from .models import (
     BacktestResult,
     Base,
+    CoordinatorTask,
     CriticReview,
     DataQualityReportRecord,
     Dataset,
@@ -62,6 +64,7 @@ __all__ = [
     "DataQualityReportRecord",
     "StatisticalTestResult",
     "BacktestResult",
+    "CoordinatorTask",
     "CriticReview",
     "Experiment",
     "ReportArtifact",

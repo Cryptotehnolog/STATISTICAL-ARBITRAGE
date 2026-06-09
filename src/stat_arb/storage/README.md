@@ -12,6 +12,7 @@ The Structured Registry is a SQLite database that serves as the source of truth 
 - **Backtest Results**: Performance metrics and cost attribution
 - **Critic Reviews**: Validation results and objections
 - **Experiments**: Full lifecycle tracking from hypothesis to decision
+- **Coordinator Tasks**: Durable task queue records for agent assignment, retries, and recovery
 - **Report Artifacts**: Links to generated reports
 
 ## Quick Start

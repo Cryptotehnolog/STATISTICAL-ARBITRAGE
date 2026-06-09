@@ -463,6 +463,9 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Track task status and completion
     - Persist task state transitions in the Structured_Registry so unfinished tasks can recover after restart
     - Define explicit retry limits and resource-aware parallelism limits
+    - Implemented registry-backed queue records with priority, agent assignment, status,
+      retry accounting, and recovery listing for running tasks
+    - Remaining before closing 13.1: resource-aware parallelism limits
     - _Requirements: 12.1_
   
   - [x] 13.2 Implement experiment lifecycle state machine
