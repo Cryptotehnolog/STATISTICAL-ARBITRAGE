@@ -134,15 +134,15 @@ def _render_html(snapshot: BacktestReportSnapshot) -> str:
     critic_status = snapshot.critic_status or "не указан"
     critic_objections = snapshot.critic_objections or "Нет"
     rows = (
-        ("Backtest ID", snapshot.backtest_id),
-        ("Hypothesis ID", snapshot.hypothesis_id),
+        ("ID backtest", snapshot.backtest_id),
+        ("ID hypothesis", snapshot.hypothesis_id),
         ("Net PnL", f"{snapshot.net_pnl:.6f}"),
         ("Gross PnL", f"{snapshot.gross_pnl:.6f}"),
         ("Итого costs", f"{snapshot.total_cost:.6f}"),
         ("Sharpe", f"{snapshot.sharpe_ratio:.6f}"),
         ("Sortino", f"{snapshot.sortino_ratio:.6f}"),
-        ("Max drawdown", f"{snapshot.max_drawdown:.6f}"),
-        ("Win rate", f"{snapshot.win_rate:.6f}"),
+        ("Максимальная просадка", f"{snapshot.max_drawdown:.6f}"),
+        ("Доля прибыльных trades", f"{snapshot.win_rate:.6f}"),
         ("Profit factor", f"{snapshot.profit_factor:.6f}"),
         ("Turnover", f"{snapshot.turnover:.6f}"),
         ("Количество trades", str(snapshot.num_trades)),
@@ -203,21 +203,21 @@ def _cost_attribution_section(snapshot: BacktestReportSnapshot) -> str:
     table_rows = "\n".join(
         f"<tr><th>{html.escape(label)}</th><td>{value:.6f}</td></tr>" for label, value in rows
     )
-    return f"""<h2>Cost attribution</h2>
+    return f"""<h2>Разбор costs</h2>
   <table>{table_rows}</table>"""
 
 
 def _data_quality_section(snapshot: BacktestReportSnapshot) -> str:
     if not snapshot.data_quality_reports:
         return (
-            "<h2>Data quality</h2>"
-            '<p class="note">Data quality reports не переданы в snapshot отчета.</p>'
+            "<h2>Качество данных</h2>"
+            '<p class="note">Отчеты data quality не переданы в snapshot отчета.</p>'
         )
     rows = "\n".join(
         "<tr>"
         f"<td>{html.escape(report.symbol)}</td>"
         f"<td>{html.escape(report.timeframe)}</td>"
-        f"<td>{'passed' if report.passed else 'failed'}</td>"
+        f"<td>{'пройдено' if report.passed else 'провалено'}</td>"
         f"<td>{report.quality_score:.6f}</td>"
         f"<td>{report.missing_bars}</td>"
         f"<td>{report.duplicate_timestamps}</td>"
@@ -225,9 +225,9 @@ def _data_quality_section(snapshot: BacktestReportSnapshot) -> str:
         "</tr>"
         for report in snapshot.data_quality_reports
     )
-    return f"""<h2>Data quality</h2>
+    return f"""<h2>Качество данных</h2>
   <table>
-    <tr><th>Symbol</th><th>Timeframe</th><th>Status</th><th>Quality score</th><th>Missing bars</th><th>Duplicates</th><th>Outliers</th></tr>
+    <tr><th>Symbol</th><th>Timeframe</th><th>Статус</th><th>Оценка качества</th><th>Пропущенные bars</th><th>Дубликаты</th><th>Outliers</th></tr>
     {rows}
   </table>"""
 
@@ -241,11 +241,11 @@ def _visualization_section(snapshot: BacktestReportSnapshot) -> str:
         )
     return """<h2>Визуализации</h2>
   <ul>
-    <li>Equity curve with drawdown overlay</li>
-    <li>Z-score signals with entry/exit markers</li>
-    <li>Cost attribution pie chart</li>
+    <li>Кривая equity с наложенной просадкой</li>
+    <li>Z-score signals с отметками entry/exit</li>
+    <li>Диаграмма разбора costs</li>
     <li>Rolling Sharpe ratio</li>
-    <li>Trade distribution histogram</li>
+    <li>Гистограмма распределения trades</li>
   </ul>"""
 
 
@@ -271,21 +271,43 @@ def _write_visualization_artifacts(
     specs: tuple[tuple[str, str, str], ...] = (
         (
             "equity_curve",
-            "Equity curve with drawdown overlay",
-            _line_svg("equity_curve", snapshot.series.equity_curve, overlay=snapshot.series.drawdown_curve),
+            "Кривая equity с наложенной просадкой",
+            _line_svg(
+                "equity_curve",
+                snapshot.series.equity_curve,
+                title="Кривая equity",
+                overlay=snapshot.series.drawdown_curve,
+            ),
         ),
         (
             "z_score_signals",
-            "Z-score signals with entry/exit markers",
+            "Z-score signals с отметками entry/exit",
             _line_svg(
                 "z_score_signals",
                 snapshot.series.z_scores,
+                title="Z-score signals",
                 markers=snapshot.series.entry_markers + snapshot.series.exit_markers,
             ),
         ),
-        ("cost_attribution", "Cost attribution pie chart", _cost_svg(snapshot)),
-        ("rolling_sharpe", "Rolling Sharpe ratio", _line_svg("rolling_sharpe", snapshot.series.rolling_sharpe)),
-        ("trade_distribution", "Trade distribution histogram", _bar_svg("trade_distribution", snapshot.series.trade_pnls)),
+        ("cost_attribution", "Диаграмма разбора costs", _cost_svg(snapshot)),
+        (
+            "rolling_sharpe",
+            "Rolling Sharpe ratio",
+            _line_svg(
+                "rolling_sharpe",
+                snapshot.series.rolling_sharpe,
+                title="Rolling Sharpe ratio",
+            ),
+        ),
+        (
+            "trade_distribution",
+            "Гистограмма распределения trades",
+            _bar_svg(
+                "trade_distribution",
+                snapshot.series.trade_pnls,
+                title="Распределение trades",
+            ),
+        ),
     )
     artifacts: list[GeneratedReportArtifact] = []
     for artifact_type, title, content in specs:
@@ -306,6 +328,7 @@ def _line_svg(
     artifact_type: str,
     values: tuple[float, ...],
     *,
+    title: str,
     overlay: tuple[float, ...] = (),
     markers: tuple[int, ...] = (),
 ) -> str:
@@ -324,7 +347,7 @@ def _line_svg(
     return f"""<svg data-artifact="{html.escape(artifact_type)}" xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180">
 <title></title>
 <rect width="640" height="180" fill="#ffffff"/>
-<text x="20" y="28" font-family="Arial" font-size="16" fill="#18212f">{html.escape(artifact_type)}</text>
+<text x="20" y="28" font-family="Arial" font-size="16" fill="#18212f">{html.escape(title)}</text>
 <polyline points="{points}" fill="none" stroke="#0f766e" stroke-width="3" />
 {overlay_node}
 {marker_nodes}
@@ -332,7 +355,7 @@ def _line_svg(
 """
 
 
-def _bar_svg(artifact_type: str, values: tuple[float, ...]) -> str:
+def _bar_svg(artifact_type: str, values: tuple[float, ...], *, title: str) -> str:
     if not values:
         values = (0.0,)
     maximum = max(abs(value) for value in values) or 1.0
@@ -348,7 +371,7 @@ def _bar_svg(artifact_type: str, values: tuple[float, ...]) -> str:
 <title></title>
 <rect width="640" height="180" fill="#ffffff"/>
 <line x1="30" y1="90" x2="610" y2="90" stroke="#64748b" stroke-width="1"/>
-<text x="20" y="28" font-family="Arial" font-size="16" fill="#18212f">{html.escape(artifact_type)}</text>
+<text x="20" y="28" font-family="Arial" font-size="16" fill="#18212f">{html.escape(title)}</text>
 {''.join(bars)}
 </svg>
 """
@@ -360,10 +383,10 @@ def _cost_svg(snapshot: BacktestReportSnapshot) -> str:
     return f"""<svg data-artifact="cost_attribution" xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180">
 <title></title>
 <rect width="640" height="180" fill="#ffffff"/>
-<text x="20" y="28" font-family="Arial" font-size="16" fill="#18212f">cost_attribution</text>
+<text x="20" y="28" font-family="Arial" font-size="16" fill="#18212f">Разбор costs</text>
 <rect x="40" y="70" width="500" height="34" fill="#dbeafe"/>
 <rect x="40" y="70" width="{cost_width:.2f}" height="34" fill="#dc2626"/>
-<text x="40" y="130" font-family="Arial" font-size="13" fill="#18212f">Costs / Gross PnL: {cost_share:.2%}</text>
+<text x="40" y="130" font-family="Arial" font-size="13" fill="#18212f">Доля costs от Gross PnL: {cost_share:.2%}</text>
 </svg>
 """
 
@@ -383,16 +406,14 @@ def _polyline_points(values: tuple[float, ...]) -> str:
 
 def _render_pdf(snapshot: BacktestReportSnapshot) -> bytes:
     lines = [
-        "Backtest report",
-        f"Backtest ID: {snapshot.backtest_id}",
-        f"Hypothesis ID: {snapshot.hypothesis_id}",
+        "Отчет по backtest",
+        f"ID backtest: {snapshot.backtest_id}",
+        f"ID hypothesis: {snapshot.hypothesis_id}",
         f"Net PnL: {snapshot.net_pnl:.6f}",
         f"Sharpe: {snapshot.sharpe_ratio:.6f}",
-        f"Critic status: {snapshot.critic_status or 'not specified'}",
+        f"Статус Critic: {snapshot.critic_status or 'не указан'}",
     ]
-    stream = "BT /F1 12 Tf 72 760 Td " + " T* ".join(
-        f"({_pdf_escape(line)})" for line in lines
-    ) + " ET"
+    stream = "BT /F1 12 Tf 72 760 Td " + " T* ".join(_pdf_literal(line) for line in lines) + " ET"
     objects = [
         "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
         "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
@@ -412,6 +433,15 @@ def _render_pdf(snapshot: BacktestReportSnapshot) -> bytes:
     content += "trailer << /Size 6 /Root 1 0 R >>\nstartxref\n"
     content += f"{xref_offset}\n%%EOF\n"
     return content.encode("latin-1")
+
+
+def _pdf_literal(value: str) -> str:
+    try:
+        value.encode("latin-1")
+    except UnicodeEncodeError:
+        payload = b"\xfe\xff" + value.encode("utf-16-be")
+        return f"<{payload.hex().upper()}>"
+    return f"({_pdf_escape(value)})"
 
 
 def _pdf_escape(value: str) -> str:

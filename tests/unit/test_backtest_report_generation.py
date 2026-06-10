@@ -87,9 +87,12 @@ def test_generate_backtest_report_artifacts_writes_html_and_json(tmp_path) -> No
     assert "bt-1" in html
     assert "Sharpe" in html
     assert "weak assumptions require retest" in html
-    assert "Equity curve" in html
-    assert "Data quality" in html
-    assert "Cost attribution" in html
+    assert "Кривая equity" in html
+    assert "Качество данных" in html
+    assert "Разбор costs" in html
+    assert "Cost attribution" not in html
+    assert "Data quality" not in html
+    assert "Equity curve with drawdown overlay" not in html
 
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     assert payload["backtest_id"] == "bt-1"

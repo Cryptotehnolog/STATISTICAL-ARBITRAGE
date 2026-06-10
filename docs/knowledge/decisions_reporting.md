@@ -20,13 +20,17 @@ Report Agent write directly to ApeRAG; store only files without registry rows; m
 complete after a minimal HTML report. Those options either bypass the source of truth or
 create false completion.
 
-Risks: The current boundary is a prerequisite, not the full Report Agent. Task 12 still
-needs complete report content, data quality report pages, visualizations, and full
-content-completeness tests before it can be closed.
+Risks: The current Task 12 boundary is intentionally lightweight. It produces complete
+registry-backed HTML/PDF/JSON artifacts, data-quality pages, and deterministic visuals
+when factual chart-ready series are provided. It must not fabricate charts from aggregate
+metrics. The remaining prerequisite for richer future reports is durable persistence of
+actual equity, drawdown, z-score, cost attribution, rolling metric, and trade series by the
+first end-to-end experiment runner.
 
 Verification: `scripts/check_report_pipeline.ps1` runs report artifact generation tests,
 Report Agent registry/memory boundary tests, and the guard that keeps the report checkpoint
-wired into pre-commit and CI.
+wired into pre-commit and CI. Human-facing report labels are Russian; technical artifact
+types and JSON keys remain English internal contracts.
 
 ## DEC-0057: Generate deterministic report visuals only from chart-ready series
 
