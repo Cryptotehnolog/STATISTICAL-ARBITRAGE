@@ -240,17 +240,19 @@ uv run streamlit run src/stat_arb/dashboard/app.py
 CLI examples:
 
 ```bash
-# Ingest data
-uv run stat-arb data ingest --symbols BTC/USDT,ETH/USDT --exchange binance --timeframe 15m
+# Скачать OHLCV, проверить качество и сохранить registry records
+uv run stat-arb data download --exchange binance --symbol BTC/USDT --timeframe 15m --since 2024-01-01T00:00:00+00:00 --limit 500 --raw-output-root data/raw --metadata-root data/registry --db-path data/registry.db --max-missing-bar-ratio 0 --max-abnormal-volume-ratio 0 --volume-spike-multiplier 10
 
-# Generate hypotheses
-uv run stat-arb hypothesis generate --method sector --limit 10
+# Проверить OHLCV sample без записи в registry
+uv run stat-arb data validate --exchange binance --symbol BTC/USDT --timeframe 15m --since 2024-01-01T00:00:00+00:00 --limit 500 --max-missing-bar-ratio 0 --max-abnormal-volume-ratio 0 --volume-spike-multiplier 10
 
-# Run full experiment
-uv run stat-arb experiment run --hypothesis-id <uuid>
+# Показать сохраненные datasets
+uv run stat-arb data list --db-path data/registry.db
 
-# View experiment status
-uv run stat-arb experiment list --status completed
+# Planned Task 15 commands:
+# uv run stat-arb hypothesis generate --method sector --limit 10
+# uv run stat-arb experiment run --hypothesis-id <uuid>
+# uv run stat-arb experiment list --status completed
 ```
 
 ## Источники данных

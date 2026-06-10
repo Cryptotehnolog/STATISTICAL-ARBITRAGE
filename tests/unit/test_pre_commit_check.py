@@ -54,6 +54,15 @@ def test_pre_commit_check_includes_property_integration_smoke() -> None:
     assert "Invoke-RequiredCheck $propertyIntegrationCheckScript" in script
 
 
+def test_pre_commit_check_includes_cli_pipeline() -> None:
+    """Fast pre-commit should keep the user-facing CLI boundary exercised."""
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "check_cli_pipeline.ps1" in script
+    assert "$cliPipelineCheckScript" in script
+    assert "Invoke-RequiredCheck $cliPipelineCheckScript" in script
+
+
 def test_check_scripts_exit_on_native_command_failure() -> None:
     """PowerShell native command failures should not be masked by later commands."""
     for path in (

@@ -124,3 +124,26 @@ Update: Failed `DataQualityReport` objects can now be converted to policy-safe
 `MemoryWriteRequest` records through `stat_arb.memory.data_quality_failure_memory_request`
 and written through `write_data_quality_failure_memory`. Registry persistence remains
 independent from the LLM gateway; runtime writes go through `MemoryAgentService`.
+
+## DEC-0066: Start Task 15 CLI with guarded data commands
+
+Status: accepted
+
+Decision: Implement the first CLI surface as `stat-arb data download`,
+`stat-arb data validate`, and `stat-arb data list`. The download command composes the
+existing CCXT source, deterministic OHLCV quality validation, Parquet persistence,
+Structured Registry rows, and JSON sidecars. The validate command fetches and validates a
+sample without writing registry state. The list command reads datasets from the registry.
+
+Rationale: Task 15 should not begin with a full experiment runner. Data ingestion already
+has quality/provenance rules, so the first CLI must expose those rules instead of adding a
+shortcut around them. Research thresholds remain explicit command inputs.
+
+Alternatives considered: Add a broad `experiment run` command first; provide a raw
+`data ingest` command that writes Parquet without registry provenance; keep CLI work
+blocked until report series sidecars exist. Those options would either bypass quality
+boundaries or delay a useful operator entrypoint.
+
+Verification: `scripts/check_cli_pipeline.ps1` runs CLI tests for dataset listing,
+validation without registry writes, and download through the full guarded persistence
+boundary.

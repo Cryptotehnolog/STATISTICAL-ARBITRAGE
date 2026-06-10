@@ -523,10 +523,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
     Memory Agent policy summaries.
 
 - [ ] 15. Build CLI tools and scripted workflows
-  - [ ] 15.1 Create CLI for data ingestion
+  - [x] 15.1 Create CLI for data ingestion
     - Command to download OHLCV data for specified symbols
     - Command to validate data quality
     - Command to list available datasets
+    - Implemented `stat-arb data download`, `stat-arb data validate`, and
+      `stat-arb data list` as explicit quality/provenance-aware commands.
+    - Added `scripts/check_cli_pipeline.ps1` as the Task 15.1 checkpoint command.
     - _Requirements: 22.6, 22.7_
   
   - [ ] 15.2 Create CLI for hypothesis management
