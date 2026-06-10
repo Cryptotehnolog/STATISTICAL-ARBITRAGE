@@ -10,9 +10,13 @@ from typing import Any
 import click
 
 from stat_arb.agents import (
+    CoordinatorTransitionRequest,
+    ExperimentFinalDecision,
+    ExperimentLifecycleStatus,
     HypothesisGenerationConfig,
     HypothesisUniverseAsset,
     generate_rule_based_hypotheses,
+    transition_experiment_lifecycle,
 )
 from stat_arb.data_quality import OHLCVQualityConfig, validate_ohlcv_batch
 from stat_arb.domain import AdjustmentMode
@@ -27,6 +31,7 @@ from stat_arb.statistical import MultipleTestingMethod
 from stat_arb.storage import (
     Base,
     Dataset,
+    Experiment,
     Hypothesis,
     create_database_engine,
     create_session_factory,
@@ -335,6 +340,118 @@ def generate_hypotheses(
     finally:
         session.close()
         engine.dispose()
+
+
+@main.group()
+def experiment() -> None:
+    """Команды управления experiments."""
+
+
+@experiment.command("list")
+@click.option("--db-path", type=click.Path(path_type=Path), required=True)
+def list_experiments(db_path: Path) -> None:
+    """Показать experiments из Structured Registry."""
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        rows = session.query(Experiment).order_by(Experiment.created_at.desc()).all()
+        click.echo(f"Найдено experiments: {len(rows)}")
+        for row in rows:
+            click.echo(
+                " | ".join(
+                    (
+                        row.experiment_id,
+                        f"hypothesis={row.hypothesis_id}",
+                        f"status={row.status}",
+                        f"agent={row.current_agent or '-'}",
+                        f"decision={row.final_decision or '-'}",
+                    )
+                )
+            )
+    finally:
+        session.close()
+        engine.dispose()
+
+
+@experiment.command("status")
+@click.option("--experiment-id", required=True)
+@click.option("--db-path", type=click.Path(path_type=Path), required=True)
+def experiment_status(experiment_id: str, db_path: Path) -> None:
+    """Показать статус одного experiment из registry."""
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        row = session.get(Experiment, experiment_id)
+        if row is None:
+            raise click.ClickException(f"Experiment не найден: {experiment_id}")
+        hypothesis_row = session.get(Hypothesis, row.hypothesis_id)
+        pair = (
+            f"{hypothesis_row.asset_a}/{hypothesis_row.asset_b}"
+            if hypothesis_row is not None
+            else "-"
+        )
+        click.echo(f"Experiment: {row.experiment_id}")
+        click.echo(f"Hypothesis: {row.hypothesis_id}")
+        click.echo(f"Pair: {pair}")
+        click.echo(f"Status: {row.status}")
+        click.echo(f"Current agent: {row.current_agent or '-'}")
+        click.echo(f"Final decision: {row.final_decision or '-'}")
+        click.echo(f"Completed at: {row.completed_at.isoformat() if row.completed_at else '-'}")
+    finally:
+        session.close()
+        engine.dispose()
+
+
+@experiment.command("advance")
+@click.option("--experiment-id", required=True)
+@click.option("--target-status", required=True)
+@click.option("--reason", required=True)
+@click.option("--actor", required=True)
+@click.option("--final-decision")
+@click.option("--db-path", type=click.Path(path_type=Path), required=True)
+def advance_experiment(
+    experiment_id: str,
+    target_status: str,
+    reason: str,
+    actor: str,
+    final_decision: str | None,
+    db_path: Path,
+) -> None:
+    """Перевести experiment в следующий lifecycle status через Coordinator."""
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        try:
+            result = transition_experiment_lifecycle(
+                CoordinatorTransitionRequest(
+                    experiment_id=experiment_id,
+                    target_status=ExperimentLifecycleStatus(target_status),
+                    reason=reason,
+                    actor=actor,
+                    final_decision=(
+                        ExperimentFinalDecision(final_decision)
+                        if final_decision is not None
+                        else None
+                    ),
+                ),
+                session=session,
+            )
+        except ValueError as exc:
+            session.rollback()
+            raise click.ClickException(str(exc)) from exc
+        session.commit()
+    finally:
+        session.close()
+        engine.dispose()
+
+    click.echo(
+        "Experiment обновлен: "
+        f"{result.experiment.experiment_id} "
+        f"{result.previous_status.value} -> {result.current_status.value}"
+    )
 
 
 def _quality_config(

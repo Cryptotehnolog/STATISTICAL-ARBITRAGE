@@ -258,9 +258,14 @@ uv run stat-arb hypothesis list --db-path data/registry.db
 # Сгенерировать rule-based hypotheses из JSON universe/contracts
 uv run stat-arb hypothesis generate --assets-json data/research/assets.json --correlations-json data/research/correlations.json --p-values-json data/research/p_values.json --require-same-sector --min-abs-correlation 0.85 --min-market-cap 50000000000 --max-market-cap 150000000000 --max-pairs 10 --multiple-testing-method bonferroni --candidate-alpha 0.05 --initial-novelty-score 1.0 --initial-status new --source rule_based --created-by hypothesis_agent --db-path data/registry.db
 
-# Planned Task 15 commands:
-# uv run stat-arb experiment run --hypothesis-id <uuid>
-# uv run stat-arb experiment list --status completed
+# Показать experiments
+uv run stat-arb experiment list --db-path data/registry.db
+
+# Показать статус одного experiment
+uv run stat-arb experiment status --experiment-id <uuid> --db-path data/registry.db
+
+# Перевести experiment в следующий lifecycle status через Coordinator boundary
+uv run stat-arb experiment advance --experiment-id <uuid> --target-status data_validation --reason "Operator starts validated data stage." --actor cli_operator --db-path data/registry.db
 ```
 
 ## Источники данных
@@ -418,44 +423,61 @@ uv run pytest && uv run ruff check . && uv run mypy src/stat_arb
 
 ## Примеры workflow
 
-Ingest cryptocurrency data:
+Скачать cryptocurrency data:
 
 ```bash
-uv run stat-arb data ingest \
-  --symbols BTC/USDT,ETH/USDT \
+uv run stat-arb data download \
   --exchange binance \
+  --symbol BTC/USDT \
   --timeframe 15m \
-  --start-date 2024-07-01 \
-  --end-date 2025-01-01
+  --since 2024-07-01T00:00:00+00:00 \
+  --limit 500 \
+  --raw-output-root data/raw \
+  --metadata-root data/registry \
+  --db-path data/registry.db \
+  --max-missing-bar-ratio 0 \
+  --max-abnormal-volume-ratio 0 \
+  --volume-spike-multiplier 10
 ```
 
-Screen pairs by sector:
+Сгенерировать candidate pairs из подготовленных JSON contracts:
 
 ```bash
 uv run stat-arb hypothesis generate \
-  --method sector \
-  --sector technology \
-  --limit 20
+  --assets-json data/research/assets.json \
+  --correlations-json data/research/correlations.json \
+  --p-values-json data/research/p_values.json \
+  --require-same-sector \
+  --min-abs-correlation 0.85 \
+  --min-market-cap 50000000000 \
+  --max-market-cap 150000000000 \
+  --max-pairs 20 \
+  --multiple-testing-method bonferroni \
+  --candidate-alpha 0.05 \
+  --initial-novelty-score 1.0 \
+  --initial-status new \
+  --source rule_based \
+  --created-by hypothesis_agent \
+  --db-path data/registry.db
 ```
 
-Statistical tests:
+Проверить lifecycle status:
 
 ```bash
-uv run stat-arb test statistical \
-  --asset-a BTC/USDT \
-  --asset-b ETH/USDT \
-  --train-window-periods <explicit_period_count> \
-  --test-window-periods <explicit_period_count>
+uv run stat-arb experiment status \
+  --experiment-id <uuid> \
+  --db-path data/registry.db
 ```
 
-Backtest и report:
+Перевести experiment в следующий lifecycle status:
 
 ```bash
-uv run stat-arb backtest run \
-  --hypothesis-id <uuid> \
-  --entry-threshold 2.0 \
-  --exit-threshold 0.5 \
-  --generate-report
+uv run stat-arb experiment advance \
+  --experiment-id <uuid> \
+  --target-status data_validation \
+  --reason "Operator starts validated data stage." \
+  --actor cli_operator \
+  --db-path data/registry.db
 ```
 
 Dashboard:

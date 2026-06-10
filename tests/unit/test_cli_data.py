@@ -14,6 +14,7 @@ from stat_arb.cli import main
 from stat_arb.storage import (
     Base,
     Dataset,
+    Experiment,
     Hypothesis,
     create_database_engine,
     create_session_factory,
@@ -325,3 +326,154 @@ def test_hypothesis_generate_uses_rule_based_agent_boundary(tmp_path: Path) -> N
     finally:
         session.close()
         engine.dispose()
+
+
+def test_experiment_list_reads_registry_lifecycle_rows(tmp_path: Path) -> None:
+    """experiment list should expose registry lifecycle state without running agents."""
+    db_path = tmp_path / "registry.db"
+    experiment_id = _seed_cli_experiment(db_path, status="data_validation")
+
+    result = CliRunner().invoke(main, ["experiment", "list", "--db-path", str(db_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "Найдено experiments: 1" in result.output
+    assert experiment_id in result.output
+    assert "data_validation" in result.output
+    assert "data_agent" in result.output
+
+
+def test_experiment_status_shows_single_experiment_and_hypothesis_pair(tmp_path: Path) -> None:
+    """experiment status should show one experiment with its hypothesis context."""
+    db_path = tmp_path / "registry.db"
+    experiment_id = _seed_cli_experiment(db_path, status="backtesting")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "status",
+            "--experiment-id",
+            experiment_id,
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert f"Experiment: {experiment_id}" in result.output
+    assert "Status: backtesting" in result.output
+    assert "Current agent: backtest_agent" in result.output
+    assert "Pair: AAA/BBB" in result.output
+
+
+def test_experiment_advance_uses_coordinator_lifecycle_boundary(tmp_path: Path) -> None:
+    """experiment advance should use Coordinator transitions instead of manual status writes."""
+    db_path = tmp_path / "registry.db"
+    experiment_id = _seed_cli_experiment(db_path, status="new")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "advance",
+            "--experiment-id",
+            experiment_id,
+            "--target-status",
+            "data_validation",
+            "--reason",
+            "Operator starts validated data stage.",
+            "--actor",
+            "cli_operator",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Experiment обновлен" in result.output
+    assert "new -> data_validation" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        stored = session.get(Experiment, experiment_id)
+        assert stored is not None
+        assert stored.status == "data_validation"
+        assert stored.current_agent == "data_agent"
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_experiment_advance_rejects_invalid_lifecycle_jump(tmp_path: Path) -> None:
+    """experiment advance should fail closed on invalid Coordinator transitions."""
+    db_path = tmp_path / "registry.db"
+    experiment_id = _seed_cli_experiment(db_path, status="new")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "advance",
+            "--experiment-id",
+            experiment_id,
+            "--target-status",
+            "backtesting",
+            "--reason",
+            "Skipping stages would be unsafe.",
+            "--actor",
+            "cli_operator",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Invalid lifecycle transition" in result.output
+
+
+def _seed_cli_experiment(db_path: Path, *, status: str) -> str:
+    engine = create_database_engine(db_path)
+    Base.metadata.create_all(engine)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    hypothesis_id = str(uuid4())
+    experiment_id = str(uuid4())
+    try:
+        session.add(
+            Hypothesis(
+                hypothesis_id=hypothesis_id,
+                asset_a="AAA",
+                asset_b="BBB",
+                rationale="Synthetic CLI experiment pair",
+                source="unit-test",
+                created_by="pytest",
+                created_at=datetime(2024, 1, 1, tzinfo=UTC).replace(tzinfo=None),
+            )
+        )
+        session.add(
+            Experiment(
+                experiment_id=experiment_id,
+                hypothesis_id=hypothesis_id,
+                status=status,
+                current_agent=_agent_for_cli_status(status),
+            )
+        )
+        session.commit()
+        return experiment_id
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def _agent_for_cli_status(status: str) -> str | None:
+    return {
+        "new": None,
+        "data_validation": "data_agent",
+        "statistical_testing": "statistical_testing_agent",
+        "backtesting": "backtest_agent",
+        "critic_review": "critic_agent",
+        "reporting": "report_agent",
+        "final_decision": None,
+    }[status]

@@ -546,6 +546,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Command to run full experiment (hypothesis → backtest → report)
     - Command to run individual stages (data validation, statistical testing, backtesting)
     - Command to query experiment status
+    - Implemented first safe slice: `stat-arb experiment list`,
+      `stat-arb experiment status`, and `stat-arb experiment advance`.
+    - `experiment advance` only moves lifecycle state through the Coordinator
+      state-machine boundary; it does not run agent stages or mutate registry
+      status directly.
+    - Full experiment runner and individual stage execution commands remain open until
+      the runner can persist factual artifacts and enforce registry/memory boundaries.
     - _Requirements: 22.10_
   
   - [ ] 15.4 Create scripted pair-screening workflow

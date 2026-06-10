@@ -35,6 +35,33 @@ Verification:
 - `scripts/check_coordinator_agent_boundaries.ps1`
 - `scripts/check_coordinator_pipeline.ps1`
 
+## DEC-0068: Start experiment CLI with lifecycle visibility before a full runner
+
+Status: accepted
+
+Decision: Task 15.3 starts with `stat-arb experiment list`,
+`stat-arb experiment status`, and `stat-arb experiment advance`. The `advance` command
+uses `transition_experiment_lifecycle` so the CLI cannot skip Coordinator state-machine
+rules or mutate `experiments.status` directly.
+
+Rationale: A full `experiment run` command needs real stage execution, artifact sidecars,
+registry writes, and Memory Agent policy summaries. Adding that as one broad command would
+risk bypassing boundaries that already exist. The first CLI slice gives operators status
+visibility and a safe lifecycle control surface while keeping stage execution open until a
+runner can preserve factual evidence.
+
+Rules:
+- Experiment CLI commands must read lifecycle state from the structured registry.
+- Lifecycle changes must go through the Coordinator transition boundary.
+- Full runner commands must not be documented as available until they are implemented and
+  covered by `scripts/check_cli_pipeline.ps1`.
+- Future stage execution must persist factual artifacts before Report Agent graphing or
+  summaries depend on them.
+
+Verification:
+- `tests/unit/test_cli_data.py`
+- `scripts/check_cli_pipeline.ps1`
+
 ## DEC-0063: Treat Coordinator integration smoke as the Task 13 checkpoint
 
 Status: accepted
