@@ -132,3 +132,26 @@ the statistical gate was missing.
 
 Risks: Upstream pair-screening workflows must provide candidate p-values. That is
 intentional: p-value provenance belongs to the workflow that computed them.
+
+## DEC-0067: Expose Hypothesis Agent through explicit CLI commands
+
+Status: accepted
+
+Decision: Implement `stat-arb hypothesis generate`, `stat-arb hypothesis list`, and
+`stat-arb hypothesis add` as the first operator-facing Hypothesis CLI. Rule-based
+generation reads explicit JSON inputs for assets, correlations, and candidate p-values,
+then calls the existing `generate_rule_based_hypotheses` boundary. Manual additions write
+registry rows with explicit source, creator, novelty score, and status.
+
+Rationale: Task 15.2 should expose existing safe boundaries instead of creating a broad
+experiment runner. Hypothesis generation still needs explicit research-impacting config:
+correlation threshold, market-cap bounds, multiple-testing method, alpha, novelty score,
+initial status, source, and creator. The CLI does not invent defaults and does not write
+directly to ApeRAG.
+
+Alternatives considered: Add an LLM-driven hypothesis CLI first; use hidden default
+thresholds for convenience; write generated hypotheses only to memory; wait for the full
+Coordinator workflow. Those options reduce reproducibility or bypass registry ownership.
+
+Verification: `scripts/check_cli_pipeline.ps1` covers data CLI and hypothesis CLI behavior,
+including manual add/list and rule-based generation through the agent boundary.

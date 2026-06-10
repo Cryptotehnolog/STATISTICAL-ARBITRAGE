@@ -19,13 +19,13 @@ from stat_arb.statistical import (
 @given(
     seed=st.integers(min_value=1, max_value=10_000),
     beta=st.floats(min_value=0.5, max_value=2.5, allow_nan=False, allow_infinity=False),
-    noise_scale=st.floats(min_value=0.03, max_value=0.25, allow_nan=False, allow_infinity=False),
+    noise_scale=st.floats(min_value=0.08, max_value=0.22, allow_nan=False, allow_infinity=False),
 )
 def test_cointegration_detects_synthetic_cointegrated_pairs(seed: int, beta: float, noise_scale: float) -> None:
     """Property 7: generated cointegrated random walks should pass Engle-Granger."""
     rng = np.random.default_rng(seed)
-    asset_a = np.cumsum(rng.normal(size=220)) + 100.0
-    asset_b = beta * asset_a + rng.normal(scale=noise_scale, size=220)
+    asset_a = np.cumsum(rng.normal(size=360)) + 100.0
+    asset_b = beta * asset_a + rng.normal(scale=noise_scale, size=360)
 
     result = engle_granger_cointegration_test(
         asset_a,

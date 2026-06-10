@@ -532,10 +532,14 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Added `scripts/check_cli_pipeline.ps1` as the Task 15.1 checkpoint command.
     - _Requirements: 22.6, 22.7_
   
-  - [ ] 15.2 Create CLI for hypothesis management
+  - [x] 15.2 Create CLI for hypothesis management
     - Command to generate hypotheses (rule-based)
     - Command to list hypotheses with status
     - Command to manually add hypothesis
+    - Implemented `stat-arb hypothesis generate`, `stat-arb hypothesis list`, and
+      `stat-arb hypothesis add` over the existing registry/Hypothesis Agent boundary.
+    - Rule-based generation uses explicit JSON inputs and explicit research-impacting
+      configuration; no hidden thresholds are introduced.
     - _Requirements: 22.9_
   
   - [ ] 15.3 Create CLI for experiment execution

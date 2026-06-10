@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import click
 
+from stat_arb.agents import (
+    HypothesisGenerationConfig,
+    HypothesisUniverseAsset,
+    generate_rule_based_hypotheses,
+)
 from stat_arb.data_quality import OHLCVQualityConfig, validate_ohlcv_batch
 from stat_arb.domain import AdjustmentMode
 from stat_arb.ingestion import (
@@ -16,9 +23,11 @@ from stat_arb.ingestion import (
     OHLCVQualityError,
     fetch_validate_write_ohlcv,
 )
+from stat_arb.statistical import MultipleTestingMethod
 from stat_arb.storage import (
     Base,
     Dataset,
+    Hypothesis,
     create_database_engine,
     create_session_factory,
     persist_ohlcv_ingestion_result,
@@ -188,6 +197,146 @@ def download_data(
     click.echo(f"Parquet files: {len(result.parquet_paths)}")
 
 
+@main.group()
+def hypothesis() -> None:
+    """Команды управления hypotheses."""
+
+
+@hypothesis.command("list")
+@click.option("--db-path", type=click.Path(path_type=Path), required=True)
+def list_hypotheses(db_path: Path) -> None:
+    """Показать hypotheses из Structured Registry."""
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        rows = session.query(Hypothesis).order_by(Hypothesis.created_at.desc()).all()
+        click.echo(f"Найдено hypotheses: {len(rows)}")
+        for row in rows:
+            click.echo(
+                " | ".join(
+                    (
+                        row.hypothesis_id,
+                        f"{row.asset_a}/{row.asset_b}",
+                        row.status,
+                        row.source,
+                        f"novelty={row.novelty_score:.6f}",
+                    )
+                )
+            )
+    finally:
+        session.close()
+        engine.dispose()
+
+
+@hypothesis.command("add")
+@click.option("--asset-a", required=True)
+@click.option("--asset-b", required=True)
+@click.option("--rationale", required=True)
+@click.option("--source", required=True)
+@click.option("--created-by", required=True)
+@click.option("--novelty-score", type=float, required=True)
+@click.option("--status", required=True)
+@click.option("--db-path", type=click.Path(path_type=Path), required=True)
+def add_hypothesis(
+    asset_a: str,
+    asset_b: str,
+    rationale: str,
+    source: str,
+    created_by: str,
+    novelty_score: float,
+    status: str,
+    db_path: Path,
+) -> None:
+    """Добавить manual hypothesis в registry."""
+    engine = create_database_engine(db_path)
+    Base.metadata.create_all(engine)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        hypothesis_row = Hypothesis(
+            asset_a=asset_a,
+            asset_b=asset_b,
+            rationale=rationale,
+            source=source,
+            created_by=created_by,
+            novelty_score=novelty_score,
+            status=status,
+        )
+        session.add(hypothesis_row)
+        session.commit()
+        click.echo(f"Hypothesis сохранена: {hypothesis_row.hypothesis_id}")
+    finally:
+        session.close()
+        engine.dispose()
+
+
+@hypothesis.command("generate")
+@click.option("--assets-json", type=click.Path(path_type=Path), required=True)
+@click.option("--correlations-json", type=click.Path(path_type=Path), required=True)
+@click.option("--p-values-json", type=click.Path(path_type=Path), required=True)
+@click.option("--require-same-sector/--allow-cross-sector", default=False)
+@click.option("--min-abs-correlation", type=float, required=True)
+@click.option("--min-market-cap", type=int, required=True)
+@click.option("--max-market-cap", type=int)
+@click.option("--max-pairs", type=int, required=True)
+@click.option("--multiple-testing-method", required=True)
+@click.option("--candidate-alpha", type=float, required=True)
+@click.option("--initial-novelty-score", type=float, required=True)
+@click.option("--initial-status", required=True)
+@click.option("--source", required=True)
+@click.option("--created-by", required=True)
+@click.option("--db-path", type=click.Path(path_type=Path), required=True)
+def generate_hypotheses(
+    assets_json: Path,
+    correlations_json: Path,
+    p_values_json: Path,
+    require_same_sector: bool,
+    min_abs_correlation: float,
+    min_market_cap: int,
+    max_market_cap: int | None,
+    max_pairs: int,
+    multiple_testing_method: str,
+    candidate_alpha: float,
+    initial_novelty_score: float,
+    initial_status: str,
+    source: str,
+    created_by: str,
+    db_path: Path,
+) -> None:
+    """Сгенерировать rule-based hypotheses из JSON universe/contracts."""
+    engine = create_database_engine(db_path)
+    Base.metadata.create_all(engine)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        result = generate_rule_based_hypotheses(
+            assets=_load_assets(assets_json),
+            correlations=_load_pair_metric(correlations_json, value_key="correlation"),
+            candidate_p_values=_load_pair_metric(p_values_json, value_key="p_value"),
+            config=HypothesisGenerationConfig(
+                require_same_sector=require_same_sector,
+                min_abs_correlation=min_abs_correlation,
+                min_market_cap=min_market_cap,
+                max_market_cap=max_market_cap,
+                max_pairs=max_pairs,
+                multiple_testing_method=MultipleTestingMethod(multiple_testing_method),
+                candidate_alpha=candidate_alpha,
+                initial_novelty_score=initial_novelty_score,
+                initial_status=initial_status,
+                source=source,
+                created_by=created_by,
+            ),
+            session=session,
+        )
+        session.commit()
+        click.echo(f"Hypotheses generated: {result.generated_count}")
+        click.echo(f"Hypotheses skipped: {result.skipped_count}")
+    finally:
+        session.close()
+        engine.dispose()
+
+
 def _quality_config(
     *,
     max_missing_bar_ratio: float,
@@ -208,3 +357,32 @@ def _parse_datetime(value: str | None) -> datetime | None:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
         raise click.BadParameter("ожидается ISO datetime, например 2024-01-01T00:00:00+00:00") from exc
+
+
+def _load_assets(path: Path) -> tuple[HypothesisUniverseAsset, ...]:
+    rows = _read_json_list(path)
+    return tuple(
+        HypothesisUniverseAsset(
+            symbol=str(row["symbol"]),
+            sector=str(row["sector"]),
+            market_cap=int(row["market_cap"]),
+        )
+        for row in rows
+    )
+
+
+def _load_pair_metric(path: Path, *, value_key: str) -> dict[tuple[str, str], float]:
+    rows = _read_json_list(path)
+    return {
+        (str(row["asset_a"]), str(row["asset_b"])): float(row[value_key])
+        for row in rows
+    }
+
+
+def _read_json_list(path: Path) -> list[dict[str, Any]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise click.BadParameter(f"{path} должен содержать JSON array")
+    if not all(isinstance(row, dict) for row in payload):
+        raise click.BadParameter(f"{path} должен содержать JSON objects")
+    return payload

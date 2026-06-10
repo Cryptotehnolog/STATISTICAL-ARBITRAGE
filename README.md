@@ -249,8 +249,16 @@ uv run stat-arb data validate --exchange binance --symbol BTC/USDT --timeframe 1
 # Показать сохраненные datasets
 uv run stat-arb data list --db-path data/registry.db
 
+# Добавить manual hypothesis
+uv run stat-arb hypothesis add --asset-a BTC/USDT --asset-b ETH/USDT --rationale "Manual crypto spread candidate" --source user_provided --created-by operator --novelty-score 1.0 --status new --db-path data/registry.db
+
+# Показать hypotheses
+uv run stat-arb hypothesis list --db-path data/registry.db
+
+# Сгенерировать rule-based hypotheses из JSON universe/contracts
+uv run stat-arb hypothesis generate --assets-json data/research/assets.json --correlations-json data/research/correlations.json --p-values-json data/research/p_values.json --require-same-sector --min-abs-correlation 0.85 --min-market-cap 50000000000 --max-market-cap 150000000000 --max-pairs 10 --multiple-testing-method bonferroni --candidate-alpha 0.05 --initial-novelty-score 1.0 --initial-status new --source rule_based --created-by hypothesis_agent --db-path data/registry.db
+
 # Planned Task 15 commands:
-# uv run stat-arb hypothesis generate --method sector --limit 10
 # uv run stat-arb experiment run --hypothesis-id <uuid>
 # uv run stat-arb experiment list --status completed
 ```
