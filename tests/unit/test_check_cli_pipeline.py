@@ -20,3 +20,4 @@ def test_check_cli_pipeline_runs_cli_tests() -> None:
     assert '"experiment"' in cli_tests
     assert '"status"' in cli_tests
     assert '"advance"' in cli_tests
+    assert '"run-stage"' in cli_tests

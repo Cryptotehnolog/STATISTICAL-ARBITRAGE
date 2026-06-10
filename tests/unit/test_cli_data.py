@@ -13,6 +13,7 @@ from click.testing import CliRunner
 from stat_arb.cli import main
 from stat_arb.storage import (
     Base,
+    CoordinatorTask,
     Dataset,
     Experiment,
     Hypothesis,
@@ -431,6 +432,161 @@ def test_experiment_advance_rejects_invalid_lifecycle_jump(tmp_path: Path) -> No
 
     assert result.exit_code != 0
     assert "Invalid lifecycle transition" in result.output
+
+
+def test_experiment_run_stage_enqueues_task_and_advances_lifecycle(tmp_path: Path) -> None:
+    """experiment run-stage should queue explicit stage work through Coordinator contracts."""
+    db_path = tmp_path / "registry.db"
+    payload_path = tmp_path / "payload.json"
+    payload_path.write_text('{"dataset_ids": ["dataset-a", "dataset-b"]}', encoding="utf-8")
+    experiment_id = _seed_cli_experiment(db_path, status="data_validation")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "run-stage",
+            "--experiment-id",
+            experiment_id,
+            "--stage",
+            "statistical_testing",
+            "--task-type",
+            "run_statistical_tests",
+            "--agent-name",
+            "statistical_testing_agent",
+            "--priority",
+            "2",
+            "--max-attempts",
+            "3",
+            "--payload-json",
+            str(payload_path),
+            "--advance-lifecycle",
+            "--reason",
+            "Queue statistical testing after data validation.",
+            "--actor",
+            "cli_operator",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Stage task поставлен в очередь" in result.output
+    assert "data_validation -> statistical_testing" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        stored_task = session.query(CoordinatorTask).one()
+        assert stored_task.experiment_id == experiment_id
+        assert stored_task.task_type == "run_statistical_tests"
+        assert stored_task.agent_name == "statistical_testing_agent"
+        assert stored_task.priority == 2
+        assert stored_task.max_attempts == 3
+        assert stored_task.status == "pending"
+        assert stored_task.payload == {"dataset_ids": ["dataset-a", "dataset-b"]}
+        stored_experiment = session.get(Experiment, experiment_id)
+        assert stored_experiment is not None
+        assert stored_experiment.status == "statistical_testing"
+        assert stored_experiment.current_agent == "statistical_testing_agent"
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_experiment_run_stage_can_queue_without_lifecycle_advance(tmp_path: Path) -> None:
+    """experiment run-stage should not mutate lifecycle unless explicitly requested."""
+    db_path = tmp_path / "registry.db"
+    payload_path = tmp_path / "payload.json"
+    payload_path.write_text("{}", encoding="utf-8")
+    experiment_id = _seed_cli_experiment(db_path, status="backtesting")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "run-stage",
+            "--experiment-id",
+            experiment_id,
+            "--stage",
+            "backtesting",
+            "--task-type",
+            "run_backtest",
+            "--agent-name",
+            "backtest_agent",
+            "--priority",
+            "1",
+            "--max-attempts",
+            "2",
+            "--payload-json",
+            str(payload_path),
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Lifecycle не изменен" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        assert session.query(CoordinatorTask).count() == 1
+        stored_experiment = session.get(Experiment, experiment_id)
+        assert stored_experiment is not None
+        assert stored_experiment.status == "backtesting"
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_experiment_run_stage_rejects_mismatched_agent_for_stage(tmp_path: Path) -> None:
+    """experiment run-stage should not queue work for the wrong agent/stage pairing."""
+    db_path = tmp_path / "registry.db"
+    payload_path = tmp_path / "payload.json"
+    payload_path.write_text("{}", encoding="utf-8")
+    experiment_id = _seed_cli_experiment(db_path, status="data_validation")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "run-stage",
+            "--experiment-id",
+            experiment_id,
+            "--stage",
+            "statistical_testing",
+            "--task-type",
+            "run_statistical_tests",
+            "--agent-name",
+            "backtest_agent",
+            "--priority",
+            "1",
+            "--max-attempts",
+            "1",
+            "--payload-json",
+            str(payload_path),
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "agent-name не соответствует stage" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        assert session.query(CoordinatorTask).count() == 0
+        stored_experiment = session.get(Experiment, experiment_id)
+        assert stored_experiment is not None
+        assert stored_experiment.status == "data_validation"
+    finally:
+        session.close()
+        engine.dispose()
 
 
 def _seed_cli_experiment(db_path: Path, *, status: str) -> str:

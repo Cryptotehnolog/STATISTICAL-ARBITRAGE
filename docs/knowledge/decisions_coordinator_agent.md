@@ -62,6 +62,34 @@ Verification:
 - `tests/unit/test_cli_data.py`
 - `scripts/check_cli_pipeline.ps1`
 
+## DEC-0069: Queue experiment stages before implementing the full runner
+
+Status: accepted
+
+Decision: Add `stat-arb experiment run-stage` as the second Task 15.3 CLI slice. The
+command creates a durable Coordinator task with explicit experiment ID, stage, task type,
+agent name, priority, retry budget, and JSON payload. It may advance lifecycle only when
+the operator passes `--advance-lifecycle`, `--reason`, and `--actor`; that transition still
+uses `transition_experiment_lifecycle`.
+
+Rationale: A real stage runner must execute agent logic, persist factual artifacts, and
+write concise memory summaries. Queueing work is the smallest useful boundary before that:
+it proves CLI inputs flow into the Coordinator registry queue without pretending that the
+stage has completed. Requiring explicit priority, retry budget, and payload prevents hidden
+workflow defaults.
+
+Rules:
+- `run-stage` must enqueue through `enqueue_coordinator_task`.
+- `run-stage` must not call agent implementation functions directly.
+- Agent name must match the requested lifecycle stage.
+- Lifecycle changes are opt-in and must use the Coordinator transition boundary.
+- Full `experiment run` remains blocked until factual artifact sidecars and stage execution
+  contracts exist.
+
+Verification:
+- `tests/unit/test_cli_data.py`
+- `scripts/check_cli_pipeline.ps1`
+
 ## DEC-0063: Treat Coordinator integration smoke as the Task 13 checkpoint
 
 Status: accepted

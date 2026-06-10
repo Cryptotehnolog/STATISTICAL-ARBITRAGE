@@ -553,6 +553,10 @@ This implementation plan breaks down the multi-agent quantitative research syste
       status directly.
     - Full experiment runner and individual stage execution commands remain open until
       the runner can persist factual artifacts and enforce registry/memory boundaries.
+    - Implemented second safe slice: `stat-arb experiment run-stage` queues one
+      explicit Coordinator task with operator-provided stage, task type, agent name,
+      priority, retry budget, and JSON payload. Lifecycle advancement is optional and
+      still uses the Coordinator state-machine boundary.
     - _Requirements: 22.10_
   
   - [ ] 15.4 Create scripted pair-screening workflow

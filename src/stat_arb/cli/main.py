@@ -10,11 +10,13 @@ from typing import Any
 import click
 
 from stat_arb.agents import (
+    CoordinatorTaskRequest,
     CoordinatorTransitionRequest,
     ExperimentFinalDecision,
     ExperimentLifecycleStatus,
     HypothesisGenerationConfig,
     HypothesisUniverseAsset,
+    enqueue_coordinator_task,
     generate_rule_based_hypotheses,
     transition_experiment_lifecycle,
 )
@@ -454,6 +456,91 @@ def advance_experiment(
     )
 
 
+@experiment.command("run-stage")
+@click.option("--experiment-id", required=True)
+@click.option("--stage", required=True)
+@click.option("--task-type", required=True)
+@click.option("--agent-name", required=True)
+@click.option("--priority", type=int, required=True)
+@click.option("--max-attempts", type=int, required=True)
+@click.option("--payload-json", type=click.Path(path_type=Path), required=True)
+@click.option("--advance-lifecycle", is_flag=True)
+@click.option("--reason")
+@click.option("--actor")
+@click.option("--db-path", type=click.Path(path_type=Path), required=True)
+def run_experiment_stage(
+    experiment_id: str,
+    stage: str,
+    task_type: str,
+    agent_name: str,
+    priority: int,
+    max_attempts: int,
+    payload_json: Path,
+    advance_lifecycle: bool,
+    reason: str | None,
+    actor: str | None,
+    db_path: Path,
+) -> None:
+    """Поставить stage task в Coordinator queue без прямого запуска агента."""
+    try:
+        target_status = ExperimentLifecycleStatus(stage)
+        _validate_stage_agent(target_status=target_status, agent_name=agent_name)
+        payload = _read_json_object(payload_json)
+        if advance_lifecycle and (not reason or not actor):
+            raise click.ClickException(
+                "--reason и --actor обязательны вместе с --advance-lifecycle"
+            )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    engine = create_database_engine(db_path)
+    Base.metadata.create_all(engine)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    transition_text = "Lifecycle не изменен"
+    try:
+        try:
+            task = enqueue_coordinator_task(
+                CoordinatorTaskRequest(
+                    experiment_id=experiment_id,
+                    task_type=task_type,
+                    agent_name=agent_name,
+                    priority=priority,
+                    max_attempts=max_attempts,
+                    payload=payload,
+                ),
+                session=session,
+            )
+            if advance_lifecycle:
+                transition_result = transition_experiment_lifecycle(
+                    CoordinatorTransitionRequest(
+                        experiment_id=experiment_id,
+                        target_status=target_status,
+                        reason=reason or "",
+                        actor=actor or "",
+                    ),
+                    session=session,
+                )
+                transition_text = (
+                    f"{transition_result.previous_status.value} -> "
+                    f"{transition_result.current_status.value}"
+                )
+        except ValueError as exc:
+            session.rollback()
+            raise click.ClickException(str(exc)) from exc
+        session.commit()
+    finally:
+        session.close()
+        engine.dispose()
+
+    click.echo(f"Stage task поставлен в очередь: {task.task_id}")
+    click.echo(f"Experiment: {task.experiment_id}")
+    click.echo(f"Stage: {target_status.value}")
+    click.echo(f"Task type: {task.task_type}")
+    click.echo(f"Agent: {task.agent_name}")
+    click.echo(transition_text)
+
+
 def _quality_config(
     *,
     max_missing_bar_ratio: float,
@@ -503,3 +590,31 @@ def _read_json_list(path: Path) -> list[dict[str, Any]]:
     if not all(isinstance(row, dict) for row in payload):
         raise click.BadParameter(f"{path} должен содержать JSON objects")
     return payload
+
+
+def _read_json_object(path: Path) -> dict[str, object]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise click.BadParameter(f"{path} должен содержать JSON object")
+    return payload
+
+
+def _validate_stage_agent(
+    *,
+    target_status: ExperimentLifecycleStatus,
+    agent_name: str,
+) -> None:
+    expected_agents = {
+        ExperimentLifecycleStatus.DATA_VALIDATION: "data_agent",
+        ExperimentLifecycleStatus.STATISTICAL_TESTING: "statistical_testing_agent",
+        ExperimentLifecycleStatus.BACKTESTING: "backtest_agent",
+        ExperimentLifecycleStatus.CRITIC_REVIEW: "critic_agent",
+        ExperimentLifecycleStatus.REPORTING: "report_agent",
+    }
+    expected_agent = expected_agents.get(target_status)
+    if expected_agent is None:
+        raise ValueError(f"stage не поддерживает queued execution: {target_status.value}")
+    if agent_name != expected_agent:
+        raise ValueError(
+            f"agent-name не соответствует stage: expected {expected_agent}, got {agent_name}"
+        )
