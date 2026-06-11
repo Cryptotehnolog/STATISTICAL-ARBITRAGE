@@ -123,6 +123,35 @@ Verification:
 - `tests/unit/test_check_cli_pipeline.py`
 - `scripts/check_cli_pipeline.ps1`
 
+## DEC-0074: Keep CLI executable stages behind an explicit support policy
+
+Status: accepted
+
+Decision: Add `stat_arb.cli.stage_support` as the single source of truth for stages that
+`stat-arb experiment execute-stage` may run locally. The supported set is limited to
+`statistical_testing`, `backtesting`, and `critic_review`. Unsupported stages return
+explicit architectural reasons: Data Agent execution lacks a mature service boundary,
+Reporting requires factual artifact/series sidecars, and final decisions remain
+Coordinator-owned.
+
+Rationale: As Task 15.3 grows, adding stage branches directly in the Click entrypoint
+would make it easy to accidentally expose an immature stage or bypass registry/memory
+rules. A small support-policy module lets tests prove which stages are safe and why the
+others are still blocked.
+
+Rules:
+- New `execute-stage` support must be added through `stage_support` first.
+- Reporting must stay blocked until factual artifact or series sidecars exist.
+- Final decision execution must stay in the Coordinator final-decision boundary, not in a
+  generic stage runner.
+- The CLI checkpoint must include stage-support tests.
+
+Verification:
+- `tests/unit/test_cli_stage_support.py`
+- `tests/unit/test_cli_data.py`
+- `tests/unit/test_check_cli_pipeline.py`
+- `scripts/check_cli_pipeline.ps1`
+
 ## DEC-0073: Add a Critic Review stage executor without direct memory writes
 
 Status: accepted

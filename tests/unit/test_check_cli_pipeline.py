@@ -12,6 +12,7 @@ def test_check_cli_pipeline_runs_cli_tests() -> None:
 
     assert "Проверка CLI pipeline" in script
     assert "tests/unit/test_cli_data.py" in script
+    assert "tests/unit/test_cli_stage_support.py" in script
     assert "tests/unit/test_check_cli_pipeline.py" in script
     assert "$LASTEXITCODE -ne 0" in script
     assert '["data", "list"' in cli_tests
@@ -28,14 +29,17 @@ def test_check_cli_pipeline_runs_cli_tests() -> None:
 def test_cli_stage_executor_does_not_bypass_memory_or_report_boundaries() -> None:
     """Stage executor must not write ApeRAG directly or create reports without artifacts."""
     cli_source = Path("src/stat_arb/cli/main.py").read_text(encoding="utf-8")
+    support_source = Path("src/stat_arb/cli/stage_support.py").read_text(encoding="utf-8")
 
     assert "run_statistical_testing" in cli_source
     assert "run_backtest_agent_persistence" in cli_source
     assert "run_critic_agent_persistence" in cli_source
     assert "ApeRAGMemoryClient" not in cli_source
     assert "run_report_agent" not in cli_source
-    assert "stage executor пока поддерживает statistical_testing, backtesting" in cli_source
-    assert "и critic_review" in cli_source
+    assert "STATISTICAL_TESTING" in support_source
+    assert "BACKTESTING" in support_source
+    assert "CRITIC_REVIEW" in support_source
+    assert "factual artifact/series sidecars" in support_source
 
 
 def test_stage_payload_parsing_lives_outside_cli_entrypoint() -> None:

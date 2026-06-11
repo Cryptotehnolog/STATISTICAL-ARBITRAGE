@@ -32,6 +32,7 @@ from stat_arb.cli.stage_payloads import (
     build_critic_agent_input,
     build_statistical_testing_input,
 )
+from stat_arb.cli.stage_support import execute_stage_spec, supported_execute_stages
 from stat_arb.data_quality import OHLCVQualityConfig, validate_ohlcv_batch
 from stat_arb.domain import AdjustmentMode
 from stat_arb.ingestion import (
@@ -571,16 +572,10 @@ def execute_experiment_stage(
         target_status = ExperimentLifecycleStatus(stage)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
-    supported_stages = {
-        ExperimentLifecycleStatus.STATISTICAL_TESTING,
-        ExperimentLifecycleStatus.BACKTESTING,
-        ExperimentLifecycleStatus.CRITIC_REVIEW,
-    }
-    if target_status not in supported_stages:
-        raise click.ClickException(
-            "stage executor пока поддерживает statistical_testing, backtesting "
-            "и critic_review"
-        )
+    try:
+        stage_spec = execute_stage_spec(target_status)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
 
     engine = create_database_engine(db_path)
     session_factory = create_session_factory(engine)
@@ -591,9 +586,10 @@ def execute_experiment_stage(
             policy=CoordinatorResourcePolicy(
                 max_running_tasks=max_running_tasks,
                 max_running_tasks_per_agent={
-                    "statistical_testing_agent": max_running_tasks_per_agent,
-                    "backtest_agent": max_running_tasks_per_agent,
-                    "critic_agent": max_running_tasks_per_agent,
+                    spec.agent_name: max_running_tasks_per_agent
+                    for spec in (
+                        execute_stage_spec(stage) for stage in supported_execute_stages()
+                    )
                 },
             ),
             session=session,
@@ -601,23 +597,15 @@ def execute_experiment_stage(
         if task is None:
             raise click.ClickException("Coordinator resource policy blocked task claim")
         try:
+            if task.task_type != stage_spec.task_type:
+                raise ValueError(f"task_type must be {stage_spec.task_type}")
+            if task.agent_name != stage_spec.agent_name:
+                raise ValueError(f"agent_name must be {stage_spec.agent_name}")
             if target_status == ExperimentLifecycleStatus.STATISTICAL_TESTING:
-                if task.task_type != "run_statistical_tests":
-                    raise ValueError("task_type must be run_statistical_tests")
-                if task.agent_name != "statistical_testing_agent":
-                    raise ValueError("agent_name must be statistical_testing_agent")
                 _execute_statistical_testing_task(task.payload, session=session)
             elif target_status == ExperimentLifecycleStatus.BACKTESTING:
-                if task.task_type != "run_backtest":
-                    raise ValueError("task_type must be run_backtest")
-                if task.agent_name != "backtest_agent":
-                    raise ValueError("agent_name must be backtest_agent")
                 _execute_backtesting_task(task.payload, session=session)
             elif target_status == ExperimentLifecycleStatus.CRITIC_REVIEW:
-                if task.task_type != "run_critic_review":
-                    raise ValueError("task_type must be run_critic_review")
-                if task.agent_name != "critic_agent":
-                    raise ValueError("agent_name must be critic_agent")
                 _execute_critic_review_task(task.payload, session=session)
             complete_coordinator_task(task_id=task.task_id, session=session)
         except Exception as exc:

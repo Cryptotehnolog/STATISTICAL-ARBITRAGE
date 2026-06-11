@@ -672,10 +672,8 @@ def test_experiment_execute_stage_rejects_report_stage_without_factual_artifacts
     )
 
     assert result.exit_code != 0
-    assert (
-        "stage executor пока поддерживает statistical_testing, backtesting "
-        "и critic_review"
-    ) in result.output
+    assert "execute-stage не поддерживает stage reporting" in result.output
+    assert "factual artifact/series sidecars" in result.output
 
 
 def test_experiment_execute_stage_runs_backtesting_and_completes_task(
