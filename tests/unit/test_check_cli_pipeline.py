@@ -21,3 +21,15 @@ def test_check_cli_pipeline_runs_cli_tests() -> None:
     assert '"status"' in cli_tests
     assert '"advance"' in cli_tests
     assert '"run-stage"' in cli_tests
+    assert '"execute-stage"' in cli_tests
+    assert "rejects_report_stage_without_factual_artifacts" in cli_tests
+
+
+def test_cli_stage_executor_does_not_bypass_memory_or_report_boundaries() -> None:
+    """Stage executor must not write ApeRAG directly or create reports without artifacts."""
+    cli_source = Path("src/stat_arb/cli/main.py").read_text(encoding="utf-8")
+
+    assert "run_statistical_testing" in cli_source
+    assert "ApeRAGMemoryClient" not in cli_source
+    assert "run_report_agent" not in cli_source
+    assert "stage executor пока поддерживает только statistical_testing" in cli_source

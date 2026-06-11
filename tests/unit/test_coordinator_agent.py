@@ -20,6 +20,7 @@ from stat_arb.agents.coordinator import (
     ExperimentFinalDecision,
     ExperimentLifecycleStatus,
     apply_coordinator_final_decision,
+    claim_coordinator_task_by_id,
     claim_next_coordinator_task,
     complete_coordinator_task,
     decide_coordinator_final_decision,
@@ -230,6 +231,74 @@ def test_coordinator_queue_claims_highest_priority_pending_task(session: Session
     assert claimed.attempt_count == 1
     assert claimed.started_at is not None
     assert session.query(CoordinatorTask).filter_by(task_id=low.task_id).one().status == "pending"
+
+
+def test_coordinator_queue_claims_specific_pending_task_by_id(session: Session) -> None:
+    """Stage executors should claim an explicit task without bypassing resource policy."""
+    experiment_id = _seed_experiment(session, status="statistical_testing")
+    task = enqueue_coordinator_task(
+        CoordinatorTaskRequest(
+            experiment_id=experiment_id,
+            task_type="run_statistical_tests",
+            agent_name="statistical_testing_agent",
+            priority=5,
+            max_attempts=2,
+            payload={"dataset_a_id": "dataset-a"},
+        ),
+        session=session,
+    )
+
+    claimed = claim_coordinator_task_by_id(
+        task_id=task.task_id,
+        policy=_resource_policy(statistical_testing_agent=1),
+        session=session,
+    )
+
+    assert claimed.task_id == task.task_id
+    assert claimed.status == "running"
+    assert claimed.attempt_count == 1
+    assert claimed.started_at is not None
+
+
+def test_coordinator_queue_claim_by_id_blocks_resource_limit(session: Session) -> None:
+    """Task-id claims should obey the same global and per-agent limits as next-task claims."""
+    experiment_id = _seed_experiment(session, status="statistical_testing")
+    running = enqueue_coordinator_task(
+        CoordinatorTaskRequest(
+            experiment_id=experiment_id,
+            task_type="run_statistical_tests",
+            agent_name="statistical_testing_agent",
+            priority=1,
+            max_attempts=1,
+            payload={},
+        ),
+        session=session,
+    )
+    pending = enqueue_coordinator_task(
+        CoordinatorTaskRequest(
+            experiment_id=experiment_id,
+            task_type="run_statistical_tests",
+            agent_name="statistical_testing_agent",
+            priority=2,
+            max_attempts=1,
+            payload={},
+        ),
+        session=session,
+    )
+    claim_coordinator_task_by_id(
+        task_id=running.task_id,
+        policy=_resource_policy(statistical_testing_agent=1),
+        session=session,
+    )
+
+    blocked = claim_coordinator_task_by_id(
+        task_id=pending.task_id,
+        policy=_resource_policy(statistical_testing_agent=1),
+        session=session,
+    )
+
+    assert blocked is None
+    assert session.query(CoordinatorTask).filter_by(task_id=pending.task_id).one().status == "pending"
 
 
 def test_coordinator_queue_records_retryable_failure_and_exhausted_failure(

@@ -557,6 +557,10 @@ This implementation plan breaks down the multi-agent quantitative research syste
       explicit Coordinator task with operator-provided stage, task type, agent name,
       priority, retry budget, and JSON payload. Lifecycle advancement is optional and
       still uses the Coordinator state-machine boundary.
+    - Implemented third safe slice: `stat-arb experiment execute-stage` executes a
+      queued `statistical_testing` task through the Statistical Testing Agent service,
+      writes structured results to the registry, and completes/fails the Coordinator task.
+      Other stages remain blocked until their factual artifact contracts exist.
     - _Requirements: 22.10_
   
   - [ ] 15.4 Create scripted pair-screening workflow

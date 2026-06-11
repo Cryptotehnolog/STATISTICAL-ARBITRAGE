@@ -269,6 +269,9 @@ uv run stat-arb experiment advance --experiment-id <uuid> --target-status data_v
 
 # Поставить stage task в Coordinator queue с явными retry/priority/payload
 uv run stat-arb experiment run-stage --experiment-id <uuid> --stage statistical_testing --task-type run_statistical_tests --agent-name statistical_testing_agent --priority 2 --max-attempts 3 --payload-json data/research/statistical_stage_payload.json --advance-lifecycle --reason "Queue statistical testing after data validation." --actor cli_operator --db-path data/registry.db
+
+# Выполнить queued statistical_testing stage через локальный agent service
+uv run stat-arb experiment execute-stage --task-id <uuid> --stage statistical_testing --max-running-tasks 1 --max-running-tasks-per-agent 1 --db-path data/registry.db
 ```
 
 ## Источники данных
@@ -497,6 +500,17 @@ uv run stat-arb experiment run-stage \
   --advance-lifecycle \
   --reason "Queue statistical testing after data validation." \
   --actor cli_operator \
+  --db-path data/registry.db
+```
+
+Выполнить queued `statistical_testing` stage:
+
+```bash
+uv run stat-arb experiment execute-stage \
+  --task-id <uuid> \
+  --stage statistical_testing \
+  --max-running-tasks 1 \
+  --max-running-tasks-per-agent 1 \
   --db-path data/registry.db
 ```
 

@@ -349,6 +349,33 @@ def claim_next_coordinator_task(
     return task
 
 
+def claim_coordinator_task_by_id(
+    *,
+    task_id: str,
+    policy: CoordinatorResourcePolicy,
+    session: Session,
+) -> CoordinatorTask | None:
+    """Claim one explicit pending Coordinator task while enforcing resource limits."""
+    if not str(task_id).strip():
+        raise ValueError("task_id is required")
+    task = _require_task(session, task_id=task_id)
+    if task.status != CoordinatorTaskStatus.PENDING.value:
+        raise ValueError("only pending Coordinator tasks can be claimed")
+    _validate_agent_has_resource_policy(task.agent_name, policy)
+    if _running_task_count(session) >= policy.max_running_tasks:
+        return None
+    if _running_task_count(session, agent_name=task.agent_name) >= policy.max_running_tasks_per_agent[
+        task.agent_name
+    ]:
+        return None
+    task.status = CoordinatorTaskStatus.RUNNING.value
+    task.attempt_count += 1
+    task.started_at = _utc_now()
+    task.completed_at = None
+    session.flush()
+    return task
+
+
 def fail_coordinator_task(
     *,
     task_id: str,

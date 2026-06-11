@@ -10,14 +10,20 @@ from typing import Any
 import click
 
 from stat_arb.agents import (
+    CoordinatorResourcePolicy,
     CoordinatorTaskRequest,
     CoordinatorTransitionRequest,
     ExperimentFinalDecision,
     ExperimentLifecycleStatus,
     HypothesisGenerationConfig,
     HypothesisUniverseAsset,
+    StatisticalTestingInput,
+    claim_coordinator_task_by_id,
+    complete_coordinator_task,
     enqueue_coordinator_task,
+    fail_coordinator_task,
     generate_rule_based_hypotheses,
+    run_statistical_testing,
     transition_experiment_lifecycle,
 )
 from stat_arb.data_quality import OHLCVQualityConfig, validate_ohlcv_batch
@@ -541,6 +547,69 @@ def run_experiment_stage(
     click.echo(transition_text)
 
 
+@experiment.command("execute-stage")
+@click.option("--task-id", required=True)
+@click.option("--stage", required=True)
+@click.option("--max-running-tasks", type=int, required=True)
+@click.option("--max-running-tasks-per-agent", type=int, required=True)
+@click.option("--db-path", type=click.Path(path_type=Path), required=True)
+def execute_experiment_stage(
+    task_id: str,
+    stage: str,
+    max_running_tasks: int,
+    max_running_tasks_per_agent: int,
+    db_path: Path,
+) -> None:
+    """Выполнить один queued stage через поддерживаемый agent service."""
+    try:
+        target_status = ExperimentLifecycleStatus(stage)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if target_status != ExperimentLifecycleStatus.STATISTICAL_TESTING:
+        raise click.ClickException(
+            "stage executor пока поддерживает только statistical_testing"
+        )
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        task = claim_coordinator_task_by_id(
+            task_id=task_id,
+            policy=CoordinatorResourcePolicy(
+                max_running_tasks=max_running_tasks,
+                max_running_tasks_per_agent={
+                    "statistical_testing_agent": max_running_tasks_per_agent
+                },
+            ),
+            session=session,
+        )
+        if task is None:
+            raise click.ClickException("Coordinator resource policy blocked task claim")
+        try:
+            if task.task_type != "run_statistical_tests":
+                raise ValueError("task_type must be run_statistical_tests")
+            if task.agent_name != "statistical_testing_agent":
+                raise ValueError("agent_name must be statistical_testing_agent")
+            _execute_statistical_testing_task(task.payload, session=session)
+            complete_coordinator_task(task_id=task.task_id, session=session)
+        except Exception as exc:
+            fail_coordinator_task(
+                task_id=task.task_id,
+                error_summary=str(exc),
+                session=session,
+            )
+            session.commit()
+            raise click.ClickException(str(exc)) from exc
+        session.commit()
+    finally:
+        session.close()
+        engine.dispose()
+
+    click.echo(f"Stage выполнен: {target_status.value}")
+    click.echo(f"Task completed: {task_id}")
+
+
 def _quality_config(
     *,
     max_missing_bar_ratio: float,
@@ -597,6 +666,99 @@ def _read_json_object(path: Path) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise click.BadParameter(f"{path} должен содержать JSON object")
     return payload
+
+
+def _execute_statistical_testing_task(payload: dict[str, object], *, session: Any) -> None:
+    run_statistical_testing(
+        StatisticalTestingInput(
+            hypothesis_id=_payload_uuid(payload, "hypothesis_id"),
+            dataset_a_id=_payload_uuid(payload, "dataset_a_id"),
+            dataset_b_id=_payload_uuid(payload, "dataset_b_id"),
+            prices_a=_payload_float_list(payload, "prices_a"),
+            prices_b=_payload_float_list(payload, "prices_b"),
+            aligned_timestamps=_payload_datetimes(payload, "aligned_timestamps"),
+            train_fraction=_payload_float(payload, "train_fraction"),
+            alpha=_payload_float(payload, "alpha"),
+            adf_regression=_payload_string(payload, "adf_regression"),
+            adf_autolag=_payload_optional_string(payload, "adf_autolag"),
+            periods_per_day=_payload_float(payload, "periods_per_day"),
+            residual_diagnostics_lags=_payload_int(payload, "residual_diagnostics_lags"),
+            regime_window=_payload_int(payload, "regime_window"),
+            regime_mean_shift_threshold=_payload_float(
+                payload,
+                "regime_mean_shift_threshold",
+            ),
+            regime_volatility_ratio_threshold=_payload_float(
+                payload,
+                "regime_volatility_ratio_threshold",
+            ),
+        ),
+        session=session,
+        memory_service=None,
+    )
+
+
+def _payload_uuid(payload: dict[str, object], key: str) -> Any:
+    from uuid import UUID
+
+    return UUID(_payload_string(payload, key))
+
+
+def _payload_string(payload: dict[str, object], key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"payload.{key} must be a non-empty string")
+    return value
+
+
+def _payload_optional_string(payload: dict[str, object], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"payload.{key} must be a string or null")
+    return value
+
+
+def _payload_float(payload: dict[str, object], key: str) -> float:
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"payload.{key} must be a number")
+    return float(value)
+
+
+def _payload_int(payload: dict[str, object], key: str) -> int:
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"payload.{key} must be an integer")
+    return value
+
+
+def _payload_float_list(payload: dict[str, object], key: str) -> list[float]:
+    value = payload.get(key)
+    if not isinstance(value, list):
+        raise ValueError(f"payload.{key} must be a list")
+    result: list[float] = []
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int | float):
+            raise ValueError(f"payload.{key} must contain only numbers")
+        result.append(float(item))
+    return result
+
+
+def _payload_datetimes(payload: dict[str, object], key: str) -> list[datetime]:
+    value = payload.get(key)
+    if not isinstance(value, list):
+        raise ValueError(f"payload.{key} must be a list")
+    result: list[datetime] = []
+    for item in value:
+        if not isinstance(item, str):
+            raise ValueError(f"payload.{key} must contain ISO datetime strings")
+        parsed = _parse_datetime(item)
+        if parsed is None:
+            raise ValueError(f"payload.{key} contains an empty datetime")
+        result.append(parsed)
+    return result
 
 
 def _validate_stage_agent(

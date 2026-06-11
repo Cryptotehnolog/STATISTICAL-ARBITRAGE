@@ -62,6 +62,36 @@ Verification:
 - `tests/unit/test_cli_data.py`
 - `scripts/check_cli_pipeline.ps1`
 
+## DEC-0070: Execute the first local stage through the Statistical Testing Agent
+
+Status: accepted
+
+Decision: Add `stat-arb experiment execute-stage` as the third Task 15.3 CLI slice, but
+support only the `statistical_testing` stage. The command claims one explicit queued
+Coordinator task by ID, enforces explicit resource limits, calls `run_statistical_testing`,
+persists the statistical test result in the structured registry, and completes or fails the
+Coordinator task.
+
+Rationale: This is the first real local stage execution boundary. It proves that queued
+work can move from CLI to Coordinator queue to an agent service without a broad full-runner.
+Other stages stay blocked until their factual artifact contracts are ready. In particular,
+Report Agent execution must not be exposed from CLI until full series sidecars or equivalent
+factual artifacts exist.
+
+Rules:
+- Stage execution must claim tasks through Coordinator queue boundaries.
+- `execute-stage` must not write ApeRAG directly.
+- `execute-stage` must not call Report Agent while factual artifact sidecars are absent.
+- Statistical Testing Agent receives explicit payload parameters; hidden train/test or
+  diagnostic defaults remain forbidden.
+- Failed stage execution must update the Coordinator task through failure handling instead
+  of leaving it running silently.
+
+Verification:
+- `tests/unit/test_cli_data.py`
+- `tests/unit/test_check_cli_pipeline.py`
+- `scripts/check_cli_pipeline.ps1`
+
 ## DEC-0069: Queue experiment stages before implementing the full runner
 
 Status: accepted

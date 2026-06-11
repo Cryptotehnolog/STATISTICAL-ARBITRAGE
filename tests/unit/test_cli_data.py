@@ -14,9 +14,11 @@ from stat_arb.cli import main
 from stat_arb.storage import (
     Base,
     CoordinatorTask,
+    DataQualityReportRecord,
     Dataset,
     Experiment,
     Hypothesis,
+    StatisticalTestResult,
     create_database_engine,
     create_session_factory,
 )
@@ -589,6 +591,88 @@ def test_experiment_run_stage_rejects_mismatched_agent_for_stage(tmp_path: Path)
         engine.dispose()
 
 
+def test_experiment_execute_stage_runs_statistical_testing_and_completes_task(
+    tmp_path: Path,
+) -> None:
+    """experiment execute-stage should run a queued statistical_testing task through service."""
+    db_path = tmp_path / "registry.db"
+    task_id = _seed_statistical_testing_task(db_path)
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "execute-stage",
+            "--task-id",
+            task_id,
+            "--stage",
+            "statistical_testing",
+            "--max-running-tasks",
+            "1",
+            "--max-running-tasks-per-agent",
+            "1",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Stage выполнен: statistical_testing" in result.output
+    assert "Task completed" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        stored_task = session.get(CoordinatorTask, task_id)
+        assert stored_task is not None
+        assert stored_task.status == "completed"
+        assert stored_task.attempt_count == 1
+        assert stored_task.completed_at is not None
+        stored_result = session.query(StatisticalTestResult).one()
+        assert isinstance(stored_result.passed, bool)
+        assert stored_result.hypothesis_id == stored_task.payload["hypothesis_id"]
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_experiment_execute_stage_rejects_report_stage_without_factual_artifacts(
+    tmp_path: Path,
+) -> None:
+    """experiment execute-stage should not create reports from aggregate-only inputs."""
+    db_path = tmp_path / "registry.db"
+    experiment_id = _seed_cli_experiment(db_path, status="reporting")
+    task_id = _seed_cli_task(
+        db_path,
+        experiment_id=experiment_id,
+        task_type="write_report",
+        agent_name="report_agent",
+        payload={"backtest_id": str(uuid4())},
+    )
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "execute-stage",
+            "--task-id",
+            task_id,
+            "--stage",
+            "reporting",
+            "--max-running-tasks",
+            "1",
+            "--max-running-tasks-per-agent",
+            "1",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "stage executor пока поддерживает только statistical_testing" in result.output
+
+
 def _seed_cli_experiment(db_path: Path, *, status: str) -> str:
     engine = create_database_engine(db_path)
     Base.metadata.create_all(engine)
@@ -633,3 +717,180 @@ def _agent_for_cli_status(status: str) -> str | None:
         "reporting": "report_agent",
         "final_decision": None,
     }[status]
+
+
+def _seed_cli_task(
+    db_path: Path,
+    *,
+    experiment_id: str,
+    task_type: str,
+    agent_name: str,
+    payload: dict[str, object],
+) -> str:
+    engine = create_database_engine(db_path)
+    Base.metadata.create_all(engine)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    task_id = str(uuid4())
+    try:
+        session.add(
+            CoordinatorTask(
+                task_id=task_id,
+                experiment_id=experiment_id,
+                task_type=task_type,
+                agent_name=agent_name,
+                priority=1,
+                status="pending",
+                attempt_count=0,
+                max_attempts=2,
+                payload=payload,
+            )
+        )
+        session.commit()
+        return task_id
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def _seed_statistical_testing_task(db_path: Path) -> str:
+    engine = create_database_engine(db_path)
+    Base.metadata.create_all(engine)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    start = datetime(2024, 1, 1, tzinfo=UTC).replace(tzinfo=None)
+    hypothesis_id = str(uuid4())
+    dataset_a_id = str(uuid4())
+    dataset_b_id = str(uuid4())
+    experiment_id = str(uuid4())
+    task_id = str(uuid4())
+    prices_a, prices_b, timestamps = _cli_cointegrated_pair(start)
+    try:
+        session.add(
+            Hypothesis(
+                hypothesis_id=hypothesis_id,
+                asset_a="AAA",
+                asset_b="BBB",
+                rationale="Synthetic statistical testing pair",
+                source="unit-test",
+                created_by="pytest",
+                created_at=start,
+            )
+        )
+        session.add_all(
+            [
+                Dataset(
+                    dataset_id=dataset_a_id,
+                    symbol="AAA",
+                    source="unit-test",
+                    timeframe="15m",
+                    start_date=start,
+                    end_date=timestamps[-1],
+                    bar_count=len(timestamps),
+                    adjustment_mode="none",
+                    file_path="/tmp/aaa.parquet",
+                ),
+                Dataset(
+                    dataset_id=dataset_b_id,
+                    symbol="BBB",
+                    source="unit-test",
+                    timeframe="15m",
+                    start_date=start,
+                    end_date=timestamps[-1],
+                    bar_count=len(timestamps),
+                    adjustment_mode="none",
+                    file_path="/tmp/bbb.parquet",
+                ),
+            ]
+        )
+        session.add_all(
+            [
+                _cli_quality_report(dataset_a_id, "AAA", start, timestamps[-1], len(timestamps)),
+                _cli_quality_report(dataset_b_id, "BBB", start, timestamps[-1], len(timestamps)),
+            ]
+        )
+        session.add(
+            Experiment(
+                experiment_id=experiment_id,
+                hypothesis_id=hypothesis_id,
+                status="statistical_testing",
+                current_agent="statistical_testing_agent",
+            )
+        )
+        session.add(
+            CoordinatorTask(
+                task_id=task_id,
+                experiment_id=experiment_id,
+                task_type="run_statistical_tests",
+                agent_name="statistical_testing_agent",
+                priority=1,
+                status="pending",
+                attempt_count=0,
+                max_attempts=2,
+                payload={
+                    "hypothesis_id": hypothesis_id,
+                    "dataset_a_id": dataset_a_id,
+                    "dataset_b_id": dataset_b_id,
+                    "prices_a": prices_a,
+                    "prices_b": prices_b,
+                    "aligned_timestamps": [
+                        timestamp.isoformat() for timestamp in timestamps
+                    ],
+                    "train_fraction": 0.7,
+                    "alpha": 0.05,
+                    "adf_regression": "c",
+                    "adf_autolag": "AIC",
+                    "periods_per_day": 96.0,
+                    "residual_diagnostics_lags": 10,
+                    "regime_window": 60,
+                    "regime_mean_shift_threshold": 3.0,
+                    "regime_volatility_ratio_threshold": 2.5,
+                },
+            )
+        )
+        session.commit()
+        return task_id
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def _cli_quality_report(
+    dataset_id: str,
+    symbol: str,
+    start: datetime,
+    end: datetime,
+    count: int,
+) -> DataQualityReportRecord:
+    return DataQualityReportRecord(
+        report_id=str(uuid4()),
+        dataset_id=dataset_id,
+        symbol=symbol,
+        source="unit-test",
+        timeframe="15m",
+        start_date=start,
+        end_date=end,
+        bar_count=count,
+        expected_bar_count=count,
+        timezone_normalized=True,
+        alignment_score=1.0,
+        quality_score=1.0,
+        passed=True,
+        issues=[],
+        report_path=f"/tmp/{symbol}-quality.json",
+        generated_at=start,
+    )
+
+
+def _cli_cointegrated_pair(start: datetime) -> tuple[list[float], list[float], list[datetime]]:
+    observations = 240
+    prices_b = [100.0]
+    for index in range(1, observations):
+        prices_b.append(prices_b[-1] + 0.05 + 0.2 * ((index % 7) - 3))
+    residuals = [0.0]
+    for index in range(1, observations):
+        shock = 0.08 * ((index % 5) - 2)
+        residuals.append(0.65 * residuals[-1] + shock)
+    prices_a = [1.4 * price + residual for price, residual in zip(prices_b, residuals)]
+    timestamps = [start + timedelta(minutes=15 * index) for index in range(observations)]
+    return prices_a, prices_b, timestamps
