@@ -5,7 +5,18 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from stat_arb.agents import BacktestAgentInput, StatisticalTestingInput
+from stat_arb.agents import (
+    BacktestAgentInput,
+    CriticAgentInput,
+    CriticCostRealismAssessment,
+    CriticDecisionAssessment,
+    CriticDecisionStatus,
+    CriticInsufficientTestingAssessment,
+    CriticLookaheadAssessment,
+    CriticOverfittingAssessment,
+    CriticWeakAssumptionAssessment,
+    StatisticalTestingInput,
+)
 from stat_arb.backtest import (
     BacktestCostConfig,
     BacktestExitPolicyConfig,
@@ -174,6 +185,136 @@ def build_backtest_agent_input(payload: dict[str, object]) -> BacktestAgentInput
     )
 
 
+def build_critic_agent_input(payload: dict[str, object]) -> CriticAgentInput:
+    """Build a Critic Agent persistence input from an explicit stage payload."""
+    lookahead = _payload_object(payload, "lookahead")
+    overfitting = _payload_object(payload, "overfitting")
+    weak_assumptions = _payload_object(payload, "weak_assumptions")
+    insufficient_testing = _payload_object(payload, "insufficient_testing")
+    cost_realism = _payload_object(payload, "cost_realism")
+    decision = _payload_object(payload, "decision")
+    return CriticAgentInput(
+        backtest_id=_payload_uuid(payload, "backtest_id"),
+        lookahead=CriticLookaheadAssessment(
+            lookahead_bias_detected=_object_bool(
+                lookahead,
+                "lookahead_bias_detected",
+                context="payload.lookahead",
+            ),
+            issues=tuple(
+                _object_string_list(lookahead, "issues", context="payload.lookahead")
+            ),
+            checked_rules=tuple(
+                _object_string_list(
+                    lookahead,
+                    "checked_rules",
+                    context="payload.lookahead",
+                )
+            ),
+        ),
+        overfitting=CriticOverfittingAssessment(
+            overfitting_detected=_object_bool(
+                overfitting,
+                "overfitting_detected",
+                context="payload.overfitting",
+            ),
+            indicators=tuple(
+                _object_string_list(
+                    overfitting,
+                    "indicators",
+                    context="payload.overfitting",
+                )
+            ),
+            checked_rules=tuple(
+                _object_string_list(
+                    overfitting,
+                    "checked_rules",
+                    context="payload.overfitting",
+                )
+            ),
+        ),
+        weak_assumptions=CriticWeakAssumptionAssessment(
+            weak_assumptions_detected=_object_bool(
+                weak_assumptions,
+                "weak_assumptions_detected",
+                context="payload.weak_assumptions",
+            ),
+            indicators=tuple(
+                _object_string_list(
+                    weak_assumptions,
+                    "indicators",
+                    context="payload.weak_assumptions",
+                )
+            ),
+            checked_rules=tuple(
+                _object_string_list(
+                    weak_assumptions,
+                    "checked_rules",
+                    context="payload.weak_assumptions",
+                )
+            ),
+        ),
+        insufficient_testing=CriticInsufficientTestingAssessment(
+            insufficient_testing_detected=_object_bool(
+                insufficient_testing,
+                "insufficient_testing_detected",
+                context="payload.insufficient_testing",
+            ),
+            indicators=tuple(
+                _object_string_list(
+                    insufficient_testing,
+                    "indicators",
+                    context="payload.insufficient_testing",
+                )
+            ),
+            checked_rules=tuple(
+                _object_string_list(
+                    insufficient_testing,
+                    "checked_rules",
+                    context="payload.insufficient_testing",
+                )
+            ),
+        ),
+        cost_realism=CriticCostRealismAssessment(
+            cost_realism_concerns_detected=_object_bool(
+                cost_realism,
+                "cost_realism_concerns_detected",
+                context="payload.cost_realism",
+            ),
+            indicators=tuple(
+                _object_string_list(
+                    cost_realism,
+                    "indicators",
+                    context="payload.cost_realism",
+                )
+            ),
+            checked_rules=tuple(
+                _object_string_list(
+                    cost_realism,
+                    "checked_rules",
+                    context="payload.cost_realism",
+                )
+            ),
+        ),
+        decision=CriticDecisionAssessment(
+            status=CriticDecisionStatus(
+                _object_string(decision, "status", context="payload.decision")
+            ),
+            recommendation=_object_string(
+                decision,
+                "recommendation",
+                context="payload.decision",
+            ),
+            objections=tuple(
+                _object_string_list(decision, "objections", context="payload.decision")
+            ),
+        ),
+        operational_concerns=tuple(
+            _payload_optional_string_list(payload, "operational_concerns")
+        ),
+    )
+
+
 def _parse_datetime(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -252,6 +393,15 @@ def _payload_float_list(payload: dict[str, object], key: str) -> list[float]:
             raise ValueError(f"payload.{key} must contain only numbers")
         result.append(float(item))
     return result
+
+
+def _payload_optional_string_list(payload: dict[str, object], key: str) -> list[str]:
+    value = payload.get(key)
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ValueError(f"payload.{key} must be a list of strings or null")
+    return value
 
 
 def _payload_exit_policy(payload: dict[str, object]) -> BacktestExitPolicyConfig | None:
@@ -378,6 +528,13 @@ def _object_int(value: dict[str, object], key: str, *, context: str) -> int:
     item = value.get(key)
     if isinstance(item, bool) or not isinstance(item, int):
         raise ValueError(f"{context}.{key} must be an integer")
+    return item
+
+
+def _object_bool(value: dict[str, object], key: str, *, context: str) -> bool:
+    item = value.get(key)
+    if not isinstance(item, bool):
+        raise ValueError(f"{context}.{key} must be a boolean")
     return item
 
 

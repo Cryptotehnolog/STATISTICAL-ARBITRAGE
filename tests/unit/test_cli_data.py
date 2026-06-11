@@ -15,6 +15,7 @@ from stat_arb.storage import (
     BacktestResult,
     Base,
     CoordinatorTask,
+    CriticReview,
     DataQualityReportRecord,
     Dataset,
     Experiment,
@@ -671,7 +672,10 @@ def test_experiment_execute_stage_rejects_report_stage_without_factual_artifacts
     )
 
     assert result.exit_code != 0
-    assert "stage executor пока поддерживает только statistical_testing и backtesting" in result.output
+    assert (
+        "stage executor пока поддерживает statistical_testing, backtesting "
+        "и critic_review"
+    ) in result.output
 
 
 def test_experiment_execute_stage_runs_backtesting_and_completes_task(
@@ -716,6 +720,62 @@ def test_experiment_execute_stage_runs_backtesting_and_completes_task(
         stored_result = session.query(BacktestResult).one()
         assert stored_result.test_id == stored_task.payload["test_id"]
         assert stored_result.execution_command == ["stat-arb", "experiment", "execute-stage"]
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_experiment_execute_stage_runs_critic_review_and_completes_task(
+    tmp_path: Path,
+) -> None:
+    """experiment execute-stage should run a queued critic_review task through service."""
+    db_path = tmp_path / "registry.db"
+    task_id = _seed_critic_review_task(db_path)
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "execute-stage",
+            "--task-id",
+            task_id,
+            "--stage",
+            "critic_review",
+            "--max-running-tasks",
+            "1",
+            "--max-running-tasks-per-agent",
+            "1",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Stage выполнен: critic_review" in result.output
+    assert "Task completed" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        stored_task = session.get(CoordinatorTask, task_id)
+        assert stored_task is not None
+        assert stored_task.status == "completed"
+        assert stored_task.attempt_count == 1
+        stored_review = session.query(CriticReview).one()
+        assert stored_review.backtest_id == stored_task.payload["backtest_id"]
+        assert stored_review.status == "rejected"
+        assert stored_review.lookahead_bias_detected is True
+        assert stored_review.overfitting_indicators == ["sharpe_degradation: unstable"]
+        assert stored_review.weak_assumptions == [
+            "cointegration_p_value_proximity: near alpha"
+        ]
+        assert stored_review.insufficient_testing == [
+            "minimum_walk_forward_windows: too few"
+        ]
+        assert stored_review.cost_concerns == ["negative_net_pnl_after_costs: loss"]
+        assert stored_review.operational_concerns == ["manual review required"]
+        assert "signal_lookahead" in stored_review.objections
     finally:
         session.close()
         engine.dispose()
@@ -1070,6 +1130,191 @@ def _seed_backtesting_task(db_path: Path, *, lock_path: Path) -> str:
                     "train_window_days": 60,
                     "test_window_days": 30,
                     "num_windows": 2,
+                },
+            )
+        )
+        session.commit()
+        return task_id
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def _seed_critic_review_task(db_path: Path) -> str:
+    engine = create_database_engine(db_path)
+    Base.metadata.create_all(engine)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    start = datetime(2024, 1, 1, tzinfo=UTC).replace(tzinfo=None)
+    hypothesis_id = str(uuid4())
+    dataset_a_id = str(uuid4())
+    dataset_b_id = str(uuid4())
+    test_id = str(uuid4())
+    backtest_id = str(uuid4())
+    experiment_id = str(uuid4())
+    task_id = str(uuid4())
+    try:
+        session.add(
+            Hypothesis(
+                hypothesis_id=hypothesis_id,
+                asset_a="AAA",
+                asset_b="BBB",
+                rationale="Synthetic critic review pair",
+                source="unit-test",
+                created_by="pytest",
+                created_at=start,
+            )
+        )
+        session.add_all(
+            [
+                Dataset(
+                    dataset_id=dataset_a_id,
+                    symbol="AAA",
+                    source="unit-test",
+                    timeframe="15m",
+                    start_date=start,
+                    end_date=start + timedelta(days=2),
+                    bar_count=240,
+                    adjustment_mode="none",
+                    file_path="/tmp/aaa.parquet",
+                ),
+                Dataset(
+                    dataset_id=dataset_b_id,
+                    symbol="BBB",
+                    source="unit-test",
+                    timeframe="15m",
+                    start_date=start,
+                    end_date=start + timedelta(days=2),
+                    bar_count=240,
+                    adjustment_mode="none",
+                    file_path="/tmp/bbb.parquet",
+                ),
+            ]
+        )
+        session.flush()
+        session.add(
+            StatisticalTestResult(
+                test_id=test_id,
+                hypothesis_id=hypothesis_id,
+                dataset_a_id=dataset_a_id,
+                dataset_b_id=dataset_b_id,
+                train_start=start,
+                train_end=start + timedelta(days=1),
+                test_start=start + timedelta(days=1),
+                test_end=start + timedelta(days=2),
+                cointegration_statistic=-3.5,
+                cointegration_p_value=0.01,
+                adf_statistic=-4.0,
+                adf_p_value=0.01,
+                hedge_ratio=1.0,
+                hedge_ratio_r_squared=0.9,
+                half_life_days=2.0,
+                residual_ljung_box_p_value=0.5,
+                residual_jarque_bera_p_value=0.5,
+                residual_excess_kurtosis=0.1,
+                residual_diagnostics_lags=10,
+                regime_changes_detected=False,
+                passed=True,
+            )
+        )
+        session.flush()
+        session.add(
+            BacktestResult(
+                backtest_id=backtest_id,
+                hypothesis_id=hypothesis_id,
+                test_id=test_id,
+                dataset_a_id=dataset_a_id,
+                dataset_b_id=dataset_b_id,
+                git_commit_hash="abcdef1",
+                config_hash="a" * 64,
+                dataset_ids=[dataset_a_id, dataset_b_id],
+                random_seed=12345,
+                execution_command=["uv", "run", "stat-arb", "backtest"],
+                run_timestamp=start,
+                lock_file_hash="f" * 64,
+                execution_time_seconds=12.5,
+                train_window_days=60,
+                test_window_days=30,
+                num_windows=2,
+                entry_threshold=2.0,
+                exit_threshold=0.5,
+                hedge_ratio=1.0,
+                gross_pnl=100.0,
+                net_pnl=80.0,
+                commission_cost=5.0,
+                spread_cost=3.0,
+                slippage_cost=2.0,
+                funding_cost=1.0,
+                borrow_cost=1.0,
+                num_trades=4,
+                turnover=1.2,
+                avg_holding_time_hours=12.0,
+                median_holding_time_hours=10.0,
+                sharpe_ratio=1.1,
+                sortino_ratio=1.3,
+                volatility=0.2,
+                max_drawdown=0.1,
+                win_rate=0.6,
+                profit_factor=1.5,
+                net_pnl_2x_costs=60.0,
+                net_pnl_half_costs=90.0,
+                baseline_sharpe=0.5,
+                tested_at=start,
+            )
+        )
+        session.add(
+            Experiment(
+                experiment_id=experiment_id,
+                hypothesis_id=hypothesis_id,
+                status="critic_review",
+                current_agent="critic_agent",
+            )
+        )
+        session.add(
+            CoordinatorTask(
+                task_id=task_id,
+                experiment_id=experiment_id,
+                task_type="run_critic_review",
+                agent_name="critic_agent",
+                priority=1,
+                status="pending",
+                attempt_count=0,
+                max_attempts=2,
+                payload={
+                    "backtest_id": backtest_id,
+                    "lookahead": {
+                        "lookahead_bias_detected": True,
+                        "issues": ["signal_lookahead: future bar used"],
+                        "checked_rules": ["strictly_past_signals"],
+                    },
+                    "overfitting": {
+                        "overfitting_detected": True,
+                        "indicators": ["sharpe_degradation: unstable"],
+                        "checked_rules": ["sharpe_degradation"],
+                    },
+                    "weak_assumptions": {
+                        "weak_assumptions_detected": True,
+                        "indicators": [
+                            "cointegration_p_value_proximity: near alpha"
+                        ],
+                        "checked_rules": ["cointegration_p_value_proximity"],
+                    },
+                    "insufficient_testing": {
+                        "insufficient_testing_detected": True,
+                        "indicators": ["minimum_walk_forward_windows: too few"],
+                        "checked_rules": ["minimum_walk_forward_windows"],
+                    },
+                    "cost_realism": {
+                        "cost_realism_concerns_detected": True,
+                        "indicators": ["negative_net_pnl_after_costs: loss"],
+                        "checked_rules": ["negative_net_pnl_after_costs"],
+                    },
+                    "decision": {
+                        "status": "rejected",
+                        "recommendation": "Reject",
+                        "objections": ["signal_lookahead: future bar used"],
+                    },
+                    "operational_concerns": ["manual review required"],
                 },
             )
         )

@@ -275,6 +275,9 @@ uv run stat-arb experiment execute-stage --task-id <uuid> --stage statistical_te
 
 # Выполнить queued backtesting stage через локальный Backtest Agent service
 uv run stat-arb experiment execute-stage --task-id <uuid> --stage backtesting --max-running-tasks 1 --max-running-tasks-per-agent 1 --db-path data/registry.db
+
+# Выполнить queued critic_review stage через локальный Critic Agent service
+uv run stat-arb experiment execute-stage --task-id <uuid> --stage critic_review --max-running-tasks 1 --max-running-tasks-per-agent 1 --db-path data/registry.db
 ```
 
 ## Источники данных
@@ -523,6 +526,17 @@ uv run stat-arb experiment execute-stage \
 uv run stat-arb experiment execute-stage \
   --task-id <uuid> \
   --stage backtesting \
+  --max-running-tasks 1 \
+  --max-running-tasks-per-agent 1 \
+  --db-path data/registry.db
+```
+
+Выполнить queued `critic_review` stage:
+
+```bash
+uv run stat-arb experiment execute-stage \
+  --task-id <uuid> \
+  --stage critic_review \
   --max-running-tasks 1 \
   --max-running-tasks-per-agent 1 \
   --db-path data/registry.db

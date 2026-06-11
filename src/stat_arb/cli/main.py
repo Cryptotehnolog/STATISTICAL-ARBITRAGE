@@ -23,11 +23,13 @@ from stat_arb.agents import (
     fail_coordinator_task,
     generate_rule_based_hypotheses,
     run_backtest_agent_persistence,
+    run_critic_agent_persistence,
     run_statistical_testing,
     transition_experiment_lifecycle,
 )
 from stat_arb.cli.stage_payloads import (
     build_backtest_agent_input,
+    build_critic_agent_input,
     build_statistical_testing_input,
 )
 from stat_arb.data_quality import OHLCVQualityConfig, validate_ohlcv_batch
@@ -572,10 +574,12 @@ def execute_experiment_stage(
     supported_stages = {
         ExperimentLifecycleStatus.STATISTICAL_TESTING,
         ExperimentLifecycleStatus.BACKTESTING,
+        ExperimentLifecycleStatus.CRITIC_REVIEW,
     }
     if target_status not in supported_stages:
         raise click.ClickException(
-            "stage executor пока поддерживает только statistical_testing и backtesting"
+            "stage executor пока поддерживает statistical_testing, backtesting "
+            "и critic_review"
         )
 
     engine = create_database_engine(db_path)
@@ -589,6 +593,7 @@ def execute_experiment_stage(
                 max_running_tasks_per_agent={
                     "statistical_testing_agent": max_running_tasks_per_agent,
                     "backtest_agent": max_running_tasks_per_agent,
+                    "critic_agent": max_running_tasks_per_agent,
                 },
             ),
             session=session,
@@ -608,6 +613,12 @@ def execute_experiment_stage(
                 if task.agent_name != "backtest_agent":
                     raise ValueError("agent_name must be backtest_agent")
                 _execute_backtesting_task(task.payload, session=session)
+            elif target_status == ExperimentLifecycleStatus.CRITIC_REVIEW:
+                if task.task_type != "run_critic_review":
+                    raise ValueError("task_type must be run_critic_review")
+                if task.agent_name != "critic_agent":
+                    raise ValueError("agent_name must be critic_agent")
+                _execute_critic_review_task(task.payload, session=session)
             complete_coordinator_task(task_id=task.task_id, session=session)
         except Exception as exc:
             fail_coordinator_task(
@@ -695,6 +706,14 @@ def _execute_statistical_testing_task(payload: dict[str, object], *, session: An
 def _execute_backtesting_task(payload: dict[str, object], *, session: Any) -> None:
     run_backtest_agent_persistence(
         build_backtest_agent_input(payload),
+        session=session,
+        memory_service=None,
+    )
+
+
+def _execute_critic_review_task(payload: dict[str, object], *, session: Any) -> None:
+    run_critic_agent_persistence(
+        build_critic_agent_input(payload),
         session=session,
         memory_service=None,
     )

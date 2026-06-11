@@ -123,6 +123,35 @@ Verification:
 - `tests/unit/test_check_cli_pipeline.py`
 - `scripts/check_cli_pipeline.ps1`
 
+## DEC-0073: Add a Critic Review stage executor without direct memory writes
+
+Status: accepted
+
+Decision: Extend `stat-arb experiment execute-stage` to support queued `critic_review`
+tasks after the statistical testing and backtesting executors. The command claims one
+explicit Coordinator task by ID, enforces `run_critic_review` plus `critic_agent`, builds
+`CriticAgentInput` from explicit payload values, calls `run_critic_agent_persistence`, and
+completes or fails the Coordinator task inside the registry transaction.
+
+Rationale: The Critic Agent boundary is mature enough to run as a local CLI stage, but a
+full experiment runner is still premature. Keeping `critic_review` as a single-stage
+executor lets us verify registry persistence and task lifecycle without letting the CLI
+write ApeRAG directly or mutate review rows by hand.
+
+Rules:
+- Critic Review stage execution must claim work through Coordinator queue boundaries.
+- `execute-stage --stage critic_review` must not write ApeRAG directly.
+- Critic Review payloads must provide completed assessments and decision fields
+  explicitly; hidden critic thresholds remain forbidden.
+- Critic Review must call `run_critic_agent_persistence` so existing backtest
+  prerequisites and registry persistence are enforced.
+- Reporting stays unsupported in `execute-stage` until factual report artifacts exist.
+
+Verification:
+- `tests/unit/test_cli_data.py`
+- `tests/unit/test_check_cli_pipeline.py`
+- `scripts/check_cli_pipeline.ps1`
+
 ## DEC-0072: Keep stage payload parsing outside the Click entrypoint
 
 Status: accepted
