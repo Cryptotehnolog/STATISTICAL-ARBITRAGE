@@ -34,3 +34,16 @@ def test_cli_stage_executor_does_not_bypass_memory_or_report_boundaries() -> Non
     assert "ApeRAGMemoryClient" not in cli_source
     assert "run_report_agent" not in cli_source
     assert "stage executor пока поддерживает только statistical_testing и backtesting" in cli_source
+
+
+def test_stage_payload_parsing_lives_outside_cli_entrypoint() -> None:
+    """Stage payload parsing should stay typed and separate from the Click entrypoint."""
+    cli_source = Path("src/stat_arb/cli/main.py").read_text(encoding="utf-8")
+    payload_source = Path("src/stat_arb/cli/stage_payloads.py").read_text(encoding="utf-8")
+
+    assert "build_statistical_testing_input" in cli_source
+    assert "build_backtest_agent_input" in cli_source
+    assert "def _payload_float" not in cli_source
+    assert "def _object_datetime" not in cli_source
+    assert "def build_statistical_testing_input" in payload_source
+    assert "def build_backtest_agent_input" in payload_source

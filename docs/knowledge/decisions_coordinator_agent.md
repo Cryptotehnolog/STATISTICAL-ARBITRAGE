@@ -123,6 +123,32 @@ Verification:
 - `tests/unit/test_check_cli_pipeline.py`
 - `scripts/check_cli_pipeline.ps1`
 
+## DEC-0072: Keep stage payload parsing outside the Click entrypoint
+
+Status: accepted
+
+Decision: Move typed JSON payload parsing for `experiment execute-stage` into
+`stat_arb.cli.stage_payloads`. The Click entrypoint keeps responsibility for user input,
+Coordinator task claim, stage routing, and transaction handling. The payload module builds
+agent-facing contracts such as `StatisticalTestingInput` and `BacktestAgentInput`.
+
+Rationale: `execute-stage` now supports more than one stage. Keeping all JSON parsing,
+explicit assumption validation, and agent input construction inside `main.py` would turn
+the CLI file into a workflow engine and make future stage additions riskier. A typed
+payload boundary keeps the CLI thin while preserving the existing no-hidden-defaults rule.
+
+Rules:
+- Stage payload builders must return typed agent/service input contracts.
+- Click commands may route stages but should not own detailed stage payload parsing.
+- Payload builders must keep research-impacting assumptions explicit.
+- Stage execution still must call mature service boundaries and must not write ApeRAG
+  directly.
+
+Verification:
+- `tests/unit/test_cli_data.py`
+- `tests/unit/test_check_cli_pipeline.py`
+- `scripts/check_cli_pipeline.ps1`
+
 ## DEC-0069: Queue experiment stages before implementing the full runner
 
 Status: accepted
