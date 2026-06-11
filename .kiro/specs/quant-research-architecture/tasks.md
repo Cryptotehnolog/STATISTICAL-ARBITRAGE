@@ -560,7 +560,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Implemented third safe slice: `stat-arb experiment execute-stage` executes a
       queued `statistical_testing` task through the Statistical Testing Agent service,
       writes structured results to the registry, and completes/fails the Coordinator task.
-      Other stages remain blocked until their factual artifact contracts exist.
+    - Extended `experiment execute-stage` to support queued `backtesting` tasks through the
+      Backtest Agent persistence boundary. The executor requires explicit payload
+      assumptions for core thresholds, costs, metrics, baseline, sensitivity, and
+      reproducibility, then writes structured backtest results to the registry and
+      completes/fails the Coordinator task.
+    - Reporting remains blocked until factual artifact/series sidecars exist, so the CLI
+      cannot generate human-facing reports from aggregate-only inputs.
     - _Requirements: 22.10_
   
   - [ ] 15.4 Create scripted pair-screening workflow

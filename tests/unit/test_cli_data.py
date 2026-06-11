@@ -12,6 +12,7 @@ from click.testing import CliRunner
 
 from stat_arb.cli import main
 from stat_arb.storage import (
+    BacktestResult,
     Base,
     CoordinatorTask,
     DataQualityReportRecord,
@@ -670,7 +671,54 @@ def test_experiment_execute_stage_rejects_report_stage_without_factual_artifacts
     )
 
     assert result.exit_code != 0
-    assert "stage executor пока поддерживает только statistical_testing" in result.output
+    assert "stage executor пока поддерживает только statistical_testing и backtesting" in result.output
+
+
+def test_experiment_execute_stage_runs_backtesting_and_completes_task(
+    tmp_path: Path,
+) -> None:
+    """experiment execute-stage should run a queued backtesting task through service."""
+    db_path = tmp_path / "registry.db"
+    lock_path = tmp_path / "uv.lock"
+    lock_path.write_text("package==1.0\n", encoding="utf-8")
+    task_id = _seed_backtesting_task(db_path, lock_path=lock_path)
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "execute-stage",
+            "--task-id",
+            task_id,
+            "--stage",
+            "backtesting",
+            "--max-running-tasks",
+            "1",
+            "--max-running-tasks-per-agent",
+            "1",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Stage выполнен: backtesting" in result.output
+    assert "Task completed" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        stored_task = session.get(CoordinatorTask, task_id)
+        assert stored_task is not None
+        assert stored_task.status == "completed"
+        assert stored_task.attempt_count == 1
+        stored_result = session.query(BacktestResult).one()
+        assert stored_result.test_id == stored_task.payload["test_id"]
+        assert stored_result.execution_command == ["stat-arb", "experiment", "execute-stage"]
+    finally:
+        session.close()
+        engine.dispose()
 
 
 def _seed_cli_experiment(db_path: Path, *, status: str) -> str:
@@ -855,6 +903,183 @@ def _seed_statistical_testing_task(db_path: Path) -> str:
         engine.dispose()
 
 
+def _seed_backtesting_task(db_path: Path, *, lock_path: Path) -> str:
+    engine = create_database_engine(db_path)
+    Base.metadata.create_all(engine)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    start = datetime(2024, 1, 1, tzinfo=UTC).replace(tzinfo=None)
+    hypothesis_id = str(uuid4())
+    dataset_a_id = str(uuid4())
+    dataset_b_id = str(uuid4())
+    experiment_id = str(uuid4())
+    test_id = str(uuid4())
+    task_id = str(uuid4())
+    prices_a, prices_b, timestamps = _cli_backtest_pair(start)
+    try:
+        session.add(
+            Hypothesis(
+                hypothesis_id=hypothesis_id,
+                asset_a="AAA",
+                asset_b="BBB",
+                rationale="Synthetic backtesting pair",
+                source="unit-test",
+                created_by="pytest",
+                created_at=start,
+            )
+        )
+        session.add_all(
+            [
+                Dataset(
+                    dataset_id=dataset_a_id,
+                    symbol="AAA",
+                    source="unit-test",
+                    timeframe="15m",
+                    start_date=start,
+                    end_date=timestamps[-1],
+                    bar_count=len(timestamps),
+                    adjustment_mode="none",
+                    file_path="/tmp/aaa.parquet",
+                ),
+                Dataset(
+                    dataset_id=dataset_b_id,
+                    symbol="BBB",
+                    source="unit-test",
+                    timeframe="15m",
+                    start_date=start,
+                    end_date=timestamps[-1],
+                    bar_count=len(timestamps),
+                    adjustment_mode="none",
+                    file_path="/tmp/bbb.parquet",
+                ),
+            ]
+        )
+        session.add_all(
+            [
+                _cli_quality_report(dataset_a_id, "AAA", start, timestamps[-1], len(timestamps)),
+                _cli_quality_report(dataset_b_id, "BBB", start, timestamps[-1], len(timestamps)),
+            ]
+        )
+        session.add(
+            StatisticalTestResult(
+                test_id=test_id,
+                hypothesis_id=hypothesis_id,
+                dataset_a_id=dataset_a_id,
+                dataset_b_id=dataset_b_id,
+                train_start=start,
+                train_end=start + timedelta(days=1),
+                test_start=start + timedelta(days=1),
+                test_end=timestamps[-1],
+                cointegration_statistic=-3.5,
+                cointegration_p_value=0.01,
+                adf_statistic=-4.0,
+                adf_p_value=0.01,
+                hedge_ratio=1.0,
+                hedge_ratio_r_squared=0.9,
+                half_life_days=2.0,
+                residual_ljung_box_p_value=0.5,
+                residual_jarque_bera_p_value=0.5,
+                residual_excess_kurtosis=0.1,
+                residual_diagnostics_lags=10,
+                regime_changes_detected=False,
+                passed=True,
+            )
+        )
+        session.add(
+            Experiment(
+                experiment_id=experiment_id,
+                hypothesis_id=hypothesis_id,
+                status="backtesting",
+                current_agent="backtest_agent",
+            )
+        )
+        session.add(
+            CoordinatorTask(
+                task_id=task_id,
+                experiment_id=experiment_id,
+                task_type="run_backtest",
+                agent_name="backtest_agent",
+                priority=1,
+                status="pending",
+                attempt_count=0,
+                max_attempts=2,
+                payload={
+                    "hypothesis_id": hypothesis_id,
+                    "test_id": test_id,
+                    "dataset_a_id": dataset_a_id,
+                    "dataset_b_id": dataset_b_id,
+                    "prices_a": prices_a,
+                    "prices_b": prices_b,
+                    "z_scores": [0.0, 2.2, 1.2, 0.2, -2.1, 0.0],
+                    "aligned_timestamps": [
+                        timestamp.isoformat() for timestamp in timestamps
+                    ],
+                    "hedge_ratio": 1.0,
+                    "entry_threshold": 2.0,
+                    "exit_threshold": 0.5,
+                    "exit_policy": None,
+                    "risk_exit_policy_disabled_reason": "unit test uses convergence-only exits",
+                    "cost_config": {
+                        "commission_rate": 0.001,
+                        "spread_cost_rate": 0.0005,
+                        "slippage_rate": 0.0002,
+                        "funding_rate_daily": 0.0001,
+                        "borrow_rate_annual": 0.005,
+                        "status": "verified",
+                        "source": "unit-test",
+                        "verified_at": "2024-01-01T00:00:00+00:00",
+                        "venue": "test-exchange",
+                        "market_type": "perpetual",
+                        "notes": "synthetic CLI fixture",
+                    },
+                    "periods_per_day": 96.0,
+                    "average_portfolio_value": 10000.0,
+                    "equity_curve": [100.0, 102.0, 100.98, 102.49, 103.0, 103.25],
+                    "period_returns": [0.02, -0.01, 0.015, 0.005, 0.002],
+                    "trade_pnls": [5.0, -2.0],
+                    "metric_config": {
+                        "periods_per_year": 365,
+                        "risk_free_rate_per_period": 0.0,
+                        "var_confidence": 0.95,
+                        "cvar_confidence": 0.95,
+                    },
+                    "baseline_config": {
+                        "kind": "buy_and_hold",
+                        "name": "long_asset_a_one_unit",
+                        "asset": "asset_a",
+                        "side": "long",
+                        "units": 1.0,
+                        "initial_capital": 100.0,
+                    },
+                    "sensitivity_scenarios": [
+                        {"name": "double_costs", "cost_multiplier": 2.0},
+                        {"name": "half_costs", "cost_multiplier": 0.5},
+                    ],
+                    "reproducibility": {
+                        "git_commit_hash": "abcdef1",
+                        "dataset_ids": [dataset_a_id, dataset_b_id],
+                        "random_seed": None,
+                        "execution_command": [
+                            "stat-arb",
+                            "experiment",
+                            "execute-stage",
+                        ],
+                        "run_timestamp": "2024-01-02T00:00:00+00:00",
+                        "lock_file_path": str(lock_path),
+                    },
+                    "train_window_days": 60,
+                    "test_window_days": 30,
+                    "num_windows": 2,
+                },
+            )
+        )
+        session.commit()
+        return task_id
+    finally:
+        session.close()
+        engine.dispose()
+
+
 def _cli_quality_report(
     dataset_id: str,
     symbol: str,
@@ -893,4 +1118,11 @@ def _cli_cointegrated_pair(start: datetime) -> tuple[list[float], list[float], l
         residuals.append(0.65 * residuals[-1] + shock)
     prices_a = [1.4 * price + residual for price, residual in zip(prices_b, residuals)]
     timestamps = [start + timedelta(minutes=15 * index) for index in range(observations)]
+    return prices_a, prices_b, timestamps
+
+
+def _cli_backtest_pair(start: datetime) -> tuple[list[float], list[float], list[datetime]]:
+    prices_a = [100.0, 103.0, 101.0, 100.0, 99.0, 100.0]
+    prices_b = [100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+    timestamps = [start + timedelta(minutes=15 * index) for index in range(len(prices_a))]
     return prices_a, prices_b, timestamps

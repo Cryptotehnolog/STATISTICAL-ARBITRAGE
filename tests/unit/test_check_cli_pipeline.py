@@ -30,6 +30,7 @@ def test_cli_stage_executor_does_not_bypass_memory_or_report_boundaries() -> Non
     cli_source = Path("src/stat_arb/cli/main.py").read_text(encoding="utf-8")
 
     assert "run_statistical_testing" in cli_source
+    assert "run_backtest_agent_persistence" in cli_source
     assert "ApeRAGMemoryClient" not in cli_source
     assert "run_report_agent" not in cli_source
-    assert "stage executor пока поддерживает только statistical_testing" in cli_source
+    assert "stage executor пока поддерживает только statistical_testing и backtesting" in cli_source

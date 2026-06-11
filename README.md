@@ -272,6 +272,9 @@ uv run stat-arb experiment run-stage --experiment-id <uuid> --stage statistical_
 
 # Выполнить queued statistical_testing stage через локальный agent service
 uv run stat-arb experiment execute-stage --task-id <uuid> --stage statistical_testing --max-running-tasks 1 --max-running-tasks-per-agent 1 --db-path data/registry.db
+
+# Выполнить queued backtesting stage через локальный Backtest Agent service
+uv run stat-arb experiment execute-stage --task-id <uuid> --stage backtesting --max-running-tasks 1 --max-running-tasks-per-agent 1 --db-path data/registry.db
 ```
 
 ## Источники данных
@@ -509,6 +512,17 @@ uv run stat-arb experiment run-stage \
 uv run stat-arb experiment execute-stage \
   --task-id <uuid> \
   --stage statistical_testing \
+  --max-running-tasks 1 \
+  --max-running-tasks-per-agent 1 \
+  --db-path data/registry.db
+```
+
+Выполнить queued `backtesting` stage:
+
+```bash
+uv run stat-arb experiment execute-stage \
+  --task-id <uuid> \
+  --stage backtesting \
   --max-running-tasks 1 \
   --max-running-tasks-per-agent 1 \
   --db-path data/registry.db

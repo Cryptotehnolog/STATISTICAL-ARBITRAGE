@@ -57,13 +57,25 @@ catch {
     # Server is not running yet.
 }
 
-$quotedPython = '"' + $pythonExe + '"'
-$quotedRoot = '"' + $repoRoot + '"'
-$quotedStdout = '"' + $stdoutLogFile + '"'
-$quotedStderr = '"' + $stderrLogFile + '"'
-$command = "cd /d $quotedRoot && start `"stat-arb-aperag-embedding`" /b $quotedPython -m uvicorn --app-dir src stat_arb.scripts.openai_embedding_server:app --host 127.0.0.1 --port $Port > $quotedStdout 2> $quotedStderr"
+$processArgs = @(
+    "-m",
+    "uvicorn",
+    "--app-dir",
+    "src",
+    "stat_arb.scripts.openai_embedding_server:app",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "$Port"
+)
 
-cmd.exe /c $command
+Start-Process `
+    -FilePath $pythonExe `
+    -ArgumentList $processArgs `
+    -WorkingDirectory $repoRoot `
+    -RedirectStandardOutput $stdoutLogFile `
+    -RedirectStandardError $stderrLogFile `
+    -WindowStyle Hidden
 
 for ($attempt = 1; $attempt -le 30; $attempt++) {
     try {

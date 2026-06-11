@@ -92,6 +92,37 @@ Verification:
 - `tests/unit/test_check_cli_pipeline.py`
 - `scripts/check_cli_pipeline.ps1`
 
+## DEC-0071: Execute backtesting stage only through the Backtest Agent boundary
+
+Status: accepted
+
+Decision: Extend `stat-arb experiment execute-stage` to support the `backtesting` stage
+after the Statistical Testing stage executor. The command claims one explicit queued
+Coordinator task by ID, enforces `run_backtest` plus `backtest_agent`, builds all backtest
+contracts from explicit payload values, calls `run_backtest_agent_persistence`, writes the
+structured result to the registry, and completes or fails the Coordinator task.
+
+Rationale: Backtesting now has a mature service boundary that already requires passed data
+quality reports, a passed statistical test, explicit cost assumptions, explicit metric
+assumptions, baseline comparison, sensitivity scenarios, and reproducibility metadata.
+Using that boundary from CLI is safe. Report execution remains blocked because reports need
+factual artifact or series sidecars; allowing report generation from aggregate-only inputs
+would produce incomplete human-facing evidence.
+
+Rules:
+- Backtesting stage execution must claim work through Coordinator queue boundaries.
+- `execute-stage --stage backtesting` must not write ApeRAG directly.
+- Backtesting payloads must provide cost, metric, baseline, sensitivity, and
+  reproducibility assumptions explicitly.
+- Backtesting must call `run_backtest_agent_persistence` so registry and prerequisite
+  checks are not bypassed.
+- Reporting stays unsupported in `execute-stage` until factual report artifacts exist.
+
+Verification:
+- `tests/unit/test_cli_data.py`
+- `tests/unit/test_check_cli_pipeline.py`
+- `scripts/check_cli_pipeline.ps1`
+
 ## DEC-0069: Queue experiment stages before implementing the full runner
 
 Status: accepted
