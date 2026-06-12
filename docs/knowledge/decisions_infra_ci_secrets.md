@@ -73,6 +73,12 @@ inside `tests/unit`; defer integration smoke until the Coordinator exists.
 Risks: The integration smoke is local and does not prove live ApeRAG availability. Live
 memory readiness remains covered by `scripts/check_memory_health.ps1`.
 
+Update: Task 15.7 adds `tests/integration/test_cli_scripted_workflows.py`, which is covered
+by the existing `scripts/check_property_integration.ps1` CI/pre-commit path. The test runs
+only local mock data and PowerShell/CLI commands, so it keeps CI free from Docker, ApeRAG,
+OmniRoute, Infisical, and exchange credentials while still proving scripted workflow
+composition.
+
 ## DEC-0024: Close bootstrap tasks 1-4 only after registry reproducibility property test
 
 Status: accepted

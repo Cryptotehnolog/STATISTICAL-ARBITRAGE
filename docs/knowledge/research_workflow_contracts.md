@@ -44,6 +44,20 @@ be used as runtime defaults.
 The registry stores the numbers and artifact references. ApeRAG stores conclusions,
 lessons learned, and notable regime/cost observations.
 
+## Scripted CLI Workflow Checkpoint
+
+Task 15 scripted workflows are small wrappers around mature CLI and agent boundaries, not a
+single autonomous "run everything" button. Pair screening writes hypotheses through the
+Hypothesis Agent boundary. Statistical testing and backtesting are queued and executed
+through Coordinator-backed `experiment run-stage` and `experiment execute-stage` commands.
+Reporting is allowed only when a matching factual `backtest_series` sidecar exists.
+
+`tests/integration/test_cli_scripted_workflows.py` is the current end-to-end mock-data
+checkpoint for this chain. It proves that scripts compose through the registry and
+Coordinator task queue while keeping Report Agent sidecar guards active. It does not fetch
+live market data, call external LLM providers, or replace the future full experiment
+runner.
+
 ## Defaults Policy
 
 Hidden research defaults are not allowed when a value changes statistical conclusions,

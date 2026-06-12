@@ -2,6 +2,8 @@ param(
     [string]$EnvFile = "data\aperag\.env",
     [string]$KnowledgeDir = "docs\knowledge",
     [string]$ManifestFile = "data\aperag\curated_seed_manifest.json",
+    [int]$IndexWaitTimeoutSeconds = 120,
+    [int]$IndexPollSeconds = 10,
     [switch]$IncludeGraphSmoke,
     [switch]$RequireCuratedGraph
 )
@@ -42,7 +44,21 @@ foreach ($file in $files) {
 }
 
 .\scripts\check_aperag.ps1 -IncludeGraphSmoke:$IncludeGraphSmoke | Write-Output
-.\scripts\check_aperag_knowledge.ps1 -EnvFile $EnvFile | Write-Output
+
+$indexDeadline = (Get-Date).AddSeconds($IndexWaitTimeoutSeconds)
+while ($true) {
+    try {
+        .\scripts\check_aperag_knowledge.ps1 -EnvFile $EnvFile | Write-Output
+        break
+    }
+    catch {
+        if ((Get-Date) -ge $indexDeadline) {
+            throw
+        }
+        Write-Output "ApeRAG indexes еще строятся; повтор через $IndexPollSeconds сек."
+        Start-Sleep -Seconds $IndexPollSeconds
+    }
+}
 
 if ($RequireCuratedGraph) {
     $envPath = Join-Path $repoRoot $EnvFile

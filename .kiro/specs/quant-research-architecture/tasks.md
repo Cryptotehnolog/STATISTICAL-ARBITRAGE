@@ -625,9 +625,17 @@ This implementation plan breaks down the multi-agent quantitative research syste
       15.7.
     - _Requirements: 22.10_
   
-  - [ ]* 15.7 Write integration tests for CLI tools
+  - [x]* 15.7 Write integration tests for CLI tools
     - Test CLI commands with mock data
     - Test scripted workflows end-to-end
+    - Added `tests/integration/test_cli_scripted_workflows.py` as a mock-data scripted
+      workflow checkpoint for `screen_pairs.ps1` → `run_statistical_testing.ps1` →
+      `run_backtest.ps1` → guarded reporting execution.
+    - Added `scripts/check_cli_scripted_workflows.ps1`; the same integration test is also
+      covered by `scripts/check_property_integration.ps1`, which is already wired into
+      local pre-commit and GitHub Actions.
+    - The checkpoint proves registry handoff, Coordinator tasks, Backtest Agent sidecars,
+      and Report Agent sidecar guard without becoming a full autonomous experiment runner.
     - _Requirements: 18.8_
 
 
