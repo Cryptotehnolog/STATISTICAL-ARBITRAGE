@@ -598,9 +598,17 @@ This implementation plan breaks down the multi-agent quantitative research syste
       `scripts/pre_commit_check.ps1`.
     - _Requirements: 22.9_
   
-  - [ ] 15.5 Create scripted statistical testing workflow
+  - [x] 15.5 Create scripted statistical testing workflow
     - Script to run cointegration and ADF tests on pairs
     - Output test results to registry
+    - Implemented `scripts/run_statistical_testing.ps1` as an explicit workflow wrapper
+      over `stat-arb experiment run-stage` and `stat-arb experiment execute-stage`.
+    - The workflow queues `statistical_testing` through the Coordinator task boundary,
+      advances lifecycle through the Coordinator state machine, executes the Statistical
+      Testing Agent service, and writes structured test results to the registry.
+    - Added `scripts/check_statistical_testing_workflow.ps1` and wired it into
+      `scripts/pre_commit_check.ps1`; full scripted end-to-end coverage remains part of
+      15.7 rather than being hidden inside this small wrapper task.
     - _Requirements: 22.10_
   
   - [ ] 15.6 Create scripted backtest workflow

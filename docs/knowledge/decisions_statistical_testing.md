@@ -238,3 +238,35 @@ Critic Agent.
 
 Risks: Residual diagnostics add more evidence that future reports must explain. Keep the
 thresholds explicit and include them in experiment reproducibility hashes.
+
+## DEC-0079: Script statistical testing through Coordinator-backed CLI stages
+
+Status: accepted
+
+Decision: Task 15.5 statistical-testing workflow is implemented as
+`scripts/run_statistical_testing.ps1`, a small wrapper over
+`stat-arb experiment run-stage` and `stat-arb experiment execute-stage` for the
+`statistical_testing` lifecycle stage.
+
+Rules:
+- The script must not call `run_statistical_testing` directly.
+- The script must not write directly to ApeRAG.
+- The script must queue work through the Coordinator task boundary with explicit task
+  type, agent name, priority, retry budget, payload path, actor, and reason.
+- The script must execute through the existing Statistical Testing Agent service boundary,
+  which owns registry prerequisites and structured statistical result persistence.
+- Resource limits for execution are explicit operator inputs, not hidden defaults.
+
+Rationale: The CLI already has a mature stage-execution boundary for statistical testing.
+The workflow script should make that boundary easier to run without duplicating agent
+logic, bypassing Coordinator lifecycle controls, or creating a premature full experiment
+runner.
+
+Verification:
+- `scripts/check_statistical_testing_workflow.ps1`
+- `tests/unit/test_statistical_testing_workflow.py`
+- `tests/unit/test_cli_data.py::test_experiment_execute_stage_runs_statistical_testing_and_completes_task`
+
+Risks: This is a guarded workflow wrapper, not full scripted end-to-end experiment
+coverage. Task 15.7 remains responsible for end-to-end CLI workflow tests across seeded
+mock data, queued stages, registry artifacts, and reports.
