@@ -578,6 +578,11 @@ This implementation plan breaks down the multi-agent quantitative research syste
       Report Agent boundary only when the registry already contains a matching
       `backtest_series` sidecar for the requested `backtest_id`; the CLI cannot generate
       human-facing reports from aggregate-only inputs.
+    - Implemented first guarded `experiment run-pipeline` slice for
+      `stages=backtesting,reporting`: it executes an existing pending backtesting task,
+      requires the produced `backtest_series` sidecar, queues reporting from that factual
+      artifact, and then executes the guarded reporting task. This is intentionally not a
+      full experiment runner yet.
     - _Requirements: 22.10_
   
   - [ ] 15.4 Create scripted pair-screening workflow

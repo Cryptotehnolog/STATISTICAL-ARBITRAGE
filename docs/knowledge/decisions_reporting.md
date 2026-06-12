@@ -119,3 +119,32 @@ Verification:
 - `tests/unit/test_cli_data.py::test_experiment_execute_stage_runs_reporting_with_factual_sidecar`
 - `tests/unit/test_check_cli_pipeline.py`
 - `scripts/check_cli_pipeline.ps1`
+
+## DEC-0077: Keep CLI run-pipeline narrow and artifact-gated
+
+Status: accepted
+
+Decision: The first `experiment run-pipeline` command supports only the mature
+`backtesting,reporting` chain. It executes an existing pending backtesting task, requires
+the resulting registry-linked `backtest_series` sidecar, creates a reporting task from
+that factual artifact, and then runs guarded reporting. It is not a full experiment
+runner.
+
+Rationale: A broad full-run command would hide too many assumptions while data,
+hypothesis, and experiment orchestration inputs are still maturing. A narrow chain gives
+the project an end-to-end proof that backtest artifacts flow into reports without
+bypassing registry or memory boundaries.
+
+Rules:
+- `run-pipeline` must fail closed for any stage list except `backtesting,reporting`.
+- The pipeline must use existing Coordinator task contracts and the same execution helper
+  as `execute-stage`.
+- Reporting may be queued only after the backtesting step leaves a valid
+  `backtest_series` sidecar.
+- The CLI runner must not write directly to ApeRAG.
+
+Verification:
+- `tests/unit/test_cli_data.py::test_experiment_run_pipeline_executes_backtesting_then_reporting_from_sidecar`
+- `tests/unit/test_cli_data.py::test_experiment_run_pipeline_stops_before_reporting_without_sidecar`
+- `tests/unit/test_check_cli_pipeline.py`
+- `scripts/check_cli_pipeline.ps1`

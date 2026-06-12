@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import click
@@ -48,6 +48,7 @@ from stat_arb.ingestion import (
 from stat_arb.statistical import MultipleTestingMethod
 from stat_arb.storage import (
     Base,
+    CoordinatorTask,
     Dataset,
     Experiment,
     Hypothesis,
@@ -577,7 +578,7 @@ def execute_experiment_stage(
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
     try:
-        stage_spec = execute_stage_spec(target_status)
+        execute_stage_spec(target_status)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -585,51 +586,13 @@ def execute_experiment_stage(
     session_factory = create_session_factory(engine)
     session = session_factory()
     try:
-        task = claim_coordinator_task_by_id(
-            task_id=task_id,
-            policy=CoordinatorResourcePolicy(
-                max_running_tasks=max_running_tasks,
-                max_running_tasks_per_agent={
-                    spec.agent_name: max_running_tasks_per_agent
-                    for spec in (
-                        execute_stage_spec(stage) for stage in supported_execute_stages()
-                    )
-                },
-            ),
+        _claim_execute_and_complete_stage(
             session=session,
+            task_id=task_id,
+            target_status=target_status,
+            max_running_tasks=max_running_tasks,
+            max_running_tasks_per_agent=max_running_tasks_per_agent,
         )
-        if task is None:
-            raise click.ClickException("Coordinator resource policy blocked task claim")
-        try:
-            if task.task_type != stage_spec.task_type:
-                raise ValueError(f"task_type must be {stage_spec.task_type}")
-            if task.agent_name != stage_spec.agent_name:
-                raise ValueError(f"agent_name must be {stage_spec.agent_name}")
-            if target_status == ExperimentLifecycleStatus.STATISTICAL_TESTING:
-                _execute_statistical_testing_task(task.payload, session=session)
-            elif target_status == ExperimentLifecycleStatus.BACKTESTING:
-                _execute_backtesting_task(
-                    task.payload,
-                    experiment_id=UUID(task.experiment_id),
-                    session=session,
-                )
-            elif target_status == ExperimentLifecycleStatus.CRITIC_REVIEW:
-                _execute_critic_review_task(task.payload, session=session)
-            elif target_status == ExperimentLifecycleStatus.REPORTING:
-                _execute_reporting_task(
-                    task.payload,
-                    experiment_id=UUID(task.experiment_id),
-                    session=session,
-                )
-            complete_coordinator_task(task_id=task.task_id, session=session)
-        except Exception as exc:
-            fail_coordinator_task(
-                task_id=task.task_id,
-                error_summary=str(exc),
-                session=session,
-            )
-            session.commit()
-            raise click.ClickException(str(exc)) from exc
         session.commit()
     finally:
         session.close()
@@ -637,6 +600,91 @@ def execute_experiment_stage(
 
     click.echo(f"Stage выполнен: {target_status.value}")
     click.echo(f"Task completed: {task_id}")
+
+
+@experiment.command("run-pipeline")
+@click.option("--experiment-id", required=True)
+@click.option("--stages", required=True)
+@click.option("--report-output-dir", type=click.Path(path_type=Path), required=True)
+@click.option("--max-running-tasks", type=int, required=True)
+@click.option("--max-running-tasks-per-agent", type=int, required=True)
+@click.option("--db-path", type=click.Path(path_type=Path), required=True)
+def run_experiment_pipeline(
+    experiment_id: str,
+    stages: str,
+    report_output_dir: Path,
+    max_running_tasks: int,
+    max_running_tasks_per_agent: int,
+    db_path: Path,
+) -> None:
+    """Выполнить маленький guarded pipeline из mature queued stages."""
+    target_stages = _parse_pipeline_stages(stages)
+    if target_stages != (
+        ExperimentLifecycleStatus.BACKTESTING,
+        ExperimentLifecycleStatus.REPORTING,
+    ):
+        raise click.ClickException(
+            "run-pipeline сейчас поддерживает только stages=backtesting,reporting"
+        )
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    completed: list[str] = []
+    try:
+        backtesting_task = _pending_task_for_stage(
+            session,
+            experiment_id=experiment_id,
+            stage=ExperimentLifecycleStatus.BACKTESTING,
+        )
+        _claim_execute_and_complete_stage(
+            session,
+            task_id=backtesting_task.task_id,
+            target_status=ExperimentLifecycleStatus.BACKTESTING,
+            max_running_tasks=max_running_tasks,
+            max_running_tasks_per_agent=max_running_tasks_per_agent,
+        )
+        session.commit()
+        completed.append(ExperimentLifecycleStatus.BACKTESTING.value)
+
+        backtest_id = _latest_backtest_id_from_series_sidecar(
+            session,
+            experiment_id=UUID(experiment_id),
+        )
+        reporting_task = enqueue_coordinator_task(
+            CoordinatorTaskRequest(
+                experiment_id=experiment_id,
+                task_type=execute_stage_spec(ExperimentLifecycleStatus.REPORTING).task_type,
+                agent_name=execute_stage_spec(ExperimentLifecycleStatus.REPORTING).agent_name,
+                priority=backtesting_task.priority + 1,
+                max_attempts=backtesting_task.max_attempts,
+                payload={
+                    "backtest_id": backtest_id,
+                    "output_dir": str(report_output_dir),
+                },
+            ),
+            session=session,
+        )
+        session.commit()
+
+        _claim_execute_and_complete_stage(
+            session,
+            task_id=reporting_task.task_id,
+            target_status=ExperimentLifecycleStatus.REPORTING,
+            max_running_tasks=max_running_tasks,
+            max_running_tasks_per_agent=max_running_tasks_per_agent,
+        )
+        session.commit()
+        completed.append(ExperimentLifecycleStatus.REPORTING.value)
+    except Exception as exc:
+        session.rollback()
+        raise click.ClickException(str(exc)) from exc
+    finally:
+        session.close()
+        engine.dispose()
+
+    for stage_name in completed:
+        click.echo(f"Pipeline stage выполнен: {stage_name}")
 
 
 def _quality_config(
@@ -703,6 +751,134 @@ def _execute_statistical_testing_task(payload: dict[str, object], *, session: An
         session=session,
         memory_service=None,
     )
+
+
+def _parse_pipeline_stages(stages: str) -> tuple[ExperimentLifecycleStatus, ...]:
+    try:
+        return tuple(
+            ExperimentLifecycleStatus(stage.strip())
+            for stage in stages.split(",")
+            if stage.strip()
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+def _pending_task_for_stage(
+    session: Any,
+    *,
+    experiment_id: str,
+    stage: ExperimentLifecycleStatus,
+) -> CoordinatorTask:
+    spec = execute_stage_spec(stage)
+    task = (
+        session.query(CoordinatorTask)
+        .filter(
+            CoordinatorTask.experiment_id == str(experiment_id),
+            CoordinatorTask.task_type == spec.task_type,
+            CoordinatorTask.agent_name == spec.agent_name,
+            CoordinatorTask.status == "pending",
+        )
+        .order_by(CoordinatorTask.priority.asc(), CoordinatorTask.created_at.asc())
+        .first()
+    )
+    if task is None:
+        raise ValueError(f"pending task is required for pipeline stage {stage.value}")
+    return cast(CoordinatorTask, task)
+
+
+def _claim_execute_and_complete_stage(
+    session: Any,
+    *,
+    task_id: str,
+    target_status: ExperimentLifecycleStatus,
+    max_running_tasks: int,
+    max_running_tasks_per_agent: int,
+) -> None:
+    stage_spec = execute_stage_spec(target_status)
+    task = claim_coordinator_task_by_id(
+        task_id=task_id,
+        policy=_coordinator_resource_policy(
+            max_running_tasks=max_running_tasks,
+            max_running_tasks_per_agent=max_running_tasks_per_agent,
+        ),
+        session=session,
+    )
+    if task is None:
+        raise click.ClickException("Coordinator resource policy blocked task claim")
+    try:
+        if task.task_type != stage_spec.task_type:
+            raise ValueError(f"task_type must be {stage_spec.task_type}")
+        if task.agent_name != stage_spec.agent_name:
+            raise ValueError(f"agent_name must be {stage_spec.agent_name}")
+        _execute_claimed_stage(
+            target_status,
+            task.payload,
+            experiment_id=UUID(task.experiment_id),
+            session=session,
+        )
+        complete_coordinator_task(task_id=task.task_id, session=session)
+    except Exception as exc:
+        fail_coordinator_task(
+            task_id=task.task_id,
+            error_summary=str(exc),
+            session=session,
+        )
+        session.commit()
+        raise click.ClickException(str(exc)) from exc
+
+
+def _coordinator_resource_policy(
+    *,
+    max_running_tasks: int,
+    max_running_tasks_per_agent: int,
+) -> CoordinatorResourcePolicy:
+    return CoordinatorResourcePolicy(
+        max_running_tasks=max_running_tasks,
+        max_running_tasks_per_agent={
+            spec.agent_name: max_running_tasks_per_agent
+            for spec in (execute_stage_spec(stage) for stage in supported_execute_stages())
+        },
+    )
+
+
+def _execute_claimed_stage(
+    target_status: ExperimentLifecycleStatus,
+    payload: dict[str, object],
+    *,
+    experiment_id: UUID,
+    session: Any,
+) -> None:
+    if target_status == ExperimentLifecycleStatus.STATISTICAL_TESTING:
+        _execute_statistical_testing_task(payload, session=session)
+    elif target_status == ExperimentLifecycleStatus.BACKTESTING:
+        _execute_backtesting_task(payload, experiment_id=experiment_id, session=session)
+    elif target_status == ExperimentLifecycleStatus.CRITIC_REVIEW:
+        _execute_critic_review_task(payload, session=session)
+    elif target_status == ExperimentLifecycleStatus.REPORTING:
+        _execute_reporting_task(payload, experiment_id=experiment_id, session=session)
+    else:
+        raise ValueError(f"stage не поддерживает queued execution: {target_status.value}")
+
+
+def _latest_backtest_id_from_series_sidecar(session: Any, *, experiment_id: UUID) -> str:
+    artifact = (
+        session.query(ReportArtifact)
+        .filter(
+            ReportArtifact.experiment_id == str(experiment_id),
+            ReportArtifact.artifact_type == "backtest_series",
+            ReportArtifact.format == "json",
+        )
+        .order_by(ReportArtifact.created_at.desc())
+        .first()
+    )
+    if artifact is None:
+        raise ValueError("backtest_series sidecar is required before reporting pipeline stage")
+    payload = json.loads(Path(artifact.file_path).read_text(encoding="utf-8"))
+    backtest_id = payload.get("backtest_id")
+    if not isinstance(backtest_id, str) or not backtest_id.strip():
+        raise ValueError("backtest_series sidecar must contain backtest_id")
+    return backtest_id
 
 
 def _execute_backtesting_task(

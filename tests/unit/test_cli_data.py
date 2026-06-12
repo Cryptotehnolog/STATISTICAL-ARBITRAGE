@@ -767,6 +767,129 @@ def test_experiment_execute_stage_runs_backtesting_and_completes_task(
         engine.dispose()
 
 
+def test_experiment_run_pipeline_executes_backtesting_then_reporting_from_sidecar(
+    tmp_path: Path,
+) -> None:
+    """experiment run-pipeline should chain backtesting sidecar into reporting."""
+    db_path = tmp_path / "registry.db"
+    lock_path = tmp_path / "uv.lock"
+    lock_path.write_text("package==1.0\n", encoding="utf-8")
+    task_id = _seed_backtesting_task(db_path, lock_path=lock_path)
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        task = session.get(CoordinatorTask, task_id)
+        assert task is not None
+        experiment_id = task.experiment_id
+    finally:
+        session.close()
+        engine.dispose()
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "run-pipeline",
+            "--experiment-id",
+            experiment_id,
+            "--stages",
+            "backtesting,reporting",
+            "--report-output-dir",
+            str(tmp_path / "reports"),
+            "--max-running-tasks",
+            "1",
+            "--max-running-tasks-per-agent",
+            "1",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Pipeline stage выполнен: backtesting" in result.output
+    assert "Pipeline stage выполнен: reporting" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        tasks = session.query(CoordinatorTask).order_by(CoordinatorTask.created_at.asc()).all()
+        assert [task.status for task in tasks] == ["completed", "completed"]
+        assert [task.task_type for task in tasks] == ["run_backtest", "write_report"]
+        artifact_types = {row.artifact_type for row in session.query(ReportArtifact).all()}
+        assert "backtest_series" in artifact_types
+        assert "backtest_report" in artifact_types
+        assert "equity_curve" in artifact_types
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_experiment_run_pipeline_stops_before_reporting_without_sidecar(
+    tmp_path: Path,
+) -> None:
+    """experiment run-pipeline should fail closed if backtesting leaves no sidecar."""
+    db_path = tmp_path / "registry.db"
+    lock_path = tmp_path / "uv.lock"
+    lock_path.write_text("package==1.0\n", encoding="utf-8")
+    task_id = _seed_backtesting_task(db_path, lock_path=lock_path)
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        task = session.get(CoordinatorTask, task_id)
+        assert task is not None
+        experiment_id = task.experiment_id
+        payload = dict(task.payload)
+        del payload["artifact_output_dir"]
+        del payload["series"]
+        task.payload = payload
+        session.commit()
+    finally:
+        session.close()
+        engine.dispose()
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "run-pipeline",
+            "--experiment-id",
+            experiment_id,
+            "--stages",
+            "backtesting,reporting",
+            "--report-output-dir",
+            str(tmp_path / "reports"),
+            "--max-running-tasks",
+            "1",
+            "--max-running-tasks-per-agent",
+            "1",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "backtest_series sidecar is required before reporting pipeline stage" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        tasks = session.query(CoordinatorTask).all()
+        assert len(tasks) == 1
+        assert tasks[0].status == "completed"
+        artifact_types = {row.artifact_type for row in session.query(ReportArtifact).all()}
+        assert "backtest_series" not in artifact_types
+        assert "backtest_report" not in artifact_types
+    finally:
+        session.close()
+        engine.dispose()
+
+
 def test_experiment_execute_stage_runs_critic_review_and_completes_task(
     tmp_path: Path,
 ) -> None:
