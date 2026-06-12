@@ -611,9 +611,18 @@ This implementation plan breaks down the multi-agent quantitative research syste
       15.7 rather than being hidden inside this small wrapper task.
     - _Requirements: 22.10_
   
-  - [ ] 15.6 Create scripted backtest workflow
+  - [x] 15.6 Create scripted backtest workflow
     - Script to run walk-forward backtests
-    - Output backtest reports
+    - Output backtest registry results and factual sidecars; human-facing reports remain
+      guarded by the Report Agent/reporting workflow.
+    - Implemented `scripts/run_backtest.ps1` as an explicit workflow wrapper over
+      `stat-arb experiment run-stage` and `stat-arb experiment execute-stage`.
+    - The workflow queues `backtesting` through the Coordinator task boundary, advances
+      lifecycle through the Coordinator state machine, executes the Backtest Agent
+      persistence boundary, and does not call Report Agent or ApeRAG directly.
+    - Added `scripts/check_backtest_workflow.ps1` and wired it into
+      `scripts/pre_commit_check.ps1`; full scripted end-to-end coverage remains part of
+      15.7.
     - _Requirements: 22.10_
   
   - [ ]* 15.7 Write integration tests for CLI tools

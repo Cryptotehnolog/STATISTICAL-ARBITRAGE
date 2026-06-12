@@ -286,3 +286,36 @@ produced distorted metrics.
 
 Risks: Risk exits change trade counts and PnL. That is intentional, but reports must show
 which exit policy was used.
+
+## DEC-0080: Script backtesting through Coordinator-backed CLI stages
+
+Status: accepted
+
+Decision: Task 15.6 backtest workflow is implemented as `scripts/run_backtest.ps1`, a
+small wrapper over `stat-arb experiment run-stage` and
+`stat-arb experiment execute-stage` for the `backtesting` lifecycle stage.
+
+Rules:
+- The script must not call `run_backtest_agent_persistence` directly.
+- The script must not call Report Agent directly.
+- The script must not write directly to ApeRAG.
+- The script must queue work through the Coordinator task boundary with explicit task
+  type, agent name, priority, retry budget, payload path, actor, and reason.
+- The script must execute through the Backtest Agent persistence boundary, which owns
+  registry prerequisites, provenance checks, factual series sidecars, and structured
+  backtest result persistence.
+- Resource limits for execution are explicit operator inputs, not hidden defaults.
+
+Rationale: The backtest workflow should make the mature CLI stage boundary easy to run
+without combining backtesting and report generation. Reports remain a guarded Report Agent
+responsibility and require factual `backtest_series` sidecars rather than aggregate-only
+metrics.
+
+Verification:
+- `scripts/check_backtest_workflow.ps1`
+- `tests/unit/test_backtest_workflow.py`
+- `tests/unit/test_cli_data.py::test_experiment_execute_stage_runs_backtesting_and_completes_task`
+
+Risks: This wrapper does not replace full scripted end-to-end testing. Task 15.7 remains
+responsible for seeded mock-data workflows that prove pair screening, statistical testing,
+backtesting, reporting, and registry artifacts work as a chain.
