@@ -19,6 +19,7 @@ def test_supported_execute_stages_are_mature_agent_boundaries_only() -> None:
         ExperimentLifecycleStatus.STATISTICAL_TESTING,
         ExperimentLifecycleStatus.BACKTESTING,
         ExperimentLifecycleStatus.CRITIC_REVIEW,
+        ExperimentLifecycleStatus.REPORTING,
     )
 
 
@@ -38,15 +39,16 @@ def test_execute_stage_spec_maps_task_type_and_agent_explicitly() -> None:
         task_type="run_critic_review",
         agent_name="critic_agent",
     )
+    assert execute_stage_spec(ExperimentLifecycleStatus.REPORTING) == StageExecutionSpec(
+        task_type="write_report",
+        agent_name="report_agent",
+    )
 
 
 def test_blocked_execute_stages_have_human_readable_reasons() -> None:
     """Unsupported stages should fail closed with durable architectural reasons."""
     assert "Data Agent service boundary" in blocked_execute_stage_reason(
         ExperimentLifecycleStatus.DATA_VALIDATION
-    )
-    assert "factual artifact/series sidecars" in blocked_execute_stage_reason(
-        ExperimentLifecycleStatus.REPORTING
     )
     assert "final decision is Coordinator-owned" in blocked_execute_stage_reason(
         ExperimentLifecycleStatus.FINAL_DECISION
@@ -55,5 +57,5 @@ def test_blocked_execute_stages_have_human_readable_reasons() -> None:
 
 def test_execute_stage_spec_rejects_unsupported_stages() -> None:
     """Unsupported stages should not silently receive an inferred task mapping."""
-    with pytest.raises(ValueError, match="execute-stage не поддерживает stage reporting"):
-        execute_stage_spec(ExperimentLifecycleStatus.REPORTING)
+    with pytest.raises(ValueError, match="execute-stage не поддерживает stage final_decision"):
+        execute_stage_spec(ExperimentLifecycleStatus.FINAL_DECISION)

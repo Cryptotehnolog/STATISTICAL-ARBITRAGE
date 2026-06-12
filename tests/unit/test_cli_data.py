@@ -645,14 +645,7 @@ def test_experiment_execute_stage_rejects_report_stage_without_factual_artifacts
 ) -> None:
     """experiment execute-stage should not create reports from aggregate-only inputs."""
     db_path = tmp_path / "registry.db"
-    experiment_id = _seed_cli_experiment(db_path, status="reporting")
-    task_id = _seed_cli_task(
-        db_path,
-        experiment_id=experiment_id,
-        task_type="write_report",
-        agent_name="report_agent",
-        payload={"backtest_id": str(uuid4())},
-    )
+    task_id = _seed_reporting_task(db_path, output_dir=tmp_path / "reports", with_series=False)
 
     result = CliRunner().invoke(
         main,
@@ -673,8 +666,53 @@ def test_experiment_execute_stage_rejects_report_stage_without_factual_artifacts
     )
 
     assert result.exit_code != 0
-    assert "execute-stage не поддерживает stage reporting" in result.output
-    assert "factual artifact/series sidecars" in result.output
+    assert "matching backtest_series sidecar is required" in result.output
+
+
+def test_experiment_execute_stage_runs_reporting_with_factual_sidecar(
+    tmp_path: Path,
+) -> None:
+    """experiment execute-stage should run Report Agent only from factual sidecars."""
+    db_path = tmp_path / "registry.db"
+    task_id = _seed_reporting_task(db_path, output_dir=tmp_path / "reports", with_series=True)
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "execute-stage",
+            "--task-id",
+            task_id,
+            "--stage",
+            "reporting",
+            "--max-running-tasks",
+            "1",
+            "--max-running-tasks-per-agent",
+            "1",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Stage выполнен: reporting" in result.output
+    assert "Task completed" in result.output
+
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        stored_task = session.get(CoordinatorTask, task_id)
+        assert stored_task is not None
+        assert stored_task.status == "completed"
+        artifact_types = {row.artifact_type for row in session.query(ReportArtifact).all()}
+        assert "backtest_series" in artifact_types
+        assert "backtest_report" in artifact_types
+        assert "equity_curve" in artifact_types
+        assert "z_score_signals" in artifact_types
+    finally:
+        session.close()
+        engine.dispose()
 
 
 def test_experiment_execute_stage_runs_backtesting_and_completes_task(
@@ -1335,6 +1373,193 @@ def _seed_critic_review_task(db_path: Path) -> str:
                 },
             )
         )
+        session.commit()
+        return task_id
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def _seed_reporting_task(db_path: Path, *, output_dir: Path, with_series: bool) -> str:
+    engine = create_database_engine(db_path)
+    Base.metadata.create_all(engine)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    start = datetime(2024, 1, 1, tzinfo=UTC).replace(tzinfo=None)
+    hypothesis_id = str(uuid4())
+    dataset_a_id = str(uuid4())
+    dataset_b_id = str(uuid4())
+    test_id = str(uuid4())
+    backtest_id = str(uuid4())
+    experiment_id = str(uuid4())
+    task_id = str(uuid4())
+    try:
+        session.add(
+            Hypothesis(
+                hypothesis_id=hypothesis_id,
+                asset_a="AAA",
+                asset_b="BBB",
+                rationale="Synthetic reporting pair",
+                source="unit-test",
+                created_by="pytest",
+                created_at=start,
+            )
+        )
+        session.add_all(
+            [
+                Dataset(
+                    dataset_id=dataset_a_id,
+                    symbol="AAA",
+                    source="unit-test",
+                    timeframe="15m",
+                    start_date=start,
+                    end_date=start + timedelta(days=2),
+                    bar_count=192,
+                    adjustment_mode="none",
+                    file_path="/tmp/a.parquet",
+                ),
+                Dataset(
+                    dataset_id=dataset_b_id,
+                    symbol="BBB",
+                    source="unit-test",
+                    timeframe="15m",
+                    start_date=start,
+                    end_date=start + timedelta(days=2),
+                    bar_count=192,
+                    adjustment_mode="none",
+                    file_path="/tmp/b.parquet",
+                ),
+            ]
+        )
+        session.add_all(
+            [
+                _cli_quality_report(dataset_a_id, "AAA", start, start + timedelta(days=2), 192),
+                _cli_quality_report(dataset_b_id, "BBB", start, start + timedelta(days=2), 192),
+            ]
+        )
+        session.add(
+            StatisticalTestResult(
+                test_id=test_id,
+                hypothesis_id=hypothesis_id,
+                dataset_a_id=dataset_a_id,
+                dataset_b_id=dataset_b_id,
+                train_start=start,
+                train_end=start + timedelta(days=1),
+                test_start=start + timedelta(days=1),
+                test_end=start + timedelta(days=2),
+                cointegration_statistic=-3.5,
+                cointegration_p_value=0.01,
+                adf_statistic=-4.0,
+                adf_p_value=0.02,
+                hedge_ratio=1.2,
+                hedge_ratio_r_squared=0.9,
+                half_life_days=12.0,
+                residual_ljung_box_p_value=0.5,
+                residual_jarque_bera_p_value=0.5,
+                residual_excess_kurtosis=0.1,
+                residual_diagnostics_lags=10,
+                regime_changes_detected=False,
+                passed=True,
+            )
+        )
+        session.flush()
+        session.add(
+            BacktestResult(
+                backtest_id=backtest_id,
+                hypothesis_id=hypothesis_id,
+                test_id=test_id,
+                dataset_a_id=dataset_a_id,
+                dataset_b_id=dataset_b_id,
+                git_commit_hash="abcdef1",
+                config_hash="b" * 64,
+                dataset_ids=[dataset_a_id, dataset_b_id],
+                random_seed=12345,
+                execution_command=["stat-arb", "experiment", "execute-stage"],
+                run_timestamp=start,
+                lock_file_hash="f" * 64,
+                execution_time_seconds=12.5,
+                train_window_days=60,
+                test_window_days=30,
+                num_windows=2,
+                entry_threshold=2.0,
+                exit_threshold=0.5,
+                hedge_ratio=1.2,
+                gross_pnl=10.0,
+                net_pnl=8.5,
+                commission_cost=0.5,
+                spread_cost=0.5,
+                slippage_cost=0.3,
+                funding_cost=0.1,
+                borrow_cost=0.1,
+                num_trades=4,
+                turnover=2.0,
+                avg_holding_time_hours=12.0,
+                median_holding_time_hours=10.0,
+                sharpe_ratio=1.1,
+                sortino_ratio=1.3,
+                volatility=0.2,
+                max_drawdown=0.02,
+                win_rate=0.6,
+                profit_factor=1.8,
+                net_pnl_2x_costs=7.0,
+                net_pnl_half_costs=9.2,
+                baseline_sharpe=0.2,
+                tested_at=start,
+            )
+        )
+        session.add(
+            Experiment(
+                experiment_id=experiment_id,
+                hypothesis_id=hypothesis_id,
+                status="reporting",
+                current_agent="report_agent",
+            )
+        )
+        session.add(
+            CoordinatorTask(
+                task_id=task_id,
+                experiment_id=experiment_id,
+                task_type="write_report",
+                agent_name="report_agent",
+                priority=1,
+                status="pending",
+                attempt_count=0,
+                max_attempts=2,
+                payload={"backtest_id": backtest_id, "output_dir": str(output_dir)},
+            )
+        )
+        if with_series:
+            series_path = output_dir.parent / "series" / f"backtest-{backtest_id}.series.json"
+            series_path.parent.mkdir(parents=True, exist_ok=True)
+            series_path.write_text(
+                """
+                {
+                  "backtest_id": "__BACKTEST_ID__",
+                  "timestamps": [
+                    "2024-01-01T00:00:00+00:00",
+                    "2024-01-01T00:15:00+00:00",
+                    "2024-01-01T00:30:00+00:00"
+                  ],
+                  "equity_curve": [100.0, 101.0, 102.0],
+                  "drawdown_curve": [0.0, 0.0, 0.0],
+                  "z_scores": [0.0, 2.1, 0.4],
+                  "entry_markers": [1],
+                  "exit_markers": [2],
+                  "rolling_sharpe": [0.0, 0.2, 0.3],
+                  "trade_pnls": [2.0]
+                }
+                """.replace("__BACKTEST_ID__", backtest_id),
+                encoding="utf-8",
+            )
+            session.add(
+                ReportArtifact(
+                    experiment_id=experiment_id,
+                    artifact_type="backtest_series",
+                    file_path=str(series_path),
+                    format="json",
+                    created_at=start,
+                )
+            )
         session.commit()
         return task_id
     finally:

@@ -25,12 +25,14 @@ from stat_arb.agents import (
     generate_rule_based_hypotheses,
     run_backtest_agent_persistence,
     run_critic_agent_persistence,
+    run_report_agent,
     run_statistical_testing,
     transition_experiment_lifecycle,
 )
 from stat_arb.cli.stage_payloads import (
     build_backtest_agent_input,
     build_critic_agent_input,
+    build_report_agent_input,
     build_statistical_testing_input,
 )
 from stat_arb.cli.stage_support import execute_stage_spec, supported_execute_stages
@@ -49,6 +51,7 @@ from stat_arb.storage import (
     Dataset,
     Experiment,
     Hypothesis,
+    ReportArtifact,
     create_database_engine,
     create_session_factory,
     persist_ohlcv_ingestion_result,
@@ -612,6 +615,12 @@ def execute_experiment_stage(
                 )
             elif target_status == ExperimentLifecycleStatus.CRITIC_REVIEW:
                 _execute_critic_review_task(task.payload, session=session)
+            elif target_status == ExperimentLifecycleStatus.REPORTING:
+                _execute_reporting_task(
+                    task.payload,
+                    experiment_id=UUID(task.experiment_id),
+                    session=session,
+                )
             complete_coordinator_task(task_id=task.task_id, session=session)
         except Exception as exc:
             fail_coordinator_task(
@@ -714,6 +723,45 @@ def _execute_critic_review_task(payload: dict[str, object], *, session: Any) -> 
         build_critic_agent_input(payload),
         session=session,
         memory_service=None,
+    )
+
+
+def _execute_reporting_task(
+    payload: dict[str, object],
+    *,
+    experiment_id: UUID,
+    session: Any,
+) -> None:
+    request = build_report_agent_input(payload, experiment_id=experiment_id)
+    _require_matching_backtest_series_sidecar(
+        session,
+        experiment_id=request.experiment_id,
+        backtest_id=request.backtest_id,
+    )
+    run_report_agent(request, session=session, memory_service=None)
+
+
+def _require_matching_backtest_series_sidecar(
+    session: Any,
+    *,
+    experiment_id: UUID,
+    backtest_id: UUID,
+) -> None:
+    artifacts = (
+        session.query(ReportArtifact)
+        .filter(
+            ReportArtifact.experiment_id == str(experiment_id),
+            ReportArtifact.artifact_type == "backtest_series",
+            ReportArtifact.format == "json",
+        )
+        .all()
+    )
+    for artifact in artifacts:
+        payload = json.loads(Path(artifact.file_path).read_text(encoding="utf-8"))
+        if payload.get("backtest_id") == str(backtest_id):
+            return
+    raise ValueError(
+        "matching backtest_series sidecar is required before reporting stage execution"
     )
 
 

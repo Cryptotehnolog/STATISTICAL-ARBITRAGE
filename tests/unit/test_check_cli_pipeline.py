@@ -34,12 +34,14 @@ def test_cli_stage_executor_does_not_bypass_memory_or_report_boundaries() -> Non
     assert "run_statistical_testing" in cli_source
     assert "run_backtest_agent_persistence" in cli_source
     assert "run_critic_agent_persistence" in cli_source
+    assert "run_report_agent" in cli_source
+    assert "matching backtest_series sidecar is required" in cli_source
+    assert "_require_matching_backtest_series_sidecar" in cli_source
     assert "ApeRAGMemoryClient" not in cli_source
-    assert "run_report_agent" not in cli_source
     assert "STATISTICAL_TESTING" in support_source
     assert "BACKTESTING" in support_source
     assert "CRITIC_REVIEW" in support_source
-    assert "factual artifact/series sidecars" in support_source
+    assert "REPORTING" in support_source
 
 
 def test_stage_payload_parsing_lives_outside_cli_entrypoint() -> None:
@@ -50,8 +52,10 @@ def test_stage_payload_parsing_lives_outside_cli_entrypoint() -> None:
     assert "build_statistical_testing_input" in cli_source
     assert "build_backtest_agent_input" in cli_source
     assert "build_critic_agent_input" in cli_source
+    assert "build_report_agent_input" in cli_source
     assert "def _payload_float" not in cli_source
     assert "def _object_datetime" not in cli_source
     assert "def build_statistical_testing_input" in payload_source
     assert "def build_backtest_agent_input" in payload_source
     assert "def build_critic_agent_input" in payload_source
+    assert "def build_report_agent_input" in payload_source

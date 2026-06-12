@@ -570,12 +570,14 @@ This implementation plan breaks down the multi-agent quantitative research syste
       `BacktestResult`, builds a typed `CriticAgentInput` from explicit payload values,
       writes structured review results to the registry, and keeps direct ApeRAG writes
       disabled in the CLI runner.
-    - Added an explicit stage execution support policy for `execute-stage`: only
-      `statistical_testing`, `backtesting`, and `critic_review` are exposed as mature
-      local execution boundaries. `data_validation`, `reporting`, `final_decision`, and
-      full-run execution fail closed with durable architectural reasons.
-    - Reporting remains blocked until factual artifact/series sidecars exist, so the CLI
-      cannot generate human-facing reports from aggregate-only inputs.
+    - Added an explicit stage execution support policy for `execute-stage`:
+      `statistical_testing`, `backtesting`, `critic_review`, and guarded `reporting` are
+      exposed as mature local execution boundaries. `data_validation`, `final_decision`,
+      and full-run execution still fail closed with durable architectural reasons.
+    - Extended `experiment execute-stage` to support queued `reporting` tasks through the
+      Report Agent boundary only when the registry already contains a matching
+      `backtest_series` sidecar for the requested `backtest_id`; the CLI cannot generate
+      human-facing reports from aggregate-only inputs.
     - _Requirements: 22.10_
   
   - [ ] 15.4 Create scripted pair-screening workflow

@@ -59,8 +59,9 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   final answer quality.
 - Report chart series sidecars: Backtest Agent can now persist factual chart series as a
   registry-linked `backtest_series` JSON artifact, and Report Agent can load it for visual
-  artifacts. Remaining work is to require/provide this sidecar from the future full
-  experiment runner before exposing a reporting stage executor.
+  artifacts. CLI reporting execution is now guarded by matching `backtest_series`
+  presence. Remaining work is to make the future full experiment runner provide and
+  persist these sidecars before queuing reporting work.
 - ApeRAG human graph view: ApeRAG UI is the default inspection path; build a local viewer only
   if the UI proves insufficient.
 - Queue concurrency: before enabling real multi-worker execution, add atomic Coordinator

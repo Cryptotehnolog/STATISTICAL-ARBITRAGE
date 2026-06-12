@@ -28,15 +28,16 @@ _SUPPORTED_EXECUTE_STAGE_SPECS: dict[ExperimentLifecycleStatus, StageExecutionSp
         task_type="run_critic_review",
         agent_name="critic_agent",
     ),
+    ExperimentLifecycleStatus.REPORTING: StageExecutionSpec(
+        task_type="write_report",
+        agent_name="report_agent",
+    ),
 }
 
 
 _BLOCKED_EXECUTE_STAGE_REASONS: dict[ExperimentLifecycleStatus, str] = {
     ExperimentLifecycleStatus.DATA_VALIDATION: (
         "Data Agent service boundary is not yet implemented for execute-stage."
-    ),
-    ExperimentLifecycleStatus.REPORTING: (
-        "Reporting requires factual artifact/series sidecars before CLI execution."
     ),
     ExperimentLifecycleStatus.FINAL_DECISION: (
         "final decision is Coordinator-owned and must use the final-decision boundary."

@@ -17,6 +17,7 @@ from stat_arb.agents import (
     CriticLookaheadAssessment,
     CriticOverfittingAssessment,
     CriticWeakAssumptionAssessment,
+    ReportAgentInput,
     StatisticalTestingInput,
 )
 from stat_arb.backtest import (
@@ -323,6 +324,19 @@ def build_critic_agent_input(payload: dict[str, object]) -> CriticAgentInput:
         operational_concerns=tuple(
             _payload_optional_string_list(payload, "operational_concerns")
         ),
+    )
+
+
+def build_report_agent_input(
+    payload: dict[str, object],
+    *,
+    experiment_id: UUID,
+) -> ReportAgentInput:
+    """Build a Report Agent input from an explicit stage payload."""
+    return ReportAgentInput(
+        experiment_id=experiment_id,
+        backtest_id=_payload_uuid(payload, "backtest_id"),
+        output_dir=Path(_payload_string(payload, "output_dir")),
     )
 
 

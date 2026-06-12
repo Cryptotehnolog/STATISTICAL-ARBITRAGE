@@ -24,8 +24,9 @@ Risks: The current Task 12 boundary is intentionally lightweight. It produces co
 registry-backed HTML/PDF/JSON artifacts, data-quality pages, and deterministic visuals
 when factual chart-ready series are provided. It must not fabricate charts from aggregate
 metrics. Backtest Agent persistence can now write a registry-linked `backtest_series`
-sidecar and Report Agent can load it, but the future full-runner still must make this
-sidecar mandatory before `execute-stage --stage reporting` is exposed.
+sidecar and Report Agent can load it. CLI `execute-stage --stage reporting` is exposed
+only behind a registry guard that requires a matching `backtest_series` sidecar for the
+requested `backtest_id`.
 
 Verification: `scripts/check_report_pipeline.ps1` runs report artifact generation tests,
 Report Agent registry/memory boundary tests, and the guard that keeps the report checkpoint
@@ -77,11 +78,44 @@ Rules:
 - Series sidecars must be registry-linked as `ReportArtifact(artifact_type="backtest_series")`.
 - Report Agent must validate that the sidecar `backtest_id` matches the requested
   backtest.
-- Reporting stage execution remains blocked until the runner can guarantee factual
-  sidecars for full visual reports.
+- CLI reporting stage execution must fail closed unless the registry already contains a
+  matching `backtest_series` sidecar for the requested backtest.
+- Future full-runner paths must provide and persist those factual sidecars before queuing
+  reporting work.
 
 Verification:
 - `tests/unit/test_backtest_agent.py`
 - `tests/unit/test_report_agent.py`
+- `tests/unit/test_cli_data.py`
 - `scripts/check_backtest_pipeline.ps1`
 - `scripts/check_report_pipeline.ps1`
+- `scripts/check_cli_pipeline.ps1`
+
+## DEC-0076: Enable CLI reporting execution only behind factual sidecar guard
+
+Status: accepted
+
+Decision: The CLI may execute queued `reporting` tasks through `run_report_agent`, but
+only after checking the Structured Registry for a JSON `backtest_series` artifact whose
+payload `backtest_id` matches the task payload. The CLI must not generate report visuals
+from aggregate-only backtest metrics.
+
+Rationale: Task 15 needs a staged runner path, not a broad full-run button. Reporting is
+safe to expose only when the previous backtest stage has left auditable factual chart
+series. This keeps Report Agent useful for humans while preserving registry-backed
+evidence.
+
+Rules:
+- Reporting task payloads must include `backtest_id` and `output_dir`.
+- `execute-stage --stage reporting` must use `report_agent` with task type
+  `write_report`.
+- The CLI guard must reject missing or mismatched `backtest_series` sidecars before
+  calling Report Agent.
+- Report Agent still writes memory summaries only through Memory Agent policy when a
+  memory service is supplied; the CLI runner does not write directly to ApeRAG.
+
+Verification:
+- `tests/unit/test_cli_data.py::test_experiment_execute_stage_rejects_report_stage_without_factual_artifacts`
+- `tests/unit/test_cli_data.py::test_experiment_execute_stage_runs_reporting_with_factual_sidecar`
+- `tests/unit/test_check_cli_pipeline.py`
+- `scripts/check_cli_pipeline.ps1`
