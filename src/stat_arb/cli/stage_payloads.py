@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 from uuid import UUID
 
 from stat_arb.agents import (
     BacktestAgentInput,
+    BacktestSeriesArtifactInput,
     CriticAgentInput,
     CriticCostRealismAssessment,
     CriticDecisionAssessment,
@@ -61,7 +63,11 @@ def build_statistical_testing_input(payload: dict[str, object]) -> StatisticalTe
     )
 
 
-def build_backtest_agent_input(payload: dict[str, object]) -> BacktestAgentInput:
+def build_backtest_agent_input(
+    payload: dict[str, object],
+    *,
+    experiment_id: UUID | None = None,
+) -> BacktestAgentInput:
     """Build a Backtest Agent persistence input from an explicit stage payload."""
     prices_a = _payload_float_list(payload, "prices_a")
     prices_b = _payload_float_list(payload, "prices_b")
@@ -168,6 +174,8 @@ def build_backtest_agent_input(payload: dict[str, object]) -> BacktestAgentInput
             context="payload.reproducibility",
         ),
     )
+    artifact_output_dir = _payload_optional_string(payload, "artifact_output_dir")
+    series = _payload_optional_series(payload)
     return BacktestAgentInput(
         hypothesis_id=_payload_uuid(payload, "hypothesis_id"),
         test_id=_payload_uuid(payload, "test_id"),
@@ -182,6 +190,9 @@ def build_backtest_agent_input(payload: dict[str, object]) -> BacktestAgentInput
         train_window_days=_payload_int(payload, "train_window_days"),
         test_window_days=_payload_int(payload, "test_window_days"),
         num_windows=_payload_int(payload, "num_windows"),
+        experiment_id=experiment_id if artifact_output_dir is not None else None,
+        artifact_output_dir=Path(artifact_output_dir) if artifact_output_dir is not None else None,
+        series=series,
     )
 
 
@@ -482,6 +493,28 @@ def _payload_buy_and_hold_baseline_config(
     )
 
 
+def _payload_optional_series(payload: dict[str, object]) -> BacktestSeriesArtifactInput | None:
+    value = payload.get("series")
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("payload.series must be an object or null")
+    return BacktestSeriesArtifactInput(
+        timestamps=tuple(_object_datetimes(value, "timestamps", context="payload.series")),
+        equity_curve=tuple(_object_float_list(value, "equity_curve", context="payload.series")),
+        drawdown_curve=tuple(
+            _object_float_list(value, "drawdown_curve", context="payload.series")
+        ),
+        z_scores=tuple(_object_float_list(value, "z_scores", context="payload.series")),
+        entry_markers=tuple(_object_int_list(value, "entry_markers", context="payload.series")),
+        exit_markers=tuple(_object_int_list(value, "exit_markers", context="payload.series")),
+        rolling_sharpe=tuple(
+            _object_float_list(value, "rolling_sharpe", context="payload.series")
+        ),
+        trade_pnls=tuple(_object_float_list(value, "trade_pnls", context="payload.series")),
+    )
+
+
 def _object_string(value: dict[str, object], key: str, *, context: str) -> str:
     item = value.get(key)
     if not isinstance(item, str) or not item.strip():
@@ -564,6 +597,37 @@ def _object_string_list(
     return item
 
 
+def _object_float_list(
+    value: dict[str, object],
+    key: str,
+    *,
+    context: str,
+) -> list[float]:
+    item = value.get(key)
+    if not isinstance(item, list):
+        raise ValueError(f"{context}.{key} must be a list")
+    result: list[float] = []
+    for entry in item:
+        if isinstance(entry, bool) or not isinstance(entry, int | float):
+            raise ValueError(f"{context}.{key} must contain only numbers")
+        result.append(float(entry))
+    return result
+
+
+def _object_int_list(
+    value: dict[str, object],
+    key: str,
+    *,
+    context: str,
+) -> list[int]:
+    item = value.get(key)
+    if not isinstance(item, list) or any(
+        isinstance(entry, bool) or not isinstance(entry, int) for entry in item
+    ):
+        raise ValueError(f"{context}.{key} must be a list of integers")
+    return item
+
+
 def _object_datetime(value: dict[str, object], key: str, *, context: str) -> datetime:
     item = value.get(key)
     if not isinstance(item, str):
@@ -572,6 +636,21 @@ def _object_datetime(value: dict[str, object], key: str, *, context: str) -> dat
     if parsed is None:
         raise ValueError(f"{context}.{key} must not be empty")
     return parsed
+
+
+def _object_datetimes(value: dict[str, object], key: str, *, context: str) -> list[datetime]:
+    item = value.get(key)
+    if not isinstance(item, list):
+        raise ValueError(f"{context}.{key} must be a list")
+    result: list[datetime] = []
+    for entry in item:
+        if not isinstance(entry, str):
+            raise ValueError(f"{context}.{key} must contain ISO datetime strings")
+        parsed = _parse_datetime(entry)
+        if parsed is None:
+            raise ValueError(f"{context}.{key} contains an empty datetime")
+        result.append(parsed)
+    return result
 
 
 def _payload_datetimes(payload: dict[str, object], key: str) -> list[datetime]:

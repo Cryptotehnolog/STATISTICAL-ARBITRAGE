@@ -6,7 +6,10 @@ upstream. It must not accept raw OHLCV pairs or perform alignment itself.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
@@ -26,6 +29,9 @@ from stat_arb.storage.models import (
 )
 from stat_arb.storage.models import (
     DataQualityReportRecord,
+)
+from stat_arb.storage.models import (
+    ReportArtifact as StoredReportArtifact,
 )
 from stat_arb.storage.models import (
     StatisticalTestResult as StoredStatisticalTestResult,
@@ -56,6 +62,23 @@ class BacktestAgentInput:
     train_window_days: int
     test_window_days: int
     num_windows: int
+    experiment_id: UUID | None = None
+    artifact_output_dir: Path | None = None
+    series: BacktestSeriesArtifactInput | None = None
+
+
+@dataclass(frozen=True)
+class BacktestSeriesArtifactInput:
+    """Chart-ready factual series to persist beside a backtest result."""
+
+    timestamps: tuple[datetime, ...]
+    equity_curve: tuple[float, ...]
+    drawdown_curve: tuple[float, ...]
+    z_scores: tuple[float, ...]
+    entry_markers: tuple[int, ...]
+    exit_markers: tuple[int, ...]
+    rolling_sharpe: tuple[float, ...]
+    trade_pnls: tuple[float, ...]
 
 
 @dataclass(frozen=True)
@@ -64,6 +87,7 @@ class BacktestAgentRunResult:
 
     stored_result: StoredBacktestResult
     memory_written: bool
+    series_artifact: StoredReportArtifact | None = None
 
 
 def run_backtest_agent_persistence(
@@ -87,12 +111,17 @@ def run_backtest_agent_persistence(
     )
 
     stored = _persist_backtest_result(session, request)
+    series_artifact = _persist_series_artifact(session, request, stored)
     memory_written = False
     if memory_service is not None:
         memory_service.write(_memory_request_for(stored))
         memory_written = True
 
-    return BacktestAgentRunResult(stored_result=stored, memory_written=memory_written)
+    return BacktestAgentRunResult(
+        stored_result=stored,
+        memory_written=memory_written,
+        series_artifact=series_artifact,
+    )
 
 
 def _persist_backtest_result(
@@ -163,6 +192,74 @@ def _risk_exit_policy_payload(result: BacktestCoreResult) -> dict[str, object] |
     }
 
 
+def _persist_series_artifact(
+    session: Session,
+    request: BacktestAgentInput,
+    stored: StoredBacktestResult,
+) -> StoredReportArtifact | None:
+    if request.series is None:
+        return None
+    if request.experiment_id is None or request.artifact_output_dir is None:
+        raise ValueError(
+            "experiment_id and artifact_output_dir are required when series sidecar is provided"
+        )
+    _validate_series(request.series, observations=request.core_result.observations)
+    output_dir = request.artifact_output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / f"backtest-{stored.backtest_id}.series.json"
+    path.write_text(
+        json.dumps(
+            _series_payload(stored.backtest_id, request.series),
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    artifact = StoredReportArtifact(
+        experiment_id=str(request.experiment_id),
+        artifact_type="backtest_series",
+        file_path=str(path),
+        format="json",
+        created_at=request.reproducibility.run_timestamp,
+    )
+    session.add(artifact)
+    session.flush()
+    return artifact
+
+
+def _validate_series(series: BacktestSeriesArtifactInput, *, observations: int) -> None:
+    aligned_lengths = {
+        "timestamps": len(series.timestamps),
+        "equity_curve": len(series.equity_curve),
+        "drawdown_curve": len(series.drawdown_curve),
+        "z_scores": len(series.z_scores),
+        "rolling_sharpe": len(series.rolling_sharpe),
+    }
+    mismatched = {
+        name: length for name, length in aligned_lengths.items() if length != observations
+    }
+    if mismatched:
+        raise ValueError(f"series lengths must match backtest observations: {mismatched}")
+    for marker in (*series.entry_markers, *series.exit_markers):
+        if isinstance(marker, bool) or marker < 0 or marker >= observations:
+            raise ValueError("series markers must be valid observation indices")
+
+
+def _series_payload(backtest_id: str, series: BacktestSeriesArtifactInput) -> dict[str, object]:
+    return {
+        "backtest_id": backtest_id,
+        "timestamps": [timestamp.isoformat() for timestamp in series.timestamps],
+        "equity_curve": list(series.equity_curve),
+        "drawdown_curve": list(series.drawdown_curve),
+        "z_scores": list(series.z_scores),
+        "entry_markers": list(series.entry_markers),
+        "exit_markers": list(series.exit_markers),
+        "rolling_sharpe": list(series.rolling_sharpe),
+        "trade_pnls": list(series.trade_pnls),
+    }
+
+
 def _memory_request_for(result: StoredBacktestResult) -> MemoryWriteRequest:
     return MemoryWriteRequest(
         record_type=MemoryRecordType.REPORT_SUMMARY,
@@ -198,6 +295,12 @@ def _validate_request(request: BacktestAgentInput) -> None:
         raise ValueError("test_window_days must be positive")
     if request.num_windows <= 0:
         raise ValueError("num_windows must be positive")
+    if (request.experiment_id is None) != (request.artifact_output_dir is None):
+        raise ValueError("experiment_id and artifact_output_dir must be provided together")
+    if request.series is None and (
+        request.experiment_id is not None or request.artifact_output_dir is not None
+    ):
+        raise ValueError("series is required when artifact sidecar fields are provided")
 
 
 def _require_passed_data_quality_reports(

@@ -23,9 +23,9 @@ create false completion.
 Risks: The current Task 12 boundary is intentionally lightweight. It produces complete
 registry-backed HTML/PDF/JSON artifacts, data-quality pages, and deterministic visuals
 when factual chart-ready series are provided. It must not fabricate charts from aggregate
-metrics. The remaining prerequisite for richer future reports is durable persistence of
-actual equity, drawdown, z-score, cost attribution, rolling metric, and trade series by the
-first end-to-end experiment runner.
+metrics. Backtest Agent persistence can now write a registry-linked `backtest_series`
+sidecar and Report Agent can load it, but the future full-runner still must make this
+sidecar mandatory before `execute-stage --stage reporting` is exposed.
 
 Verification: `scripts/check_report_pipeline.ps1` runs report artifact generation tests,
 Report Agent registry/memory boundary tests, and the guard that keeps the report checkpoint
@@ -52,6 +52,36 @@ boundary provides useful artifacts now while preserving a clean path for richer 
 views later.
 
 Verification: `tests/unit/test_backtest_report_generation.py` covers full artifact
-generation with series and the registry-only missing-visualization path. `tests/unit/test_report_agent.py`
-verifies registry data-quality rows, artifact persistence, and policy-safe memory summary
-writes.
+generation with series and the registry-only missing-visualization path.
+`tests/unit/test_backtest_agent.py` verifies persisted `backtest_series` sidecars.
+`tests/unit/test_report_agent.py` verifies sidecar loading, registry data-quality rows,
+artifact persistence, and policy-safe memory summary writes.
+
+## DEC-0075: Persist factual backtest series as registry-linked sidecars
+
+Status: accepted
+
+Decision: Backtest Agent persistence may receive explicit chart-ready factual series and
+write them as a `backtest_series` JSON sidecar linked through `ReportArtifact`. Report
+Agent reads that registry artifact and generates visual report artifacts from the sidecar.
+If the sidecar is absent, Report Agent keeps the missing-visualization message and does
+not fabricate charts from aggregate metrics.
+
+Rationale: The report layer needs real equity, drawdown, z-score, rolling metric, and trade
+series to produce trustworthy charts. Storing those series only as loose files would make
+them hard to find and audit. Linking the JSON sidecar in the registry preserves the
+Structured Registry as the source of truth for report inputs.
+
+Rules:
+- Series sidecars must be provided explicitly by the runner/backtest payload.
+- Series sidecars must be registry-linked as `ReportArtifact(artifact_type="backtest_series")`.
+- Report Agent must validate that the sidecar `backtest_id` matches the requested
+  backtest.
+- Reporting stage execution remains blocked until the runner can guarantee factual
+  sidecars for full visual reports.
+
+Verification:
+- `tests/unit/test_backtest_agent.py`
+- `tests/unit/test_report_agent.py`
+- `scripts/check_backtest_pipeline.ps1`
+- `scripts/check_report_pipeline.ps1`

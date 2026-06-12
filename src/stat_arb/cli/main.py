@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import click
 
@@ -604,7 +605,11 @@ def execute_experiment_stage(
             if target_status == ExperimentLifecycleStatus.STATISTICAL_TESTING:
                 _execute_statistical_testing_task(task.payload, session=session)
             elif target_status == ExperimentLifecycleStatus.BACKTESTING:
-                _execute_backtesting_task(task.payload, session=session)
+                _execute_backtesting_task(
+                    task.payload,
+                    experiment_id=UUID(task.experiment_id),
+                    session=session,
+                )
             elif target_status == ExperimentLifecycleStatus.CRITIC_REVIEW:
                 _execute_critic_review_task(task.payload, session=session)
             complete_coordinator_task(task_id=task.task_id, session=session)
@@ -691,9 +696,14 @@ def _execute_statistical_testing_task(payload: dict[str, object], *, session: An
     )
 
 
-def _execute_backtesting_task(payload: dict[str, object], *, session: Any) -> None:
+def _execute_backtesting_task(
+    payload: dict[str, object],
+    *,
+    experiment_id: UUID,
+    session: Any,
+) -> None:
     run_backtest_agent_persistence(
-        build_backtest_agent_input(payload),
+        build_backtest_agent_input(payload, experiment_id=experiment_id),
         session=session,
         memory_service=None,
     )

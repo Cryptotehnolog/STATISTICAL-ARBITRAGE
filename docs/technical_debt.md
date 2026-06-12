@@ -92,20 +92,20 @@ Related tasks: 9.x, 11.x, 15.x, TD-0013.
 
 ### TD-0023: Persist chart-ready report series sidecars
 
-Status: open
+Status: partially closed
 
 Why deferred: Task 12 can generate deterministic report charts when equity, drawdown,
 z-score, cost, and trade series are explicitly provided. The current registry-backed
-Report Agent path correctly refuses to fabricate charts from aggregate metrics, but the
-future end-to-end experiment runner does not yet persist those full series as durable
-artifacts.
+Report Agent path correctly refuses to fabricate charts from aggregate metrics. The
+Backtest Agent now persists chart-ready factual series as registry-linked
+`backtest_series` JSON sidecars when the runner payload provides them, and Report Agent
+loads those sidecars automatically.
 
 Follow-up:
-- When the first end-to-end experiment runner exists, persist actual equity, drawdown,
-  z-score, cost attribution, rolling metric, and trade series beside the backtest result as
-  registry-linked artifact sidecars.
-- Make Report Agent load those sidecars automatically so full visual reports can be built
-  from factual data without requiring callers to pass series manually.
+- Wire the future full experiment runner so every real backtest stage provides and
+  persists factual series sidecars by default.
+- Add a guard before enabling `execute-stage --stage reporting`: reporting from CLI must
+  require an existing `backtest_series` artifact for full visual reports.
 - Keep aggregate registry metrics separate from chart-ready time series.
 
 Related tasks: 12.1, 12.4, 13.x, 14.x.

@@ -20,6 +20,7 @@ from stat_arb.storage import (
     Dataset,
     Experiment,
     Hypothesis,
+    ReportArtifact,
     StatisticalTestResult,
     create_database_engine,
     create_session_factory,
@@ -718,6 +719,11 @@ def test_experiment_execute_stage_runs_backtesting_and_completes_task(
         stored_result = session.query(BacktestResult).one()
         assert stored_result.test_id == stored_task.payload["test_id"]
         assert stored_result.execution_command == ["stat-arb", "experiment", "execute-stage"]
+        stored_artifact = session.query(ReportArtifact).one()
+        assert stored_artifact.experiment_id == stored_task.experiment_id
+        assert stored_artifact.artifact_type == "backtest_series"
+        assert stored_artifact.format == "json"
+        assert Path(stored_artifact.file_path).exists()
     finally:
         session.close()
         engine.dispose()
@@ -1128,6 +1134,19 @@ def _seed_backtesting_task(db_path: Path, *, lock_path: Path) -> str:
                     "train_window_days": 60,
                     "test_window_days": 30,
                     "num_windows": 2,
+                    "artifact_output_dir": str(lock_path.parent / "backtest-artifacts"),
+                    "series": {
+                        "timestamps": [
+                            timestamp.isoformat() for timestamp in timestamps
+                        ],
+                        "equity_curve": [100.0, 102.0, 100.98, 102.49, 103.0, 103.25],
+                        "drawdown_curve": [0.0, 0.0, 0.01, 0.0, 0.0, 0.0],
+                        "z_scores": [0.0, 2.2, 1.2, 0.2, -2.1, 0.0],
+                        "entry_markers": [1, 4],
+                        "exit_markers": [3, 5],
+                        "rolling_sharpe": [0.0, 0.1, 0.2, 0.3, 0.2, 0.4],
+                        "trade_pnls": [5.0, -2.0],
+                    },
                 },
             )
         )

@@ -3,6 +3,7 @@
 from stat_arb.agents.backtest import (
     BacktestAgentInput,
     BacktestAgentRunResult,
+    BacktestSeriesArtifactInput,
     run_backtest_agent_persistence,
 )
 from stat_arb.agents.coordinator import (
@@ -85,6 +86,7 @@ from stat_arb.agents.statistical_testing import (
 __all__ = [
     "BacktestAgentInput",
     "BacktestAgentRunResult",
+    "BacktestSeriesArtifactInput",
     "AgentToolPermissionPolicy",
     "AgentToolPermissionRequest",
     "AgentToolPermissionResult",

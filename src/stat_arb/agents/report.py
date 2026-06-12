@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -14,6 +15,7 @@ from stat_arb.reports import (
     BacktestReportSnapshot,
     DataQualityReportSnapshot,
     GeneratedReportArtifact,
+    ReportSeriesSnapshot,
     generate_backtest_report_artifacts,
 )
 from stat_arb.storage.models import (
@@ -71,8 +73,13 @@ def run_report_agent(
 
     critic = _latest_critic_review(session, backtest_id=request.backtest_id)
     data_quality_reports = _data_quality_reports_for(session, backtest)
+    series = _load_series_sidecar(
+        session,
+        experiment_id=request.experiment_id,
+        backtest_id=request.backtest_id,
+    )
     generated = generate_backtest_report_artifacts(
-        _snapshot_from(backtest, critic, data_quality_reports),
+        _snapshot_from(backtest, critic, data_quality_reports, series),
         output_dir=request.output_dir,
     )
     stored = _persist_artifacts(
@@ -137,10 +144,49 @@ def _data_quality_reports_for(
     return tuple(rows)
 
 
+def _load_series_sidecar(
+    session: Session,
+    *,
+    experiment_id: UUID,
+    backtest_id: UUID,
+) -> ReportSeriesSnapshot | None:
+    artifacts = (
+        session.query(StoredReportArtifact)
+        .filter(
+            StoredReportArtifact.experiment_id == str(experiment_id),
+            StoredReportArtifact.artifact_type == "backtest_series",
+            StoredReportArtifact.format == "json",
+        )
+        .order_by(StoredReportArtifact.created_at.desc())
+        .all()
+    )
+    if not artifacts:
+        return None
+    for artifact in artifacts:
+        payload = json.loads(Path(artifact.file_path).read_text(encoding="utf-8"))
+        if payload.get("backtest_id") == str(backtest_id):
+            return _series_snapshot_from_payload(payload)
+    raise ValueError("backtest_series artifact does not match requested backtest")
+
+
+def _series_snapshot_from_payload(payload: dict[str, object]) -> ReportSeriesSnapshot:
+    return ReportSeriesSnapshot(
+        timestamps=tuple(_string_list(payload, "timestamps")),
+        equity_curve=tuple(_float_list(payload, "equity_curve")),
+        drawdown_curve=tuple(_float_list(payload, "drawdown_curve")),
+        z_scores=tuple(_float_list(payload, "z_scores")),
+        entry_markers=tuple(_int_list(payload, "entry_markers")),
+        exit_markers=tuple(_int_list(payload, "exit_markers")),
+        rolling_sharpe=tuple(_float_list(payload, "rolling_sharpe")),
+        trade_pnls=tuple(_float_list(payload, "trade_pnls")),
+    )
+
+
 def _snapshot_from(
     backtest: StoredBacktestResult,
     critic: StoredCriticReview | None,
     data_quality_reports: tuple[StoredDataQualityReportRecord, ...],
+    series: ReportSeriesSnapshot | None,
 ) -> BacktestReportSnapshot:
     return BacktestReportSnapshot(
         backtest_id=backtest.backtest_id,
@@ -183,7 +229,36 @@ def _snapshot_from(
             )
             for report in data_quality_reports
         ),
+        series=series,
     )
+
+
+def _string_list(payload: dict[str, object], key: str) -> list[str]:
+    value = payload.get(key)
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ValueError(f"backtest_series.{key} must be a list of strings")
+    return value
+
+
+def _float_list(payload: dict[str, object], key: str) -> list[float]:
+    value = payload.get(key)
+    if not isinstance(value, list):
+        raise ValueError(f"backtest_series.{key} must be a list")
+    result: list[float] = []
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int | float):
+            raise ValueError(f"backtest_series.{key} must contain only numbers")
+        result.append(float(item))
+    return result
+
+
+def _int_list(payload: dict[str, object], key: str) -> list[int]:
+    value = payload.get(key)
+    if not isinstance(value, list) or any(
+        isinstance(item, bool) or not isinstance(item, int) for item in value
+    ):
+        raise ValueError(f"backtest_series.{key} must be a list of integers")
+    return value
 
 
 def _persist_artifacts(

@@ -57,9 +57,10 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - Agent RAG answer-quality evaluation: add an eval script only after the first agent
   generates answers from ApeRAG context; current checks validate retrieval readiness, not
   final answer quality.
-- Report chart series sidecars: once the first end-to-end experiment runner exists, persist
-  actual equity, drawdown, z-score, cost attribution, rolling metric, and trade series as
-  registry-linked artifacts so Report Agent can build full visuals from factual data.
+- Report chart series sidecars: Backtest Agent can now persist factual chart series as a
+  registry-linked `backtest_series` JSON artifact, and Report Agent can load it for visual
+  artifacts. Remaining work is to require/provide this sidecar from the future full
+  experiment runner before exposing a reporting stage executor.
 - ApeRAG human graph view: ApeRAG UI is the default inspection path; build a local viewer only
   if the UI proves insufficient.
 - Queue concurrency: before enabling real multi-worker execution, add atomic Coordinator

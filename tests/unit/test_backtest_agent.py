@@ -9,7 +9,11 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from stat_arb.agents import BacktestAgentInput, run_backtest_agent_persistence
+from stat_arb.agents import (
+    BacktestAgentInput,
+    BacktestSeriesArtifactInput,
+    run_backtest_agent_persistence,
+)
 from stat_arb.backtest import (
     BacktestCostConfig,
     BaselineAsset,
@@ -26,7 +30,15 @@ from stat_arb.backtest import (
     run_pair_backtest_core,
 )
 from stat_arb.memory import MemoryWriteRequest
-from stat_arb.storage import BacktestResult, Base, DataQualityReportRecord, Dataset, Hypothesis
+from stat_arb.storage import (
+    BacktestResult,
+    Base,
+    DataQualityReportRecord,
+    Dataset,
+    Experiment,
+    Hypothesis,
+    ReportArtifact,
+)
 from stat_arb.storage.models import StatisticalTestResult as StoredStatisticalTestResult
 
 
@@ -94,6 +106,76 @@ def test_backtest_agent_persists_registry_result_and_memory_summary(
     assert memory.requests[0].registry_reference == f"registry:backtest_results/{stored.backtest_id}"
     assert "Structured performance metrics" in memory.requests[0].body
     assert "net_pnl" not in memory.requests[0].body
+
+
+def test_backtest_agent_persists_factual_series_sidecar(
+    session: Session,
+    tmp_path: Path,
+) -> None:
+    """Backtest Agent should persist chart-ready factual series as registry artifact."""
+    hypothesis_id, test_id, dataset_a_id, dataset_b_id = _seed_prerequisites(
+        session,
+        with_quality=True,
+        passed_test=True,
+    )
+    experiment_id = uuid4()
+    session.add(
+        Experiment(
+            experiment_id=str(experiment_id),
+            hypothesis_id=str(hypothesis_id),
+            status="backtesting",
+            current_agent="backtest_agent",
+        )
+    )
+    session.commit()
+    request = _agent_input(tmp_path, hypothesis_id, test_id, dataset_a_id, dataset_b_id)
+    request_with_series = BacktestAgentInput(
+        hypothesis_id=request.hypothesis_id,
+        test_id=request.test_id,
+        dataset_a_id=request.dataset_a_id,
+        dataset_b_id=request.dataset_b_id,
+        core_result=request.core_result,
+        pnl=request.pnl,
+        metrics=request.metrics,
+        baseline=request.baseline,
+        sensitivity=request.sensitivity,
+        reproducibility=request.reproducibility,
+        train_window_days=request.train_window_days,
+        test_window_days=request.test_window_days,
+        num_windows=request.num_windows,
+        experiment_id=experiment_id,
+        artifact_output_dir=tmp_path / "artifacts",
+        series=BacktestSeriesArtifactInput(
+            timestamps=tuple(step.timestamp for step in request.core_result.steps),
+            equity_curve=(100.0, 102.0, 100.98, 102.49, 103.0),
+            drawdown_curve=(0.0, 0.0, 0.01, 0.0, 0.0),
+            z_scores=tuple(step.z_score for step in request.core_result.steps),
+            entry_markers=tuple(
+                step.index for step in request.core_result.trades if "enter" in step.action.value
+            ),
+            exit_markers=tuple(
+                step.index for step in request.core_result.trades if step.action.value == "exit"
+            ),
+            rolling_sharpe=(0.0, 0.2, 0.3, 0.4, 0.5),
+            trade_pnls=(5.0, -2.0),
+        ),
+    )
+
+    result = run_backtest_agent_persistence(request_with_series, session=session)
+
+    artifact = session.query(ReportArtifact).one()
+    assert result.series_artifact is not None
+    assert result.series_artifact.artifact_id == artifact.artifact_id
+    assert artifact.experiment_id == str(experiment_id)
+    assert artifact.artifact_type == "backtest_series"
+    assert artifact.format == "json"
+    path = Path(artifact.file_path)
+    assert path.exists()
+    payload = path.read_text(encoding="utf-8")
+    assert '"backtest_id"' in payload
+    assert '"equity_curve"' in payload
+    assert '"z_scores"' in payload
+    assert '"trade_pnls"' in payload
 
 
 def test_backtest_agent_requires_passed_data_quality(session: Session, tmp_path: Path) -> None:
