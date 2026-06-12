@@ -730,7 +730,7 @@ def _load_pair_metric(path: Path, *, value_key: str) -> dict[tuple[str, str], fl
 
 
 def _read_json_list(path: Path) -> list[dict[str, Any]]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(payload, list):
         raise click.BadParameter(f"{path} должен содержать JSON array")
     if not all(isinstance(row, dict) for row in payload):
@@ -739,7 +739,7 @@ def _read_json_list(path: Path) -> list[dict[str, Any]]:
 
 
 def _read_json_object(path: Path) -> dict[str, object]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(payload, dict):
         raise click.BadParameter(f"{path} должен содержать JSON object")
     return payload

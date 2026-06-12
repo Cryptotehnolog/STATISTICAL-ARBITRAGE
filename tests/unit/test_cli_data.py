@@ -334,6 +334,65 @@ def test_hypothesis_generate_uses_rule_based_agent_boundary(tmp_path: Path) -> N
         engine.dispose()
 
 
+def test_hypothesis_generate_accepts_utf8_bom_json_inputs(tmp_path: Path) -> None:
+    """hypothesis generate should accept JSON files commonly written by Windows tools."""
+    db_path = tmp_path / "registry.db"
+    assets_path = tmp_path / "assets.json"
+    correlations_path = tmp_path / "correlations.json"
+    p_values_path = tmp_path / "p_values.json"
+    assets_path.write_text(
+        '[{"symbol":"AAA","sector":"Banks","market_cap":100000000000},'
+        '{"symbol":"BBB","sector":"Banks","market_cap":95000000000}]',
+        encoding="utf-8-sig",
+    )
+    correlations_path.write_text(
+        '[{"asset_a":"AAA","asset_b":"BBB","correlation":0.93}]',
+        encoding="utf-8-sig",
+    )
+    p_values_path.write_text(
+        '[{"asset_a":"AAA","asset_b":"BBB","p_value":0.01}]',
+        encoding="utf-8-sig",
+    )
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "hypothesis",
+            "generate",
+            "--assets-json",
+            str(assets_path),
+            "--correlations-json",
+            str(correlations_path),
+            "--p-values-json",
+            str(p_values_path),
+            "--require-same-sector",
+            "--min-abs-correlation",
+            "0.85",
+            "--min-market-cap",
+            "50000000000",
+            "--max-pairs",
+            "5",
+            "--multiple-testing-method",
+            "bonferroni",
+            "--candidate-alpha",
+            "0.05",
+            "--initial-novelty-score",
+            "1.0",
+            "--initial-status",
+            "new",
+            "--source",
+            "rule_based",
+            "--created-by",
+            "hypothesis_agent",
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Hypotheses generated: 1" in result.output
+
+
 def test_experiment_list_reads_registry_lifecycle_rows(tmp_path: Path) -> None:
     """experiment list should expose registry lifecycle state without running agents."""
     db_path = tmp_path / "registry.db"

@@ -585,10 +585,17 @@ This implementation plan breaks down the multi-agent quantitative research syste
       full experiment runner yet.
     - _Requirements: 22.10_
   
-  - [ ] 15.4 Create scripted pair-screening workflow
+  - [x] 15.4 Create scripted pair-screening workflow
     - Script to screen pairs by sector
     - Script to screen pairs by correlation
     - Output candidate pairs for testing
+    - Implemented `scripts/screen_pairs.ps1` as an explicit workflow wrapper over
+      `stat-arb hypothesis generate` and `stat-arb hypothesis list`.
+    - Screening requires caller-supplied assets, correlations, candidate p-values,
+      thresholds, multiple-testing method, alpha, novelty score, source, creator, and
+      registry path; it introduces no hidden research defaults.
+    - Added `scripts/check_pair_screening_pipeline.ps1` and wired it into
+      `scripts/pre_commit_check.ps1`.
     - _Requirements: 22.9_
   
   - [ ] 15.5 Create scripted statistical testing workflow

@@ -155,3 +155,32 @@ Coordinator workflow. Those options reduce reproducibility or bypass registry ow
 
 Verification: `scripts/check_cli_pipeline.ps1` covers data CLI and hypothesis CLI behavior,
 including manual add/list and rule-based generation through the agent boundary.
+
+## DEC-0078: Script pair screening as an explicit Hypothesis Agent workflow
+
+Status: accepted
+
+Decision: Task 15.4 pair screening is implemented as `scripts/screen_pairs.ps1`, a
+PowerShell workflow wrapper over `stat-arb hypothesis generate` and
+`stat-arb hypothesis list`. The script screens pairs by sector, correlation,
+market-cap bounds, and corrected candidate p-values through the existing Hypothesis Agent
+boundary.
+
+Rationale: Pair screening is the entry point for later statistical tests, so it must not
+be a hidden heuristic or a separate ad hoc implementation. Reusing the Hypothesis Agent
+keeps generated candidates in the Structured Registry and preserves explicit research
+configuration.
+
+Rules:
+- The script must require explicit input files and research-impacting thresholds.
+- It must not introduce default correlation, alpha, market-cap, novelty, or max-pair
+  assumptions.
+- It must output candidates by reading the registry through `stat-arb hypothesis list`.
+- It must not call ApeRAG directly.
+- Windows-authored JSON with UTF-8 BOM is accepted by CLI JSON readers.
+
+Verification:
+- `scripts/check_pair_screening_pipeline.ps1`
+- `tests/unit/test_pair_screening_workflow.py`
+- `tests/unit/test_cli_data.py::test_hypothesis_generate_uses_rule_based_agent_boundary`
+- `tests/unit/test_cli_data.py::test_hypothesis_generate_accepts_utf8_bom_json_inputs`
