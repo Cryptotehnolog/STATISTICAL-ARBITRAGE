@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from stat_arb.memory import MemoryQueryRequest, MemoryQueryResult, MemoryQueryType
 from stat_arb.storage import (
     BacktestResult,
     CoordinatorTask,
@@ -74,6 +76,66 @@ class DashboardExperimentSort:
     descending: bool = True
 
 
+class DashboardMemoryQueryService(Protocol):
+    """Read-only Memory Agent query boundary used by dashboard helpers."""
+
+    def query(self, request: MemoryQueryRequest) -> MemoryQueryResult:
+        """Run one sanitized read-only memory query."""
+
+
+@dataclass(frozen=True)
+class DashboardMemorySearchRequest:
+    """Human-facing dashboard memory search request."""
+
+    query: str
+    query_type: str
+    scope: str = "project"
+    keywords: tuple[str, ...] = ()
+    relationship: str | None = None
+    top_k: int = 5
+    max_depth: int = 2
+
+    def __post_init__(self) -> None:
+        if not self.query.strip():
+            raise ValueError("query is required")
+        if self.query_type not in {item.value for item in MemoryQueryType}:
+            raise ValueError("query_type must be topic, entity, or relationship")
+        if self.scope not in {"project", "agent"}:
+            raise ValueError("scope must be project or agent")
+        if isinstance(self.top_k, bool) or not isinstance(self.top_k, int):
+            raise TypeError("top_k must be an integer")
+        if not 1 <= self.top_k <= 10:
+            raise ValueError("top_k must be between 1 and 10")
+        if isinstance(self.max_depth, bool) or not isinstance(self.max_depth, int):
+            raise TypeError("max_depth must be an integer")
+        if not 1 <= self.max_depth <= 5:
+            raise ValueError("max_depth must be between 1 and 5")
+
+
+@dataclass(frozen=True)
+class DashboardMemorySearchItem:
+    """Sanitized memory search result for human-facing dashboard rendering."""
+
+    snippet: str
+    source: str | None
+    score: float | None
+    metadata_keys: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DashboardMemorySearchResult:
+    """Sanitized dashboard memory search response."""
+
+    items: tuple[DashboardMemorySearchItem, ...]
+    ready: bool
+    missing_markers: tuple[str, ...]
+    degraded: bool
+    degraded_reason: str | None
+    graph_labels: int | None = None
+    graph_nodes: int | None = None
+    graph_edges: int | None = None
+
+
 def get_dashboard_navigation() -> list[DashboardNavigationItem]:
     """Return the initial read-only dashboard navigation model."""
     return [
@@ -88,6 +150,44 @@ def get_dashboard_navigation() -> list[DashboardNavigationItem]:
             "approval", "Очередь одобрения", "Статус будущих approvals только на чтение."
         ),
     ]
+
+
+def run_dashboard_memory_search(
+    request: DashboardMemorySearchRequest,
+    *,
+    memory_service: DashboardMemoryQueryService,
+) -> DashboardMemorySearchResult:
+    """Run a dashboard memory search through the read-only Memory Agent boundary."""
+    memory_result = memory_service.query(
+        MemoryQueryRequest(
+            query_type=MemoryQueryType(request.query_type),
+            query=request.query.strip(),
+            scope=request.scope,  # type: ignore[arg-type]
+            keywords=list(request.keywords),
+            relationship=request.relationship,
+            top_k=request.top_k,
+            max_depth=request.max_depth,
+        )
+    )
+    graph = memory_result.graph_summary
+    return DashboardMemorySearchResult(
+        items=tuple(
+            DashboardMemorySearchItem(
+                snippet=_sanitize_memory_snippet(item.text),
+                source=item.source,
+                score=item.score,
+                metadata_keys=tuple(sorted(str(key) for key in item.metadata)),
+            )
+            for item in memory_result.results
+        ),
+        ready=memory_result.ready,
+        missing_markers=memory_result.missing_markers,
+        degraded=memory_result.degraded,
+        degraded_reason=memory_result.degraded_reason,
+        graph_labels=graph.labels if graph else None,
+        graph_nodes=graph.nodes if graph else None,
+        graph_edges=graph.edges if graph else None,
+    )
 
 
 def load_dashboard_snapshot(
@@ -499,6 +599,18 @@ def _sort_experiments(
         return (0, comparable)
 
     return sorted(rows, key=sort_key)
+
+
+def _sanitize_memory_snippet(text: str, *, max_chars: int = 400) -> str:
+    redacted = re.sub(
+        r"(?i)\b(api[_-]?key|client[_-]?secret|access[_-]?token)\b\s*[:=]\s*\S+",
+        "[redacted-secret]",
+        text,
+    )
+    compact = " ".join(redacted.split())
+    if len(compact) <= max_chars:
+        return compact
+    return compact[: max_chars - 1].rstrip() + "..."
 
 
 def _as_datetime(value: datetime | date, *, end: bool) -> datetime:

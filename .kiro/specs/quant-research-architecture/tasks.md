@@ -456,7 +456,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
       boundary integration, and CI/pre-commit wiring
     - _Requirements: 18.8_
 
-- [ ] 13. Build Coordinator Agent
+- [x] 13. Build Coordinator Agent
   - [x] 13.1 Implement task queue management
     - Create task queue with priority support
     - Implement task assignment to agents
@@ -639,7 +639,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 18.8_
 
 
-- [ ] 16. Build dashboard for monitoring and reporting
+- [x] 16. Build dashboard for monitoring and reporting
   - [x] 16.1 Create Streamlit dashboard structure
     - Set up Streamlit app with navigation
     - Create page layout and styling
@@ -695,12 +695,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
       boundary exists, so UI cannot bypass memory policy.
     - _Requirements: 11.7_
 
-  - [ ] 16.7b Implement full read-only Memory Agent query boundary
+  - [x] 16.7b Implement full read-only Memory Agent query boundary
     - Search ApeRAG by topic, entity, or relationship through a dedicated
       read-only Memory Agent boundary, not directly from Streamlit
     - Display sanitized search results with context, registry references,
       freshness status, and backend readiness metadata
-    - Tracked as TD-0034 in `docs/technical_debt.md`
+    - Implemented dashboard query wrapper through Memory Agent service with sanitized
+      snippets, graph metadata, degraded-read support, and no direct Streamlit ApeRAG calls.
     - _Requirements: 11.7_
   
   - [x] 16.8a Implement read-only manual approval queue
@@ -708,17 +709,20 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Display approve/reject readiness and required reason context
     - _Requirements: 11.8, 14.6-14.9_
 
-  - [ ] 16.8b Implement audited Coordinator approve/reject actions
+  - [x] 16.8b Implement audited Coordinator approve/reject actions
     - Add explicit approve/reject actions only through a Coordinator transition API
     - Require actor, timestamp, reason, and decision provenance in the registry
     - Write only policy-safe approval summaries through Memory Agent policy
-    - Tracked as TD-0035 in `docs/technical_debt.md`
+    - Implemented `CoordinatorApprovalActionRequest` and
+      `apply_coordinator_approval_action` so manual approvals use Coordinator lifecycle
+      transitions and Memory Agent policy, not ad-hoc dashboard mutation.
     - _Requirements: 11.8, 14.6-14.9_
 
   - [x]* 16.9 Write integration tests for dashboard
     - Test dashboard pages render correctly
     - Test data loading and filtering
-    - Added dashboard snapshot and UI guard tests covering Task 16.1-16.8a.
+    - Added dashboard snapshot, Memory Agent query, approval API, and UI guard tests
+      covering Task 16.1-16.8b.
     - _Requirements: 18.8_
 
 - [ ] 17. Implement failure handling and error recovery

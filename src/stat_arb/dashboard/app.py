@@ -10,10 +10,13 @@ import streamlit as st
 from stat_arb.dashboard.data import (
     DashboardExperimentFilters,
     DashboardExperimentSort,
+    DashboardMemorySearchRequest,
+    DashboardMemorySearchResult,
     DashboardSnapshot,
     get_dashboard_navigation,
     load_dashboard_snapshot,
 )
+from stat_arb.memory.dashboard_query import query_dashboard_memory
 
 _COLUMN_LABELS = {
     "experiment_id": "ID эксперимента",
@@ -375,16 +378,14 @@ def _render_reports(snapshot: DashboardSnapshot) -> None:
 
 def _render_memory_search(snapshot: DashboardSnapshot) -> None:
     st.markdown("### Поиск по памяти")
-    st.caption("Read-only boundary для будущего ApeRAG search через Memory Agent policy.")
+    st.caption("Read-only search через Memory Agent query boundary.")
     left, right = st.columns([2, 1])
     with left:
-        st.text_input("Запрос", placeholder="topic, entity или relationship", disabled=True)
+        query = st.text_input("Запрос", placeholder="topic, entity или relationship")
     with right:
-        st.selectbox("Тип поиска", options=["topic", "entity", "relationship"], disabled=True)
-    st.info(
-        "Прямой ApeRAG-запрос из dashboard отключен. Поиск будет подключен через "
-        "отдельный read-only Memory Agent boundary, чтобы UI не обходил policy слой."
-    )
+        query_type = st.selectbox("Тип поиска", options=["topic", "entity", "relationship"])
+    scope = st.selectbox("Слой памяти", options=["project", "agent"], index=0)
+    top_k = st.slider("Количество результатов", min_value=1, max_value=10, value=5)
     _render_metric_strip(
         [
             ("ApeRAG backend", "active"),
@@ -392,18 +393,72 @@ def _render_memory_search(snapshot: DashboardSnapshot) -> None:
             ("Memory writes", "через policy"),
         ]
     )
+    if not query.strip():
+        st.info("Введите запрос, чтобы выполнить read-only поиск через Memory Agent.")
+        return
+    try:
+        result = query_dashboard_memory(
+            DashboardMemorySearchRequest(
+                query=query,
+                query_type=str(query_type),
+                scope=str(scope),
+                top_k=int(top_k),
+            )
+        )
+    except Exception as exc:  # pragma: no cover - Streamlit displays runtime backend errors.
+        st.error(f"Memory search недоступен: {type(exc).__name__}: {exc}")
+        return
+    _render_memory_search_result(result)
+
+
+def _render_memory_search_result(result: DashboardMemorySearchResult) -> None:
+    st.markdown("#### Результаты поиска")
+    _render_metric_strip(
+        [
+            ("Ready", result.ready),
+            ("Degraded", result.degraded),
+            ("Graph nodes", result.graph_nodes if result.graph_nodes is not None else "n/a"),
+        ]
+    )
+    if result.degraded_reason:
+        st.warning(result.degraded_reason)
+    if result.missing_markers:
+        st.warning("Не найдены expected markers: " + ", ".join(result.missing_markers))
+    if not result.items:
+        st.info("Memory search не вернул результатов.")
+        return
+    table = pd.DataFrame(
+        [
+            {
+                "snippet": item.snippet,
+                "source": item.source,
+                "score": item.score,
+                "metadata_keys": ", ".join(item.metadata_keys),
+            }
+            for item in result.items
+        ]
+    )
+    st.dataframe(
+        table.rename(
+            columns={
+                "snippet": "Фрагмент",
+                "source": "Источник",
+                "score": "Score",
+                "metadata_keys": "Metadata keys",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 
 def _render_approval_queue(snapshot: DashboardSnapshot) -> None:
     st.markdown("### Очередь одобрения")
-    st.caption("Эксперименты, готовые к human review. Кнопки approve/reject отключены.")
+    st.caption("Эксперименты, готовые к human review через audited Coordinator API.")
     if not snapshot.approval_queue:
         st.info("Очередь одобрения пуста.")
         return
-    st.warning(
-        "Approve/reject мутации намеренно не встроены в dashboard: решение должно идти "
-        "через audited Coordinator boundary с reason input и registry transition."
-    )
+    st.info("Approve/reject действия должны вызывать Coordinator approval action с reason input.")
     visible_columns = [
         "experiment_id",
         "pair",

@@ -62,14 +62,6 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   artifacts. CLI reporting execution is now guarded by matching `backtest_series`
   presence. Remaining work is to make the future full experiment runner provide and
   persist these sidecars before queuing reporting work.
-- Dashboard approval actions: keep Task 16.8b open until an audited Coordinator approval
-  transition API exists. Future approve/reject controls must persist actor,
-  timestamp, reason, and decision through the registry lifecycle boundary, and write only
-  policy-safe summaries through Memory Agent policy.
-- Dashboard memory search: keep Task 16.7b open until a dedicated read-only Memory Agent
-  query boundary exists. Dashboard code must not query
-  ApeRAG directly, use raw HTTP clients, or bypass sanitized snippets, registry references,
-  freshness status, and backend readiness metadata.
 - ApeRAG human graph view: ApeRAG UI is the default inspection path; build a local viewer only
   if the UI proves insufficient.
 - Queue concurrency: before enabling real multi-worker execution, add atomic Coordinator
@@ -103,3 +95,10 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   after ApeRAG became the active project and operational agent memory backend.
 - Duplicate `.kiro/skills` source was removed after the selected Rust skills were installed
   into Codex and confirmed visible in the current session.
+- Dashboard Memory Agent read boundary is implemented. Task 16.7b added active Streamlit
+  memory search through `MemoryAgentService.query`, sanitized snippets, graph readiness
+  metadata, degraded-read status, and guards against direct ApeRAG/HTTP calls in dashboard.
+- Dashboard approval actions have an audited Coordinator API. Task 16.8b added
+  `CoordinatorApprovalActionRequest` and `apply_coordinator_approval_action`, requiring
+  actor/reason provenance and routing approve/reject/quarantine through registry lifecycle
+  transition plus Memory Agent policy.

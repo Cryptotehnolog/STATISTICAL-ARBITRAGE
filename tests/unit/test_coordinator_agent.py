@@ -12,6 +12,7 @@ from stat_arb.agents.coordinator import (
     AgentToolPermissionPolicy,
     AgentToolPermissionRequest,
     AgentToolPermissionScope,
+    CoordinatorApprovalActionRequest,
     CoordinatorFinalDecisionEvidence,
     CoordinatorFinalDecisionPolicy,
     CoordinatorResourcePolicy,
@@ -19,6 +20,7 @@ from stat_arb.agents.coordinator import (
     CoordinatorTransitionRequest,
     ExperimentFinalDecision,
     ExperimentLifecycleStatus,
+    apply_coordinator_approval_action,
     apply_coordinator_final_decision,
     claim_coordinator_task_by_id,
     claim_next_coordinator_task,
@@ -182,6 +184,8 @@ def test_coordinator_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "max_running_tasks_per_agent" in script
     assert "CoordinatorFinalDecisionPolicy" in script
     assert "require_retest_justification" in script
+    assert "CoordinatorApprovalActionRequest" in script
+    assert "apply_coordinator_approval_action" in script
     assert "apply_coordinator_final_decision" in script
     assert "AgentToolPermissionPolicy" in script
     assert "enforce_agent_tool_permission" in script
@@ -618,6 +622,58 @@ def test_coordinator_applies_final_decision_through_transition_and_memory(
     assert memory.requests[0].metadata["final_decision"] == "approved"
     assert memory.requests[0].registry_reference == f"registry:experiments/{experiment_id}"
     assert "Critic status approved" in memory.requests[0].body
+
+
+def test_coordinator_approval_action_requires_reason_and_writes_memory(
+    session: Session,
+) -> None:
+    """Task 16.8b should expose audited approve/reject actions through Coordinator only."""
+    experiment_id = _seed_experiment(session, status="reporting")
+    memory = FakeMemoryService()
+
+    result = apply_coordinator_approval_action(
+        CoordinatorApprovalActionRequest(
+            experiment_id=experiment_id,
+            final_decision=ExperimentFinalDecision.APPROVED,
+            reason="Human reviewer approved the report package for demo review.",
+            actor="victor",
+        ),
+        session=session,
+        memory_service=memory,
+    )
+
+    stored = session.query(Experiment).one()
+    assert result.current_status == ExperimentLifecycleStatus.FINAL_DECISION
+    assert stored.final_decision == "approved"
+    assert stored.completed_at is not None
+    assert memory.requests[0].registry_reference == f"registry:experiments/{experiment_id}"
+    assert memory.requests[0].metadata["actor"] == "victor"
+    assert memory.requests[0].metadata["final_decision"] == "approved"
+
+
+def test_coordinator_approval_action_rejects_missing_reason_without_mutation(
+    session: Session,
+) -> None:
+    """Manual approval actions must not hide actor/reason provenance."""
+    experiment_id = _seed_experiment(session, status="reporting")
+    memory = FakeMemoryService()
+
+    with pytest.raises(ValueError, match="reason is required"):
+        apply_coordinator_approval_action(
+            CoordinatorApprovalActionRequest(
+                experiment_id=experiment_id,
+                final_decision=ExperimentFinalDecision.REJECTED,
+                reason=" ",
+                actor="victor",
+            ),
+            session=session,
+            memory_service=memory,
+        )
+
+    stored = session.query(Experiment).one()
+    assert stored.status == "reporting"
+    assert stored.final_decision is None
+    assert memory.requests == []
 
 
 def test_coordinator_final_decision_integration_blocks_unjustified_retest_without_mutation(

@@ -8,40 +8,6 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
-### TD-0035: Add audited Coordinator approval transition API for dashboard actions
-
-Status: open
-
-Why deferred: Task 16 intentionally keeps the dashboard read-only. Adding Streamlit
-approve/reject buttons without an audited Coordinator transition API would bypass the
-registry lifecycle boundary and make human decisions harder to review.
-
-Follow-up:
-- Add an explicit Coordinator approval transition service with required reason input.
-- Persist approval/rejection timestamp, actor, reason, and final decision in the registry.
-- Write only policy-safe approval summaries through Memory Agent policy.
-- Enable dashboard approve/reject controls only after tests prove they use this service
-  and cannot mutate registry rows directly.
-
-Related tasks: 13.3, 13.4, 16.8b, 21.3, DEC-0090.
-
-### TD-0034: Add read-only Memory Agent search boundary for dashboard queries
-
-Status: open
-
-Why deferred: Task 16 exposes a disabled dashboard memory search shell, but direct ApeRAG
-queries from Streamlit would bypass the Memory Agent policy/read cache boundary.
-
-Follow-up:
-- Add a dedicated read-only Memory Agent query service for topic/entity/relationship search.
-- Return sanitized result snippets, registry references, freshness status, and backend
-  readiness metadata.
-- Keep dashboard code free of `ApeRAGMemoryClient`, raw HTTP calls, and direct document
-  write/read endpoint usage.
-- Add dashboard tests and guard checks before enabling the search controls.
-
-Related tasks: 11.x, 16.7b, DEC-0065, DEC-0090.
-
 ### TD-0033: Compare native pairs pipeline against Jesse MCP ideas without adopting it as a dependency
 
 Status: open
@@ -429,6 +395,30 @@ Follow-up:
 Related tasks: 18.1, 18.4.
 
 ## Resolved
+
+### TD-0035: Add audited Coordinator approval transition API for dashboard actions
+
+Status: resolved
+
+Resolution: Added `CoordinatorApprovalActionRequest` and
+`apply_coordinator_approval_action`. Manual approve/reject/quarantine actions now require
+actor and reason provenance, persist through the Coordinator lifecycle transition API, and
+write only policy-safe summaries through Memory Agent policy. Dashboard code remains free
+of direct registry mutations.
+
+Closed by: Task 16.8b.
+
+### TD-0034: Add read-only Memory Agent search boundary for dashboard queries
+
+Status: resolved
+
+Resolution: Added a dashboard-facing Memory Agent query wrapper and active Streamlit
+search controls. Dashboard queries now go through `MemoryAgentService.query`, return
+sanitized snippets, graph readiness metadata, degraded-read status, and source metadata
+keys, while keeping dashboard code free of `ApeRAGMemoryClient`, raw HTTP calls, and
+direct document endpoint usage.
+
+Closed by: Task 16.7b.
 
 ### TD-0022: Ruflo read-only swarm audit policy
 

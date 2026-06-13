@@ -71,6 +71,14 @@ if (
 }
 
 if (
+    $source -notmatch "CoordinatorApprovalActionRequest" -or
+    $source -notmatch "apply_coordinator_approval_action" -or
+    $source -notmatch "approval actions must approve, reject, or quarantine"
+) {
+    Write-Error "Coordinator approval actions должны иметь explicit audited request и идти через lifecycle transition."
+}
+
+if (
     $source -match "target_status: ExperimentLifecycleStatus =|final_decision: ExperimentFinalDecision =|priority: int =|max_attempts: int =|max_running_tasks: int =|max_running_tasks_per_agent: dict\[str, int\] =|policy: CoordinatorResourcePolicy \| None =|require_retest_justification: bool =|critic_status_to_decision: .* =|policy: CoordinatorFinalDecisionPolicy \| None =|policy: AgentToolPermissionPolicy \| None ="
 ) {
     Write-Error "Coordinator Agent не должен прятать lifecycle/task/resource defaults в request config."
@@ -83,6 +91,15 @@ if (-not $applySignature.Success) {
 
 if ($applySignature.Groups[1].Value -match 'memory_service: MemoryWriter \| None') {
     Write-Error "Coordinator final decision apply не должен делать memory_service optional."
+}
+
+$approvalSignature = [regex]::Match($source, '(?s)def apply_coordinator_approval_action\((.*?)\) -> CoordinatorTransitionResult:')
+if (-not $approvalSignature.Success) {
+    Write-Error "Coordinator approval action function не найден."
+}
+
+if ($approvalSignature.Groups[1].Value -match 'memory_service: MemoryWriter \| None') {
+    Write-Error "Coordinator approval action не должен делать memory_service optional."
 }
 
 Write-Output "Проверка Coordinator Agent boundaries прошла."

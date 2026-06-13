@@ -50,11 +50,13 @@ not start stages, approve experiments, write ApeRAG memory, mutate Coordinator t
 or modify lifecycle state. Interactive execution and approval controls belong to later
 explicit boundaries, not to the monitoring list view.
 
-## DEC-0090: Complete Task 16 as a safe read-only monitoring dashboard
+## DEC-0090: Complete Task 16 as a guarded monitoring dashboard
 
 Task 16 adds concrete dashboard pages for hypotheses, statistical tests, backtests,
-report artifacts, coordinator errors, memory readiness, and the manual approval queue.
-The dashboard remains an operational monitoring surface, not an execution surface.
+report artifacts, coordinator errors, Memory Agent search, and the manual approval queue.
+The dashboard remains an operational monitoring surface. It may run read-only memory
+queries through the Memory Agent boundary, but it must not bypass registry, Coordinator,
+or Memory Agent policy for mutations.
 
 Visualization policy:
 
@@ -65,13 +67,17 @@ Visualization policy:
 
 Memory policy:
 
-- The dashboard may show a read-only memory search shell and readiness context.
-- It must not instantiate ApeRAG clients or MemoryAgentService directly.
-- Real memory search belongs behind a dedicated read-only Memory Agent boundary.
+- The dashboard may run read-only topic/entity/relationship searches through the
+  Memory Agent query boundary.
+- It must not instantiate ApeRAG clients or MemoryAgentService directly in Streamlit code.
+- Search results must be sanitized snippets with source, graph readiness, degraded-read
+  status, and metadata keys instead of raw backend payloads.
 
 Approval policy:
 
 - The dashboard may display experiments eligible for human review.
 - It must not mutate experiment state with ad-hoc Streamlit buttons.
-- Approve/reject decisions must go through an audited Coordinator transition API
-  with explicit reason capture and registry persistence.
+- Approve/reject/quarantine decisions must go through
+  `apply_coordinator_approval_action`, which requires actor and reason provenance,
+  persists through the registry lifecycle transition, and writes only policy-safe
+  summaries through Memory Agent policy.

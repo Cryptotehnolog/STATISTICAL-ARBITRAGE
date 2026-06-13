@@ -6,11 +6,21 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from stat_arb.dashboard.data import (
     DashboardExperimentFilters,
     DashboardExperimentSort,
+    DashboardMemorySearchRequest,
     get_dashboard_navigation,
     load_dashboard_snapshot,
+    run_dashboard_memory_search,
+)
+from stat_arb.memory import (
+    ApeRAGGraphSummary,
+    ApeRAGSearchResult,
+    MemoryQueryRequest,
+    MemoryQueryResult,
 )
 from stat_arb.storage import (
     BacktestResult,
@@ -789,6 +799,69 @@ def test_dashboard_sidecar_readiness_requires_matching_json_payload(tmp_path) ->
         engine.dispose()
 
 
+class FakeDashboardMemoryService:
+    """Fake Memory Agent read boundary for dashboard search tests."""
+
+    def __init__(self) -> None:
+        self.requests: list[MemoryQueryRequest] = []
+
+    def query(self, request: MemoryQueryRequest) -> MemoryQueryResult:
+        self.requests.append(request)
+        return MemoryQueryResult(
+            results=(
+                ApeRAGSearchResult(
+                    text=(
+                        "DEC-0065 says dashboard memory search must go through "
+                        "Memory Agent policy. api_key=SHOULD_NOT_LEAK " + "x" * 700
+                    ),
+                    score=0.91,
+                    source="decisions_dashboard.md",
+                    metadata={"raw": {"nested": "hidden"}},
+                ),
+            ),
+            graph_summary=ApeRAGGraphSummary(labels=3, nodes=4, edges=2),
+        )
+
+
+def test_dashboard_memory_search_uses_memory_agent_query_boundary() -> None:
+    """Task 16.7b should query memory through a sanitized read-only Memory Agent boundary."""
+    memory = FakeDashboardMemoryService()
+
+    result = run_dashboard_memory_search(
+        DashboardMemorySearchRequest(
+            query="dashboard memory search",
+            query_type="topic",
+            scope="project",
+            keywords=("dashboard", "memory"),
+            top_k=3,
+        ),
+        memory_service=memory,
+    )
+
+    assert memory.requests[0].query_type == "topic"
+    assert memory.requests[0].scope == "project"
+    assert memory.requests[0].top_k == 3
+    assert result.ready is True
+    assert result.graph_labels == 3
+    assert result.items[0].source == "decisions_dashboard.md"
+    assert "api_key" not in result.items[0].snippet.lower()
+    assert len(result.items[0].snippet) <= 420
+    assert result.items[0].metadata_keys == ("raw",)
+
+
+def test_dashboard_memory_search_rejects_empty_query() -> None:
+    """Dashboard memory search should fail closed before calling backend on empty input."""
+    memory = FakeDashboardMemoryService()
+
+    with pytest.raises(ValueError, match="query is required"):
+        run_dashboard_memory_search(
+            DashboardMemorySearchRequest(query=" ", query_type="topic"),
+            memory_service=memory,
+        )
+
+    assert memory.requests == []
+
+
 def test_dashboard_task16_pages_are_rendered_read_only() -> None:
     """Task 16.3-16.8a pages should be concrete read-only sections, not placeholders."""
     app = Path("src/stat_arb/dashboard/app.py").read_text(encoding="utf-8")
@@ -809,7 +882,8 @@ def test_dashboard_task16_pages_are_rendered_read_only() -> None:
     assert "Cost attribution" in app
     assert "Журнал ошибок" in app
     assert "Поиск по памяти" in app
-    assert "Кнопки approve/reject отключены" in app
+    assert "query_dashboard_memory" in app
+    assert "audited Coordinator API" in app
     assert "_read_only_session" in data
     assert "session.rollback()" in data
     assert "st.button" not in app
@@ -844,6 +918,18 @@ def test_dashboard_structure_guard_blocks_raw_http_and_bytecode_output() -> None
 
     assert "httpx|requests|urllib|/api/v1/collections|Invoke-RestMethod" in script
     assert "PYTHONDONTWRITEBYTECODE" in script
+
+
+def test_dashboard_memory_query_factory_stays_outside_streamlit_surface() -> None:
+    """Dashboard should use a factory wrapper, not raw ApeRAG or HTTP clients in Streamlit code."""
+    app = Path("src/stat_arb/dashboard/app.py").read_text(encoding="utf-8")
+    factory = Path("src/stat_arb/memory/dashboard_query.py").read_text(encoding="utf-8")
+
+    assert "query_dashboard_memory" in app
+    assert "ApeRAGMemoryClient" not in app
+    assert "MemoryAgentService" not in app
+    assert "MemoryAgentService" in factory
+    assert "ApeRAGMemoryClient" in factory
 
 
 def test_pre_commit_runs_dashboard_structure_guard() -> None:

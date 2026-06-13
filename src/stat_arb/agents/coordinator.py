@@ -89,6 +89,28 @@ class CoordinatorTransitionRequest:
 
 
 @dataclass(frozen=True)
+class CoordinatorApprovalActionRequest:
+    """Audited manual approve/reject action for dashboard or operator workflows."""
+
+    experiment_id: str
+    final_decision: ExperimentFinalDecision
+    reason: str
+    actor: str
+
+    def __post_init__(self) -> None:
+        if not str(self.experiment_id).strip():
+            raise ValueError("experiment_id is required")
+        if not isinstance(self.final_decision, ExperimentFinalDecision):
+            raise TypeError("final_decision must be an ExperimentFinalDecision")
+        if self.final_decision == ExperimentFinalDecision.ELIGIBLE_FOR_DEMO:
+            raise ValueError("approval actions must approve, reject, or quarantine")
+        if not self.reason.strip():
+            raise ValueError("reason is required")
+        if not self.actor.strip():
+            raise ValueError("actor is required")
+
+
+@dataclass(frozen=True)
 class CoordinatorTaskRequest:
     """Request to enqueue one durable Coordinator task."""
 
@@ -173,9 +195,7 @@ class CoordinatorResourcePolicy:
     max_running_tasks_per_agent: dict[str, int]
 
     def __post_init__(self) -> None:
-        if isinstance(self.max_running_tasks, bool) or not isinstance(
-            self.max_running_tasks, int
-        ):
+        if isinstance(self.max_running_tasks, bool) or not isinstance(self.max_running_tasks, int):
             raise TypeError("max_running_tasks must be an integer")
         if self.max_running_tasks <= 0:
             raise ValueError("max_running_tasks must be positive")
@@ -224,9 +244,7 @@ class CoordinatorFinalDecisionEvidence:
         if not self.hypothesis_status.strip():
             raise ValueError("hypothesis_status is required")
         _validate_non_empty_texts(self.critic_objections, label="critic_objections")
-        if self.retest_justification is not None and not isinstance(
-            self.retest_justification, str
-        ):
+        if self.retest_justification is not None and not isinstance(self.retest_justification, str):
             raise TypeError("retest_justification must be a string or None")
 
 
@@ -326,9 +344,10 @@ def claim_next_coordinator_task(
     _validate_agent_has_resource_policy(normalized_agent, policy)
     if _running_task_count(session) >= policy.max_running_tasks:
         return None
-    if _running_task_count(session, agent_name=normalized_agent) >= policy.max_running_tasks_per_agent[
-        normalized_agent
-    ]:
+    if (
+        _running_task_count(session, agent_name=normalized_agent)
+        >= policy.max_running_tasks_per_agent[normalized_agent]
+    ):
         return None
     task = (
         session.query(CoordinatorTask)
@@ -364,9 +383,10 @@ def claim_coordinator_task_by_id(
     _validate_agent_has_resource_policy(task.agent_name, policy)
     if _running_task_count(session) >= policy.max_running_tasks:
         return None
-    if _running_task_count(session, agent_name=task.agent_name) >= policy.max_running_tasks_per_agent[
-        task.agent_name
-    ]:
+    if (
+        _running_task_count(session, agent_name=task.agent_name)
+        >= policy.max_running_tasks_per_agent[task.agent_name]
+    ):
         return None
     task.status = CoordinatorTaskStatus.RUNNING.value
     task.attempt_count += 1
@@ -498,6 +518,26 @@ def apply_coordinator_final_decision(
     )
 
 
+def apply_coordinator_approval_action(
+    request: CoordinatorApprovalActionRequest,
+    *,
+    session: Session,
+    memory_service: MemoryWriter,
+) -> CoordinatorTransitionResult:
+    """Apply one audited human approval action through Coordinator lifecycle boundary."""
+    return transition_experiment_lifecycle(
+        CoordinatorTransitionRequest(
+            experiment_id=request.experiment_id,
+            target_status=ExperimentLifecycleStatus.FINAL_DECISION,
+            reason=request.reason,
+            actor=request.actor,
+            final_decision=request.final_decision,
+        ),
+        session=session,
+        memory_service=memory_service,
+    )
+
+
 def _running_task_count(session: Session, *, agent_name: str | None = None) -> int:
     query = session.query(CoordinatorTask).filter(
         CoordinatorTask.status == CoordinatorTaskStatus.RUNNING.value
@@ -566,9 +606,7 @@ def transition_experiment_lifecycle(
 
 def _require_experiment(session: Session, *, experiment_id: str) -> Experiment:
     experiment = (
-        session.query(Experiment)
-        .filter(Experiment.experiment_id == str(experiment_id))
-        .first()
+        session.query(Experiment).filter(Experiment.experiment_id == str(experiment_id)).first()
     )
     if experiment is None:
         raise ValueError(f"experiment is required for Coordinator transition {experiment_id}")
@@ -576,11 +614,7 @@ def _require_experiment(session: Session, *, experiment_id: str) -> Experiment:
 
 
 def _require_task(session: Session, *, task_id: str) -> CoordinatorTask:
-    task = (
-        session.query(CoordinatorTask)
-        .filter(CoordinatorTask.task_id == str(task_id))
-        .first()
-    )
+    task = session.query(CoordinatorTask).filter(CoordinatorTask.task_id == str(task_id)).first()
     if task is None:
         raise ValueError(f"Coordinator task is required: {task_id}")
     return task
