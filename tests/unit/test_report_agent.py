@@ -49,43 +49,27 @@ def session() -> Session:
         engine.dispose()
 
 
-def test_report_agent_generates_artifacts_registry_rows_and_memory_summary(
+def test_report_agent_requires_factual_series_sidecar(
     session: Session,
     tmp_path: Path,
 ) -> None:
-    """Report Agent should persist artifacts and write only a concise memory summary."""
+    """Report Agent must fail closed without a matching factual series sidecar."""
     experiment_id, backtest_id = _seed_report_prerequisites(session)
     memory = FakeMemoryService()
 
-    result = run_report_agent(
-        ReportAgentInput(
-            experiment_id=experiment_id,
-            backtest_id=backtest_id,
-            output_dir=tmp_path,
-        ),
-        session=session,
-        memory_service=memory,
-    )
+    with pytest.raises(ValueError, match="matching backtest_series sidecar is required"):
+        run_report_agent(
+            ReportAgentInput(
+                experiment_id=experiment_id,
+                backtest_id=backtest_id,
+                output_dir=tmp_path,
+            ),
+            session=session,
+            memory_service=memory,
+        )
 
-    stored = session.query(ReportArtifact).order_by(ReportArtifact.artifact_type).all()
-    assert len(stored) == 4
-    assert {row.artifact_type for row in stored} == {
-        "backtest_report",
-        "backtest_report_pdf",
-        "data_quality_report",
-        "json_summary",
-    }
-    assert all(Path(row.file_path).exists() for row in stored)
-    assert len(result.artifacts) == 4
-    data_quality_row = next(row for row in stored if row.artifact_type == "data_quality_report")
-    assert "AAA" in Path(data_quality_row.file_path).read_text(encoding="utf-8")
-    assert "BBB" in Path(data_quality_row.file_path).read_text(encoding="utf-8")
-    assert result.memory_written is True
-    assert len(memory.requests) == 1
-    assert memory.requests[0].record_type == "report_summary"
-    assert memory.requests[0].registry_reference.startswith("registry:report_artifacts/")
-    assert "Report artifacts were generated" in memory.requests[0].body
-    assert "net_pnl" not in memory.requests[0].body
+    assert session.query(ReportArtifact).count() == 0
+    assert memory.requests == []
 
 
 def test_report_agent_loads_factual_series_sidecar_for_visualizations(
@@ -139,6 +123,12 @@ def test_report_agent_loads_factual_series_sidecar_for_visualizations(
     )
 
     artifact_types = {artifact.artifact_type for artifact in result.artifacts}
+    assert {
+        "backtest_report",
+        "backtest_report_pdf",
+        "data_quality_report",
+        "json_summary",
+    } <= artifact_types
     assert "equity_curve" in artifact_types
     assert "z_score_signals" in artifact_types
     assert "cost_attribution" in artifact_types
@@ -147,9 +137,58 @@ def test_report_agent_loads_factual_series_sidecar_for_visualizations(
     html_report = next(
         artifact for artifact in result.artifacts if artifact.artifact_type == "backtest_report"
     )
-    assert "Кривая equity с наложенной просадкой" in Path(
-        html_report.file_path
-    ).read_text(encoding="utf-8")
+    assert "Кривая equity с наложенной просадкой" in Path(html_report.file_path).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_report_agent_persists_artifacts_and_memory_summary_with_sidecar(
+    session: Session,
+    tmp_path: Path,
+) -> None:
+    """Report Agent should persist artifacts and write concise memory after sidecar check."""
+    experiment_id, backtest_id = _seed_report_prerequisites(session)
+    matching_path = _write_series_sidecar(
+        tmp_path / "series" / "matching.series.json",
+        backtest_id=backtest_id,
+        equity_curve=[100.0, 101.0, 102.0],
+    )
+    session.add(
+        ReportArtifact(
+            experiment_id=str(experiment_id),
+            artifact_type="backtest_series",
+            file_path=str(matching_path),
+            format="json",
+            created_at=datetime(2024, 1, 2, tzinfo=UTC),
+        )
+    )
+    session.commit()
+    memory = FakeMemoryService()
+
+    result = run_report_agent(
+        ReportAgentInput(
+            experiment_id=experiment_id,
+            backtest_id=backtest_id,
+            output_dir=tmp_path / "reports",
+        ),
+        session=session,
+        memory_service=memory,
+    )
+
+    stored = session.query(ReportArtifact).order_by(ReportArtifact.artifact_type).all()
+    artifact_types = {row.artifact_type for row in stored}
+    assert "backtest_series" in artifact_types
+    assert "backtest_report" in artifact_types
+    assert all(
+        Path(row.file_path).exists() for row in stored if row.artifact_type != "backtest_series"
+    )
+    assert len(result.artifacts) >= 4
+    assert result.memory_written is True
+    assert len(memory.requests) == 1
+    assert memory.requests[0].record_type == "report_summary"
+    assert memory.requests[0].registry_reference.startswith("registry:report_artifacts/")
+    assert "Report artifacts were generated" in memory.requests[0].body
+    assert "net_pnl" not in memory.requests[0].body
 
 
 def test_report_agent_selects_series_sidecar_for_requested_backtest(
@@ -201,7 +240,9 @@ def test_report_agent_selects_series_sidecar_for_requested_backtest(
     assert "equity_curve" in artifact_types
 
 
-def test_report_agent_requires_matching_experiment_and_backtest(session: Session, tmp_path: Path) -> None:
+def test_report_agent_requires_matching_experiment_and_backtest(
+    session: Session, tmp_path: Path
+) -> None:
     """Report artifacts must not connect an experiment to an unrelated backtest."""
     _experiment_id, backtest_id = _seed_report_prerequisites(session)
     other_hypothesis_id = uuid4()

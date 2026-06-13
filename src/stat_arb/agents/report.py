@@ -73,7 +73,7 @@ def run_report_agent(
 
     critic = _latest_critic_review(session, backtest_id=request.backtest_id)
     data_quality_reports = _data_quality_reports_for(session, backtest)
-    series = _load_series_sidecar(
+    series = _require_series_sidecar(
         session,
         experiment_id=request.experiment_id,
         backtest_id=request.backtest_id,
@@ -144,12 +144,12 @@ def _data_quality_reports_for(
     return tuple(rows)
 
 
-def _load_series_sidecar(
+def _require_series_sidecar(
     session: Session,
     *,
     experiment_id: UUID,
     backtest_id: UUID,
-) -> ReportSeriesSnapshot | None:
+) -> ReportSeriesSnapshot:
     artifacts = (
         session.query(StoredReportArtifact)
         .filter(
@@ -161,12 +161,15 @@ def _load_series_sidecar(
         .all()
     )
     if not artifacts:
-        return None
+        raise ValueError("matching backtest_series sidecar is required before report generation")
     for artifact in artifacts:
         payload = json.loads(Path(artifact.file_path).read_text(encoding="utf-8"))
         if payload.get("backtest_id") == str(backtest_id):
             return _series_snapshot_from_payload(payload)
-    raise ValueError("backtest_series artifact does not match requested backtest")
+    raise ValueError(
+        "matching backtest_series sidecar is required before report generation; "
+        "backtest_series artifact does not match requested backtest"
+    )
 
 
 def _series_snapshot_from_payload(payload: dict[str, object]) -> ReportSeriesSnapshot:

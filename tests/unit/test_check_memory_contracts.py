@@ -10,9 +10,13 @@ def test_check_memory_contracts_enforces_policy_layer() -> None:
     script = SCRIPT_PATH.read_text(encoding="utf-8")
 
     assert "src\\stat_arb\\memory\\policy.py" in script
+    assert "src\\stat_arb\\cli" in script
+    assert "src\\stat_arb\\dashboard" in script
     assert "MemoryAgentService" in script
     assert "ApeRAGMemoryClient" in script
     assert "write_markdown_document" in script
+    assert "AllowedDirectApeRagFiles" in script
+    assert "/api/v1/collections" in script
 
 
 def test_check_memory_contracts_has_russian_operator_output() -> None:
@@ -21,3 +25,11 @@ def test_check_memory_contracts_has_russian_operator_output() -> None:
 
     assert "Проверка memory contracts" in script
     assert "должны писать в память через MemoryAgentService" in script
+
+
+def test_readme_describes_aperag_as_policy_safe_summary_store() -> None:
+    """README should not imply ApeRAG replaces registry as decision source of truth."""
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    assert "policy-safe summaries" in readme
+    assert "all agent decisions" not in readme

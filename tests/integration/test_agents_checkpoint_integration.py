@@ -8,10 +8,12 @@ from uuid import UUID, uuid4
 
 import numpy as np
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.agents import (
     BacktestAgentInput,
+    BacktestSeriesArtifactInput,
     CoordinatorFinalDecisionEvidence,
     CoordinatorFinalDecisionPolicy,
     CriticAgentInput,
@@ -127,6 +129,7 @@ def test_task_14_agents_share_registry_and_memory_boundaries(
                 test_id=UUID(statistical.stored_result.test_id),
                 dataset_a_id=dataset_a_id,
                 dataset_b_id=dataset_b_id,
+                experiment_id=experiment_id,
             ),
             session=session,
             memory_service=memory,
@@ -167,8 +170,15 @@ def test_task_14_agents_share_registry_and_memory_boundaries(
         assert statistical.stored_result.hypothesis_id == hypothesis.hypothesis_id
         assert backtest.stored_result.test_id == statistical.stored_result.test_id
         assert critic.stored_review.backtest_id == backtest.stored_result.backtest_id
-        assert len(report.artifacts) == 4
-        assert session.query(ReportArtifact).count() == 4
+        artifact_types = {artifact.artifact_type for artifact in report.artifacts}
+        assert {
+            "backtest_report",
+            "json_summary",
+            "equity_curve",
+            "z_score_signals",
+            "cost_attribution",
+        } <= artifact_types
+        assert session.query(ReportArtifact).count() == len(report.artifacts) + 1
         assert coordinator.current_status == "final_decision"
         assert stored_experiment.final_decision == "approved"
         assert len(memory.requests) == 6
@@ -177,7 +187,8 @@ def test_task_14_agents_share_registry_and_memory_boundaries(
     finally:
         bind = session.get_bind()
         session.close()
-        bind.dispose()
+        if isinstance(bind, Engine):
+            bind.dispose()
 
 
 def _create_session() -> Session:
@@ -298,10 +309,10 @@ def _backtest_input(
     test_id: UUID,
     dataset_a_id: UUID,
     dataset_b_id: UUID,
+    experiment_id: UUID,
 ) -> BacktestAgentInput:
     timestamps = tuple(
-        datetime(2024, 1, 1, tzinfo=UTC) + timedelta(minutes=15 * index)
-        for index in range(5)
+        datetime(2024, 1, 1, tzinfo=UTC) + timedelta(minutes=15 * index) for index in range(5)
     )
     prices_a = np.asarray([100.0, 103.0, 101.0, 100.0, 99.0])
     prices_b = np.asarray([100.0, 100.0, 100.0, 100.0, 100.0])
@@ -381,6 +392,18 @@ def _backtest_input(
         train_window_days=21,
         test_window_days=7,
         num_windows=2,
+        experiment_id=experiment_id,
+        artifact_output_dir=tmp_path / "backtest-artifacts",
+        series=BacktestSeriesArtifactInput(
+            timestamps=timestamps,
+            equity_curve=(100.0, 102.0, 100.98, 102.49, 103.0),
+            drawdown_curve=(0.0, 0.0, 0.01, 0.0, 0.0),
+            z_scores=(2.2, 1.2, 0.2, -2.1, 0.0),
+            entry_markers=(0, 3),
+            exit_markers=(2, 4),
+            rolling_sharpe=(0.0, 0.1, 0.05, 0.12, 0.15),
+            trade_pnls=(5.0, -2.0),
+        ),
     )
 
 

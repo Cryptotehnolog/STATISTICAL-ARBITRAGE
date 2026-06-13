@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from collections.abc import Generator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from pathlib import Path
@@ -20,9 +23,12 @@ from stat_arb.storage import (
     Hypothesis,
     ReportArtifact,
     StatisticalTestResult,
-    get_session,
 )
-from stat_arb.storage.database import DEFAULT_DB_PATH
+from stat_arb.storage.database import (
+    DEFAULT_DB_PATH,
+    create_database_engine,
+    create_session_factory,
+)
 
 
 @dataclass(frozen=True)
@@ -108,7 +114,7 @@ def load_dashboard_snapshot(
             approval_queue=[],
         )
 
-    with get_session(db_path=registry_path) as session:
+    with _read_only_session(registry_path) as session:
         counts = {
             "hypotheses": session.query(Hypothesis).count(),
             "datasets": session.query(Dataset).count(),
@@ -201,6 +207,20 @@ def _empty_counts() -> dict[str, int]:
     }
 
 
+@contextmanager
+def _read_only_session(db_path: Path) -> Generator[Session, None, None]:
+    """Create a read-only-style session boundary that always rolls back on exit."""
+    engine = create_database_engine(db_path)
+    session_factory = create_session_factory(engine)
+    session = session_factory()
+    try:
+        yield session
+    finally:
+        session.rollback()
+        session.close()
+        engine.dispose()
+
+
 def _latest_rows(
     session: Session, model: type[Any], ordering: Any, *, limit: int = 100
 ) -> list[Any]:
@@ -288,9 +308,13 @@ def _backtest_row(session: Session, result: BacktestResult) -> dict[str, Any]:
             select(ReportArtifact).where(
                 ReportArtifact.experiment_id.in_(experiment_ids),
                 ReportArtifact.artifact_type == "backtest_series",
+                ReportArtifact.format == "json",
             )
         ).scalars()
-        has_series_sidecar = any(result.backtest_id in artifact.file_path for artifact in artifacts)
+        has_series_sidecar = any(
+            _artifact_matches_backtest(artifact, backtest_id=result.backtest_id)
+            for artifact in artifacts
+        )
     return {
         "backtest_id": result.backtest_id,
         "hypothesis_id": result.hypothesis_id,
@@ -326,6 +350,14 @@ def _report_artifact_row(artifact: ReportArtifact) -> dict[str, Any]:
         "file_path": artifact.file_path,
         "created_at": artifact.created_at.isoformat(),
     }
+
+
+def _artifact_matches_backtest(artifact: ReportArtifact, *, backtest_id: str) -> bool:
+    try:
+        payload = json.loads(Path(artifact.file_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return isinstance(payload, dict) and payload.get("backtest_id") == backtest_id
 
 
 def _coordinator_log_row(task: CoordinatorTask) -> dict[str, Any]:
@@ -455,11 +487,18 @@ def _sort_experiments(
     }
     actual_field = field_by_alias.get(sort.field, sort.field)
 
-    def sort_key(row: dict[str, Any]) -> tuple[bool, Any]:
+    def sort_key(row: dict[str, Any]) -> Any:
         value = row.get(actual_field)
-        return value is None, value
+        if value is None:
+            return (1, None)
+        comparable = value
+        if sort.descending and isinstance(value, int | float):
+            comparable = -value
+        elif sort.descending and isinstance(value, str):
+            comparable = "".join(chr(0x10FFFF - ord(char)) for char in value)
+        return (0, comparable)
 
-    return sorted(rows, key=sort_key, reverse=sort.descending)
+    return sorted(rows, key=sort_key)
 
 
 def _as_datetime(value: datetime | date, *, end: bool) -> datetime:

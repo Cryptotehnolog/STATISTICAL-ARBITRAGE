@@ -572,7 +572,7 @@ Exchange terms of service:
 
 Audit logs:
 
-- Все agent decisions проходят через Memory Agent policy layer и пишутся в ApeRAG.
+- policy-safe summaries и registry references проходят через Memory Agent policy layer и пишутся в ApeRAG.
 - Все experiments отслеживаются в SQLite registry.
 - Audit trails нужны для compliance.
 

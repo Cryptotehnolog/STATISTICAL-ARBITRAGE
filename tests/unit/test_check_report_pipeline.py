@@ -36,7 +36,10 @@ def test_report_source_package_is_not_ignored_as_output() -> None:
 def test_report_agent_uses_registry_linked_backtest_series_sidecars() -> None:
     """Report Agent should load factual chart series only through registry artifacts."""
     source = Path("src/stat_arb/agents/report.py").read_text(encoding="utf-8")
+    tests = Path("tests/unit/test_report_agent.py").read_text(encoding="utf-8")
 
     assert 'artifact_type == "backtest_series"' in source
     assert "ReportSeriesSnapshot" in source
+    assert "matching backtest_series sidecar is required" in source
     assert "backtest_series artifact does not match requested backtest" in source
+    assert "test_report_agent_requires_factual_series_sidecar" in tests

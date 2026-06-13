@@ -22,6 +22,7 @@ $forbiddenPatterns = @(
     "st\.form_submit_button\s*\(",
     "MemoryAgentService",
     "ApeRAGMemoryClient",
+    "httpx|requests|urllib|/api/v1/collections|Invoke-RestMethod",
     "insert\s+into",
     "\.add\s*\(",
     "\.delete\s*\(",
@@ -39,6 +40,7 @@ foreach ($file in Get-ChildItem -LiteralPath $dashboardDir -Filter "*.py") {
 
 Push-Location $repoRoot
 try {
+    $env:PYTHONDONTWRITEBYTECODE = "1"
     uv run python -m compileall -q src\stat_arb\dashboard
 }
 finally {

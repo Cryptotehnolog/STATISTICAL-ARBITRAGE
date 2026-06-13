@@ -688,15 +688,16 @@ This implementation plan breaks down the multi-agent quantitative research syste
       and report artifacts.
     - _Requirements: 11.6_
   
-  - [x] 16.7 Implement memory search functionality
-    - Search ApeRAG by topic, entity, or relationship
-    - Display search results with context
+  - [x] 16.7 Implement memory readiness and search shell
+    - Display ApeRAG readiness context and future search controls
+    - Keep topic/entity/relationship result retrieval deferred to a dedicated
+      read-only Memory Agent boundary tracked in `docs/technical_debt.md`
     - Implemented safe read-only memory search shell. Direct ApeRAG calls from
       dashboard are intentionally disabled until a dedicated Memory Agent read
       boundary exists, so UI cannot bypass memory policy.
     - _Requirements: 11.7_
   
-  - [x] 16.8 Implement manual approval queue
+  - [x] 16.8 Implement read-only manual approval queue
     - Display experiments eligible for demo review
     - Display approve/reject readiness and required reason context
     - Keep approve/reject mutations out of dashboard until an audited Coordinator

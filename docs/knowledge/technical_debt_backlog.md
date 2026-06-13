@@ -62,6 +62,14 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   artifacts. CLI reporting execution is now guarded by matching `backtest_series`
   presence. Remaining work is to make the future full experiment runner provide and
   persist these sidecars before queuing reporting work.
+- Dashboard approval actions: keep Task 16 dashboard read-only until an audited Coordinator
+  approval transition API exists. Future approve/reject controls must persist actor,
+  timestamp, reason, and decision through the registry lifecycle boundary, and write only
+  policy-safe summaries through Memory Agent policy.
+- Dashboard memory search: keep the current dashboard search shell disabled until a
+  dedicated read-only Memory Agent query boundary exists. Dashboard code must not query
+  ApeRAG directly, use raw HTTP clients, or bypass sanitized snippets, registry references,
+  freshness status, and backend readiness metadata.
 - ApeRAG human graph view: ApeRAG UI is the default inspection path; build a local viewer only
   if the UI proves insufficient.
 - Queue concurrency: before enabling real multi-worker execution, add atomic Coordinator
