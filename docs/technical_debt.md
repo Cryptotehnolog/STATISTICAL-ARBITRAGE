@@ -23,7 +23,7 @@ Follow-up:
 - Enable dashboard approve/reject controls only after tests prove they use this service
   and cannot mutate registry rows directly.
 
-Related tasks: 13.3, 13.4, 16.8, 21.3, DEC-0090.
+Related tasks: 13.3, 13.4, 16.8b, 21.3, DEC-0090.
 
 ### TD-0034: Add read-only Memory Agent search boundary for dashboard queries
 
@@ -40,7 +40,7 @@ Follow-up:
   write/read endpoint usage.
 - Add dashboard tests and guard checks before enabling the search controls.
 
-Related tasks: 11.x, 16.7, DEC-0065, DEC-0090.
+Related tasks: 11.x, 16.7b, DEC-0065, DEC-0090.
 
 ### TD-0033: Compare native pairs pipeline against Jesse MCP ideas without adopting it as a dependency
 

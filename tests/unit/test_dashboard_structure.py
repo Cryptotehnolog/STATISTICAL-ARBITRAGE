@@ -790,7 +790,7 @@ def test_dashboard_sidecar_readiness_requires_matching_json_payload(tmp_path) ->
 
 
 def test_dashboard_task16_pages_are_rendered_read_only() -> None:
-    """Task 16.3-16.8 pages should be concrete read-only sections, not placeholders."""
+    """Task 16.3-16.8a pages should be concrete read-only sections, not placeholders."""
     app = Path("src/stat_arb/dashboard/app.py").read_text(encoding="utf-8")
     data = Path("src/stat_arb/dashboard/data.py").read_text(encoding="utf-8")
 
