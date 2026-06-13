@@ -37,3 +37,15 @@ Boundary:
 
 - Autostart is local operator convenience only. It must not run experiments, write
   to registry, write to ApeRAG, or bypass Coordinator/Memory Agent policy.
+
+## DEC-0089: Keep the experiment list as a read-only registry projection
+
+Task 16.2 adds the first useful dashboard page: an experiment list with lifecycle
+status, hypothesis pair, current agent, final decision, and latest statistical,
+backtest, and Critic result fields. The page supports status, asset, created-date
+filters, and metric sorting.
+
+The list is intentionally a read-only projection over the SQLite registry. It must
+not start stages, approve experiments, write ApeRAG memory, mutate Coordinator tasks,
+or modify lifecycle state. Interactive execution and approval controls belong to later
+explicit boundaries, not to the monitoring list view.

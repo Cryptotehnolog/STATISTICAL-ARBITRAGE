@@ -8,26 +8,61 @@ import pandas as pd
 import streamlit as st
 
 from stat_arb.dashboard.data import (
+    DashboardExperimentFilters,
+    DashboardExperimentSort,
     DashboardSnapshot,
     get_dashboard_navigation,
     load_dashboard_snapshot,
 )
 
 _COLUMN_LABELS = {
-    "experiment_id": "Experiment ID",
-    "hypothesis_id": "Hypothesis ID",
+    "experiment_id": "ID эксперимента",
+    "hypothesis_id": "ID гипотезы",
     "status": "Статус",
     "current_agent": "Текущий агент",
     "final_decision": "Финальное решение",
     "pair": "Пара",
+    "asset_a": "Актив A",
+    "asset_b": "Актив B",
+    "hypothesis_status": "Статус гипотезы",
     "data_quality_passed": "Data quality пройдена",
     "statistical_tests_passed": "Статтесты пройдены",
     "backtest_completed": "Бэктест завершен",
     "critic_approved": "Critic одобрил",
     "novelty_score": "Novelty score",
+    "latest_test_id": "Последний stat test",
+    "latest_cointegration_p_value": "Cointegration p-value",
+    "latest_hedge_ratio": "Hedge ratio",
+    "latest_half_life_days": "Half-life, дни",
+    "latest_backtest_id": "Последний бэктест",
+    "latest_net_pnl": "Net PnL",
+    "latest_sharpe_ratio": "Sharpe",
+    "latest_max_drawdown": "Max drawdown",
+    "latest_critic_status": "Статус Critic",
     "source": "Источник",
     "created_by": "Создано",
     "created_at": "Создано в",
+}
+
+_EXPERIMENT_STATUS_OPTIONS = [
+    "new",
+    "data_validation",
+    "statistical_testing",
+    "backtesting",
+    "critic_review",
+    "reporting",
+    "final_decision",
+]
+
+_EXPERIMENT_SORT_OPTIONS = {
+    "Дата создания": "created_at",
+    "Статус": "status",
+    "Пара": "pair",
+    "Novelty score": "novelty_score",
+    "Cointegration p-value": "cointegration_p_value",
+    "Net PnL": "net_pnl",
+    "Sharpe": "sharpe_ratio",
+    "Max drawdown": "max_drawdown",
 }
 
 
@@ -42,13 +77,11 @@ def main() -> None:
     _inject_style()
 
     st.title("Statistical Arbitrage")
-    st.caption("Dashboard только на чтение для мониторинга registry и просмотра reports.")
+    st.caption("Dashboard только на чтение для мониторинга registry и просмотра отчетов.")
 
     registry_path = Path(
         st.sidebar.text_input("Путь к registry", value="data/registry.db", help="Файл SQLite registry.")
     )
-    snapshot = load_dashboard_snapshot(registry_path)
-
     st.sidebar.markdown("### Навигация")
     selected = st.sidebar.radio(
         "Раздел",
@@ -57,13 +90,22 @@ def main() -> None:
         label_visibility="collapsed",
     )
     st.sidebar.info("Текущий dashboard работает только на чтение. Запуск stages и approvals пока отключен.")
+    experiment_filters, experiment_sort = _experiment_controls() if selected == "experiments" else (
+        DashboardExperimentFilters(),
+        DashboardExperimentSort(),
+    )
+    snapshot = load_dashboard_snapshot(
+        registry_path,
+        experiment_filters=experiment_filters,
+        experiment_sort=experiment_sort,
+    )
 
     _render_overview(snapshot.counts, snapshot.registry_path)
 
     if selected == "overview":
         _render_overview_details(snapshot)
     elif selected == "experiments":
-        _render_table("Эксперименты", snapshot.experiments)
+        _render_experiment_list(snapshot)
     elif selected == "hypotheses":
         _render_table("Гипотезы", snapshot.hypotheses)
     else:
@@ -92,6 +134,72 @@ def _render_overview_details(snapshot: DashboardSnapshot) -> None:
         _render_table("Последние эксперименты", snapshot.experiments)
     with right:
         _render_table("Последние гипотезы", snapshot.hypotheses)
+
+
+def _experiment_controls() -> tuple[DashboardExperimentFilters, DashboardExperimentSort]:
+    st.sidebar.markdown("### Фильтры экспериментов")
+    statuses = st.sidebar.multiselect(
+        "Статусы",
+        options=_EXPERIMENT_STATUS_OPTIONS,
+        default=[],
+        help="Пустой выбор показывает все статусы.",
+    )
+    asset_query = st.sidebar.text_input("Актив", value="", placeholder="BTC, ETH, SOL")
+    date_range = st.sidebar.date_input("Дата создания", value=[], format="YYYY-MM-DD")
+    sort_label = st.sidebar.selectbox("Сортировка", options=list(_EXPERIMENT_SORT_OPTIONS), index=0)
+    descending = st.sidebar.toggle("Сначала большие/новые", value=True)
+    created_from = date_range[0] if isinstance(date_range, tuple) and len(date_range) >= 1 else None
+    created_to = date_range[1] if isinstance(date_range, tuple) and len(date_range) >= 2 else None
+    return (
+        DashboardExperimentFilters(
+            statuses=tuple(statuses),
+            asset_query=asset_query,
+            created_from=created_from,
+            created_to=created_to,
+        ),
+        DashboardExperimentSort(
+            field=_EXPERIMENT_SORT_OPTIONS[sort_label],
+            descending=descending,
+        ),
+    )
+
+
+def _render_experiment_list(snapshot: DashboardSnapshot) -> None:
+    st.markdown("### Эксперименты")
+    st.caption("Список только на чтение: lifecycle, гипотезы и последние результаты из registry.")
+    if not snapshot.experiments:
+        st.info("Эксперименты не найдены. Проверьте фильтры или наличие записей в registry.")
+        return
+
+    status_counts: dict[str, int] = {}
+    for row in snapshot.experiments:
+        status = str(row.get("status") or "unknown")
+        status_counts[status] = status_counts.get(status, 0) + 1
+    columns = st.columns(min(4, max(1, len(status_counts))))
+    for column, (status, count) in zip(columns, status_counts.items(), strict=False):
+        with column:
+            st.metric(status, count)
+
+    visible_columns = [
+        "experiment_id",
+        "pair",
+        "status",
+        "current_agent",
+        "final_decision",
+        "latest_cointegration_p_value",
+        "latest_net_pnl",
+        "latest_sharpe_ratio",
+        "latest_max_drawdown",
+        "latest_critic_status",
+        "created_at",
+    ]
+    table = pd.DataFrame(snapshot.experiments)
+    table = table[[column for column in visible_columns if column in table.columns]]
+    st.dataframe(
+        table.rename(columns=_COLUMN_LABELS),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 
 def _render_table(title: str, rows: list[dict[str, object]]) -> None:

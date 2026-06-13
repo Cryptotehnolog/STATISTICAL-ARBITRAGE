@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from stat_arb.storage import (
     BacktestResult,
@@ -43,6 +45,24 @@ class DashboardSnapshot:
     hypotheses: list[dict[str, Any]]
 
 
+@dataclass(frozen=True)
+class DashboardExperimentFilters:
+    """Read-only filters for the experiment list view."""
+
+    statuses: tuple[str, ...] = ()
+    asset_query: str = ""
+    created_from: datetime | date | None = None
+    created_to: datetime | date | None = None
+
+
+@dataclass(frozen=True)
+class DashboardExperimentSort:
+    """Read-only sort option for the experiment list view."""
+
+    field: str = "created_at"
+    descending: bool = True
+
+
 def get_dashboard_navigation() -> list[DashboardNavigationItem]:
     """Return the initial read-only dashboard navigation model."""
     return [
@@ -57,9 +77,17 @@ def get_dashboard_navigation() -> list[DashboardNavigationItem]:
     ]
 
 
-def load_dashboard_snapshot(db_path: Path | str = DEFAULT_DB_PATH) -> DashboardSnapshot:
+def load_dashboard_snapshot(
+    db_path: Path | str = DEFAULT_DB_PATH,
+    *,
+    experiment_filters: DashboardExperimentFilters | None = None,
+    experiment_sort: DashboardExperimentSort | None = None,
+    experiment_limit: int = 100,
+) -> DashboardSnapshot:
     """Load a read-only registry snapshot for dashboard rendering."""
     registry_path = Path(db_path)
+    experiment_filters = experiment_filters or DashboardExperimentFilters()
+    experiment_sort = experiment_sort or DashboardExperimentSort()
     if not registry_path.exists():
         return DashboardSnapshot(
             registry_path=registry_path,
@@ -81,31 +109,37 @@ def load_dashboard_snapshot(db_path: Path | str = DEFAULT_DB_PATH) -> DashboardS
             "report_artifacts": session.query(ReportArtifact).count(),
         }
 
-        experiment_rows = session.execute(
-            select(Experiment, Hypothesis)
-            .join(Hypothesis, Experiment.hypothesis_id == Hypothesis.hypothesis_id)
-            .order_by(Experiment.created_at.desc())
-            .limit(25)
-        ).all()
+        experiment_query = select(Experiment, Hypothesis).join(
+            Hypothesis, Experiment.hypothesis_id == Hypothesis.hypothesis_id
+        )
+        if experiment_filters.statuses:
+            experiment_query = experiment_query.where(
+                Experiment.status.in_(experiment_filters.statuses)
+            )
+        asset_query = experiment_filters.asset_query.strip().lower()
+        if asset_query:
+            experiment_query = experiment_query.where(
+                (Hypothesis.asset_a.ilike(f"%{asset_query}%"))
+                | (Hypothesis.asset_b.ilike(f"%{asset_query}%"))
+            )
+        if experiment_filters.created_from is not None:
+            experiment_query = experiment_query.where(
+                Experiment.created_at >= _as_datetime(experiment_filters.created_from, end=False)
+            )
+        if experiment_filters.created_to is not None:
+            experiment_query = experiment_query.where(
+                Experiment.created_at <= _as_datetime(experiment_filters.created_to, end=True)
+            )
+        experiment_rows = session.execute(experiment_query).all()
         hypothesis_rows = session.execute(
             select(Hypothesis).order_by(Hypothesis.created_at.desc()).limit(25)
         ).scalars()
 
         experiments = [
-            {
-                "experiment_id": experiment.experiment_id,
-                "status": experiment.status,
-                "current_agent": experiment.current_agent,
-                "final_decision": experiment.final_decision,
-                "pair": f"{hypothesis.asset_a} / {hypothesis.asset_b}",
-                "data_quality_passed": experiment.data_quality_passed,
-                "statistical_tests_passed": experiment.statistical_tests_passed,
-                "backtest_completed": experiment.backtest_completed,
-                "critic_approved": experiment.critic_approved,
-                "created_at": experiment.created_at.isoformat(),
-            }
+            _experiment_row(session, experiment=experiment, hypothesis=hypothesis)
             for experiment, hypothesis in experiment_rows
         ]
+        experiments = _sort_experiments(experiments, experiment_sort)[:experiment_limit]
         hypotheses = [
             {
                 "hypothesis_id": hypothesis.hypothesis_id,
@@ -139,3 +173,102 @@ def _empty_counts() -> dict[str, int]:
         "coordinator_tasks": 0,
         "report_artifacts": 0,
     }
+
+
+def _experiment_row(
+    session: Session, *, experiment: Experiment, hypothesis: Hypothesis
+) -> dict[str, Any]:
+    latest_test = (
+        session.execute(
+            select(StatisticalTestResult)
+            .where(StatisticalTestResult.hypothesis_id == hypothesis.hypothesis_id)
+            .order_by(StatisticalTestResult.tested_at.desc())
+            .limit(1)
+        )
+        .scalars()
+        .first()
+    )
+    latest_backtest = (
+        session.execute(
+            select(BacktestResult)
+            .where(BacktestResult.hypothesis_id == hypothesis.hypothesis_id)
+            .order_by(BacktestResult.tested_at.desc())
+            .limit(1)
+        )
+        .scalars()
+        .first()
+    )
+    latest_critic = (
+        session.execute(
+            select(CriticReview)
+            .join(BacktestResult, CriticReview.backtest_id == BacktestResult.backtest_id)
+            .where(BacktestResult.hypothesis_id == hypothesis.hypothesis_id)
+            .order_by(CriticReview.reviewed_at.desc())
+            .limit(1)
+        )
+        .scalars()
+        .first()
+    )
+    return {
+        "experiment_id": experiment.experiment_id,
+        "hypothesis_id": hypothesis.hypothesis_id,
+        "status": experiment.status,
+        "current_agent": experiment.current_agent,
+        "final_decision": experiment.final_decision,
+        "pair": f"{hypothesis.asset_a} / {hypothesis.asset_b}",
+        "asset_a": hypothesis.asset_a,
+        "asset_b": hypothesis.asset_b,
+        "hypothesis_status": hypothesis.status,
+        "novelty_score": hypothesis.novelty_score,
+        "data_quality_passed": experiment.data_quality_passed,
+        "statistical_tests_passed": experiment.statistical_tests_passed,
+        "backtest_completed": experiment.backtest_completed,
+        "critic_approved": experiment.critic_approved,
+        "latest_test_id": latest_test.test_id if latest_test else None,
+        "latest_cointegration_p_value": latest_test.cointegration_p_value if latest_test else None,
+        "latest_hedge_ratio": latest_test.hedge_ratio if latest_test else None,
+        "latest_half_life_days": latest_test.half_life_days if latest_test else None,
+        "latest_backtest_id": latest_backtest.backtest_id if latest_backtest else None,
+        "latest_net_pnl": latest_backtest.net_pnl if latest_backtest else None,
+        "latest_sharpe_ratio": latest_backtest.sharpe_ratio if latest_backtest else None,
+        "latest_max_drawdown": latest_backtest.max_drawdown if latest_backtest else None,
+        "latest_critic_status": latest_critic.status if latest_critic else None,
+        "created_at": experiment.created_at.isoformat(),
+    }
+
+
+def _sort_experiments(
+    rows: list[dict[str, Any]], sort: DashboardExperimentSort
+) -> list[dict[str, Any]]:
+    allowed_fields = {
+        "created_at",
+        "status",
+        "pair",
+        "novelty_score",
+        "cointegration_p_value",
+        "net_pnl",
+        "sharpe_ratio",
+        "max_drawdown",
+    }
+    if sort.field not in allowed_fields:
+        raise ValueError(f"Unsupported dashboard experiment sort field: {sort.field}")
+    field_by_alias = {
+        "cointegration_p_value": "latest_cointegration_p_value",
+        "net_pnl": "latest_net_pnl",
+        "sharpe_ratio": "latest_sharpe_ratio",
+        "max_drawdown": "latest_max_drawdown",
+    }
+    actual_field = field_by_alias.get(sort.field, sort.field)
+
+    def sort_key(row: dict[str, Any]) -> tuple[bool, Any]:
+        value = row.get(actual_field)
+        return value is None, value
+
+    return sorted(rows, key=sort_key, reverse=sort.descending)
+
+
+def _as_datetime(value: datetime | date, *, end: bool) -> datetime:
+    if isinstance(value, datetime):
+        return value.replace(tzinfo=None)
+    boundary_time = time.max if end else time.min
+    return datetime.combine(value, boundary_time)

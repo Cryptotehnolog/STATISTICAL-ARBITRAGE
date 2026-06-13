@@ -648,10 +648,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
       `scripts/pre_commit_check.ps1` to prevent early mutation paths.
     - _Requirements: 11.1-11.8_
   
-  - [ ] 16.2 Implement experiment list view
+  - [x] 16.2 Implement experiment list view
     - Display all experiments with status, hypothesis, and results
     - Filter by status, date, asset
     - Sort by various metrics
+    - Implemented read-only registry projection with lifecycle/hypothesis rows,
+      latest statistical/backtest/critic result columns, status/date/asset filters,
+      metric sorting, and no mutation or agent execution controls.
     - _Requirements: 11.1_
   
   - [ ] 16.3 Implement hypothesis status view
