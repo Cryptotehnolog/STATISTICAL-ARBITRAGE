@@ -100,3 +100,30 @@ def test_pre_commit_runs_dashboard_structure_guard() -> None:
     assert "check_dashboard_structure.ps1" in script
     assert "$dashboardStructureCheckScript" in script
     assert "Invoke-RequiredCheck $dashboardStructureCheckScript" in script
+
+
+def test_dashboard_local_launcher_is_background_and_project_rooted() -> None:
+    """Dashboard launcher should let localhost:8501 work without manual cwd setup."""
+    script = Path("scripts/start_dashboard.ps1").read_text(encoding="utf-8")
+    config = Path(".streamlit/config.toml").read_text(encoding="utf-8")
+
+    assert "$repoRoot = Split-Path -Parent $PSScriptRoot" in script
+    assert "src\\stat_arb\\dashboard\\app.py" in script
+    assert "--server.port" in script
+    assert "--server.headless" in script
+    assert "-WindowStyle Hidden" in script
+    assert "http://localhost:$Port" in script
+    assert "gatherUsageStats = false" in config
+
+
+def test_dashboard_autostart_installer_registers_startup_task() -> None:
+    """Dashboard should have an optional Windows startup task installer."""
+    script = Path("scripts/install_dashboard_autostart.ps1").read_text(encoding="utf-8")
+
+    assert "StatArbDashboard" in script
+    assert "Get-Variable IsWindows" in script
+    assert "New-ScheduledTaskAction" in script
+    assert "New-ScheduledTaskTrigger -AtLogOn" in script
+    assert "WScript.Shell" in script
+    assert "Startup" in script
+    assert "start_dashboard.ps1" in script
