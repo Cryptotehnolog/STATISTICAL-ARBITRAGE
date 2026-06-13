@@ -19,6 +19,7 @@ $pairScreeningPipelineCheckScript = Join-Path $PSScriptRoot "check_pair_screenin
 $statisticalTestingWorkflowCheckScript = Join-Path $PSScriptRoot "check_statistical_testing_workflow.ps1"
 $backtestWorkflowCheckScript = Join-Path $PSScriptRoot "check_backtest_workflow.ps1"
 $agentsCheckpointScript = Join-Path $PSScriptRoot "check_agents_checkpoint.ps1"
+$dashboardStructureCheckScript = Join-Path $PSScriptRoot "check_dashboard_structure.ps1"
 $propertyIntegrationCheckScript = Join-Path $PSScriptRoot "check_property_integration.ps1"
 $legacyMemoryBackendSurfaceCheckScript = Join-Path $PSScriptRoot "check_no_legacy_memory_backend_user_surface.ps1"
 $legacyMemoryBackendImportsCheckScript = Join-Path $PSScriptRoot "check_no_legacy_memory_backend_imports.ps1"
@@ -54,6 +55,7 @@ Write-Output "- Проверка pair-screening workflow: check_pair_screening_p
 Write-Output "- Проверка statistical-testing workflow: check_statistical_testing_workflow.ps1"
 Write-Output "- Проверка backtest workflow: check_backtest_workflow.ps1"
 Write-Output "- Проверка Task 14 agents checkpoint: check_agents_checkpoint.ps1"
+Write-Output "- Проверка dashboard structure: check_dashboard_structure.ps1"
 Write-Output "- Property/integration smoke: check_property_integration.ps1"
 Write-Output "- Проверка активной пользовательской memory surface: check_no_legacy_memory_backend_user_surface.ps1"
 Write-Output "- Проверка отсутствия legacy memory backend imports: check_no_legacy_memory_backend_imports.ps1"
@@ -79,6 +81,7 @@ try {
     Invoke-RequiredCheck $statisticalTestingWorkflowCheckScript
     Invoke-RequiredCheck $backtestWorkflowCheckScript
     Invoke-RequiredCheck $agentsCheckpointScript
+    Invoke-RequiredCheck $dashboardStructureCheckScript
     Invoke-RequiredCheck $propertyIntegrationCheckScript
     Invoke-RequiredCheck $legacyMemoryBackendSurfaceCheckScript
     Invoke-RequiredCheck $legacyMemoryBackendImportsCheckScript

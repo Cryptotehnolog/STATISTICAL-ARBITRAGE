@@ -640,9 +640,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
 
 
 - [ ] 16. Build dashboard for monitoring and reporting
-  - [ ] 16.1 Create Streamlit dashboard structure
+  - [x] 16.1 Create Streamlit dashboard structure
     - Set up Streamlit app with navigation
     - Create page layout and styling
+    - Implemented read-only Streamlit scaffold over registry snapshot data.
+    - Added `scripts/check_dashboard_structure.ps1` and wired it into
+      `scripts/pre_commit_check.ps1` to prevent early mutation paths.
     - _Requirements: 11.1-11.8_
   
   - [ ] 16.2 Implement experiment list view

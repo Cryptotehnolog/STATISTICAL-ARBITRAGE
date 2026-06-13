@@ -1,5 +1,6 @@
 param(
     [int]$Port = 18101,
+    [int]$HealthWaitSeconds = 180,
     [switch]$Stop
 )
 
@@ -77,7 +78,8 @@ Start-Process `
     -RedirectStandardError $stderrLogFile `
     -WindowStyle Hidden
 
-for ($attempt = 1; $attempt -le 30; $attempt++) {
+$deadline = (Get-Date).AddSeconds($HealthWaitSeconds)
+while ((Get-Date) -lt $deadline) {
     try {
         $health = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/health" -TimeoutSec 3
         if ($health.status -eq "healthy") {
@@ -96,4 +98,16 @@ for ($attempt = 1; $attempt -le 30; $attempt++) {
     }
 }
 
-Write-Error "ApeRAG embedding server не стартовал. Логи: $stdoutLogFile, $stderrLogFile"
+try {
+    $health = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/health" -TimeoutSec 5
+    if ($health.status -eq "healthy") {
+        Write-Output "ApeRAG embedding server запущен: http://127.0.0.1:$Port"
+        Write-Output "Model: $($health.model)"
+        exit 0
+    }
+}
+catch {
+    # Fall through to the explicit startup error below.
+}
+
+Write-Error "ApeRAG embedding server не стартовал за $HealthWaitSeconds секунд. Логи: $stdoutLogFile, $stderrLogFile"
