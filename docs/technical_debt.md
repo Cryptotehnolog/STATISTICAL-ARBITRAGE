@@ -8,6 +8,28 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0032: Stage future paper/live trading roles after research MVP boundaries
+
+Status: open
+
+Why deferred: Regime Switch Detector, Execution and Slippage Simulator, and Dynamic Risk
+and Capital Allocator are important for paper/live trading, but implementing them as full
+agents now would expand v1 beyond a research platform and blur the boundary between
+simulation and real capital risk.
+
+Follow-up:
+- Implement execution and slippage simulation first as a deterministic Backtest/Critic
+  service boundary using explicit verified/manual-approved cost and liquidity inputs.
+- Add regime robustness checks in the research pipeline before any live risk-off or model
+  switching behavior.
+- Add explicit capital allocation and exposure policy contracts before autonomous sizing.
+- Keep all future paper/live memory writes behind Memory Agent policy and all exact
+  metrics, approvals, and artifacts in the registry/sidecars.
+- Revisit full paper/live agents only after dashboard, failure handling, reproducibility,
+  and MVP validation are stable.
+
+Related tasks: 7.x, 10.5, 16.x, 17.x, 21.x, 22.5, DEC-0081, DEC-0082, DEC-0083, DEC-0084.
+
 ### TD-0031: Add durable queue concurrency controls before multi-worker execution
 
 Status: open

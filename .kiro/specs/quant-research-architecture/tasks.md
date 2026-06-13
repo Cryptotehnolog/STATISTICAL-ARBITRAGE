@@ -822,6 +822,10 @@ This implementation plan breaks down the multi-agent quantitative research syste
 
 - [ ] 21. **[DEFERRED/v2]** Document risk management and position sizing criteria
   - **NOTE: This task is DEFERRED to v2. For v1 MVP, only document criteria and assumptions. Do NOT implement demo/live execution logic.**
+  - Future paper/live roadmap is documented in `docs/knowledge/decisions_future_paper_live.md`.
+  - Execution/slippage realism should be implemented before autonomous capital allocation.
+  - Regime detection starts as research robustness evidence before live risk-off commands.
+  - Risk allocation starts as explicit policy contracts before autonomous sizing.
   - [ ] 21.1 Document position sizing assumptions
     - Document risk parameters for future demo trading
     - Document max risk per trade assumptions
