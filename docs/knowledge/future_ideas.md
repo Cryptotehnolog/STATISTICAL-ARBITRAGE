@@ -72,3 +72,32 @@ Backtest Agent, Critic Agent, and Memory Agent boundaries start emitting structu
 
 Notes: Do not copy the Agent Flow trademark, logo, or exact branding. Apache-2.0 makes the
 technical approach reusable, but the project should keep its own design identity.
+
+## IDEA-0007: Evaluate Jesse MCP as an external trading-tool reference
+
+Status: proposed
+
+Idea: Use `bkuri/jesse-mcp` as a reference for future MCP tool-server boundaries around
+trading workflows, especially pairs trading, risk analysis, async job tracking, and
+strategy certification gates.
+
+What is useful:
+- Pairs-trading tool taxonomy: correlation matrix, pairs backtest, factor analysis,
+  regime detection, cointegration-oriented workflow ideas, and strategy generation.
+- Risk-tool taxonomy: Monte Carlo, VaR, stress testing, leverage review, drawdown recovery,
+  and portfolio concentration checks.
+- Operational patterns: MCP tool registration, health endpoint, long-running job progress,
+  and certification-style gates before paper/live promotion.
+
+What must not be copied blindly:
+- Hidden defaults for capital, fees, leverage, thresholds, windows, and simulation counts.
+- Mock fallback results that could be mistaken for real research evidence.
+- Live trading tools or order/session controls before the project has explicit paper/live
+  execution policy, kill switch, approval gates, and registry audit logging.
+- Direct LLM tool access that bypasses Coordinator, registry, Critic, or Memory Agent
+  policy boundaries.
+
+Why later: The current MVP already has a native research pipeline. Jesse MCP should be
+evaluated after dashboard and failure-handling baselines exist, and only as a sandboxed
+external adapter or checklist source. It should not replace the current Backtest,
+Statistical Testing, Hypothesis, Critic, Coordinator, or Memory Agent boundaries.

@@ -8,6 +8,28 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0033: Compare native pairs pipeline against Jesse MCP ideas without adopting it as a dependency
+
+Status: open
+
+Why deferred: `bkuri/jesse-mcp` contains useful pairs-trading, risk-analysis, MCP tool, job
+tracking, and certification-gate ideas, but direct adoption would add another trading
+framework boundary, hidden defaults, mock fallback ambiguity, and live-trading tools before
+the MVP has dashboard, failure handling, and paper/live policy controls.
+
+Follow-up:
+- After Task 16/17 baseline, run a read-only comparison of our Hypothesis, Statistical
+  Testing, Backtest, Critic, Coordinator, and future Risk tasks against Jesse MCP pairs and
+  risk tool taxonomy.
+- Extract only missing validated capabilities, such as richer pair-screening diagnostics,
+  factor analysis, Monte Carlo risk scenarios, job progress views, or certification gates.
+- Keep every adopted idea behind explicit configs, registry provenance, Coordinator
+  permissions, and Memory Agent policy.
+- Do not install Jesse MCP as a runtime dependency or expose live trading tools unless a
+  separate paper/live design is approved.
+
+Related tasks: 9.x, 10.x, 13.x, 16.x, 17.x, 21.x, 24.x, IDEA-0007.
+
 ### TD-0032: Stage future paper/live trading roles after research MVP boundaries
 
 Status: open
