@@ -13,9 +13,12 @@ from stat_arb.dashboard.data import (
 )
 from stat_arb.storage import (
     BacktestResult,
+    CoordinatorTask,
+    CriticReview,
     Dataset,
     Experiment,
     Hypothesis,
+    ReportArtifact,
     StatisticalTestResult,
     init_database,
 )
@@ -291,6 +294,220 @@ def test_dashboard_experiment_list_ui_exposes_filters_and_sorting() -> None:
     assert "Сортировка" in app
     assert "Сначала большие/новые" in app
     assert "Эксперименты не найдены" in app
+    assert "st.button" not in app
+    assert "form_submit_button" not in app
+
+
+def test_dashboard_snapshot_exposes_task16_registry_views(tmp_path) -> None:
+    """Task 16 pages should read hypotheses, tests, backtests, reports and queues."""
+    db_path = tmp_path / "registry.db"
+    engine = init_database(db_path)
+    session_factory = create_session_factory(engine)
+    try:
+        with session_factory() as session:
+            session.add(
+                Hypothesis(
+                    hypothesis_id="hyp-dashboard",
+                    asset_a="BTC/USDT",
+                    asset_b="ETH/USDT",
+                    rationale="Dashboard pair",
+                    source="rule_based",
+                    similar_hypotheses=["memory:hyp-old", "memory:hyp-old"],
+                    novelty_score=0.73,
+                    status="testing",
+                    created_by="test",
+                    created_at=datetime(2026, 2, 1, tzinfo=UTC).replace(tzinfo=None),
+                )
+            )
+            session.add_all(
+                [
+                    Dataset(
+                        dataset_id="dataset-a",
+                        symbol="BTC/USDT",
+                        source="ccxt",
+                        timeframe="15m",
+                        start_date=datetime(2025, 1, 1),
+                        end_date=datetime(2025, 6, 1),
+                        bar_count=100,
+                        missing_bars=0,
+                        outlier_count=0,
+                        quality_score=1.0,
+                        adjustment_mode="none",
+                        file_path="data/a.parquet",
+                    ),
+                    Dataset(
+                        dataset_id="dataset-b",
+                        symbol="ETH/USDT",
+                        source="ccxt",
+                        timeframe="15m",
+                        start_date=datetime(2025, 1, 1),
+                        end_date=datetime(2025, 6, 1),
+                        bar_count=100,
+                        missing_bars=0,
+                        outlier_count=0,
+                        quality_score=1.0,
+                        adjustment_mode="none",
+                        file_path="data/b.parquet",
+                    ),
+                ]
+            )
+            session.add(
+                Experiment(
+                    experiment_id="exp-dashboard",
+                    hypothesis_id="hyp-dashboard",
+                    status="reporting",
+                    current_agent="report_agent",
+                    data_quality_passed=True,
+                    statistical_tests_passed=True,
+                    backtest_completed=True,
+                    critic_approved=True,
+                    created_at=datetime(2026, 2, 2, tzinfo=UTC).replace(tzinfo=None),
+                )
+            )
+            session.add(
+                StatisticalTestResult(
+                    test_id="test-dashboard",
+                    hypothesis_id="hyp-dashboard",
+                    dataset_a_id="dataset-a",
+                    dataset_b_id="dataset-b",
+                    train_start=datetime(2025, 1, 1),
+                    train_end=datetime(2025, 3, 1),
+                    test_start=datetime(2025, 3, 2),
+                    test_end=datetime(2025, 4, 1),
+                    cointegration_statistic=-3.2,
+                    cointegration_p_value=0.019,
+                    adf_statistic=-4.2,
+                    adf_p_value=0.021,
+                    hedge_ratio=1.15,
+                    hedge_ratio_r_squared=0.88,
+                    half_life_days=6.5,
+                    residual_ljung_box_p_value=0.31,
+                    residual_jarque_bera_p_value=0.42,
+                    residual_excess_kurtosis=0.11,
+                    residual_diagnostics_lags=5,
+                    regime_changes_detected=1,
+                    passed=True,
+                    tested_at=datetime(2026, 2, 3, tzinfo=UTC).replace(tzinfo=None),
+                )
+            )
+            session.flush()
+            session.add(
+                BacktestResult(
+                    backtest_id="bt-dashboard",
+                    hypothesis_id="hyp-dashboard",
+                    test_id="test-dashboard",
+                    dataset_a_id="dataset-a",
+                    dataset_b_id="dataset-b",
+                    git_commit_hash="a" * 40,
+                    config_hash="b" * 64,
+                    dataset_ids=["dataset-a", "dataset-b"],
+                    random_seed=11,
+                    execution_command=["stat-arb"],
+                    run_timestamp=datetime(2026, 2, 4, tzinfo=UTC).replace(tzinfo=None),
+                    lock_file_hash="c" * 64,
+                    train_window_days=90,
+                    test_window_days=30,
+                    num_windows=3,
+                    entry_threshold=2.0,
+                    exit_threshold=0.5,
+                    hedge_ratio=1.15,
+                    gross_pnl=140.0,
+                    net_pnl=101.0,
+                    commission_cost=12.0,
+                    spread_cost=9.0,
+                    slippage_cost=8.0,
+                    funding_cost=6.0,
+                    borrow_cost=4.0,
+                    num_trades=14,
+                    turnover=1.9,
+                    avg_holding_time_hours=9.0,
+                    median_holding_time_hours=8.0,
+                    sharpe_ratio=1.8,
+                    sortino_ratio=2.2,
+                    volatility=0.13,
+                    max_drawdown=-0.09,
+                    win_rate=0.61,
+                    profit_factor=1.9,
+                    net_pnl_2x_costs=62.0,
+                    net_pnl_half_costs=120.5,
+                    baseline_sharpe=0.5,
+                    tested_at=datetime(2026, 2, 5, tzinfo=UTC).replace(tzinfo=None),
+                )
+            )
+            session.add(
+                CriticReview(
+                    review_id="review-dashboard",
+                    backtest_id="bt-dashboard",
+                    weak_assumptions=["half-life near policy bound"],
+                    cost_concerns=["slippage snapshot requires refresh"],
+                    status="approved",
+                    recommendation="Ready for demo review with caveats.",
+                    objections="No blocking objections.",
+                    reviewed_at=datetime(2026, 2, 6, tzinfo=UTC).replace(tzinfo=None),
+                )
+            )
+            session.add(
+                CoordinatorTask(
+                    task_id="task-dashboard",
+                    experiment_id="exp-dashboard",
+                    task_type="reporting",
+                    agent_name="report_agent",
+                    priority=3,
+                    status="failed",
+                    attempt_count=2,
+                    max_attempts=3,
+                    payload={"stage": "reporting"},
+                    last_error="Missing backtest_series sidecar",
+                    created_at=datetime(2026, 2, 7, tzinfo=UTC).replace(tzinfo=None),
+                )
+            )
+            session.add(
+                ReportArtifact(
+                    artifact_id="artifact-dashboard",
+                    experiment_id="exp-dashboard",
+                    artifact_type="backtest_series",
+                    file_path=str(tmp_path / "bt-dashboard.series.json"),
+                    format="json",
+                    created_at=datetime(2026, 2, 8, tzinfo=UTC).replace(tzinfo=None),
+                )
+            )
+            session.commit()
+
+        snapshot = load_dashboard_snapshot(db_path)
+
+        assert snapshot.hypotheses[0]["similar_hypotheses_count"] == 1
+        assert snapshot.hypotheses[0]["related_experiments"] == 1
+        assert snapshot.statistical_tests[0]["pair"] == "BTC/USDT / ETH/USDT"
+        assert snapshot.statistical_tests[0]["regime_changes_detected"] == 1
+        assert snapshot.backtests[0]["total_cost"] == 39.0
+        assert snapshot.backtests[0]["has_series_sidecar"] is True
+        assert snapshot.report_artifacts[0]["artifact_type"] == "backtest_series"
+        assert snapshot.logs[0]["last_error"] == "Missing backtest_series sidecar"
+        assert snapshot.approval_queue[0]["experiment_id"] == "exp-dashboard"
+    finally:
+        engine.dispose()
+
+
+def test_dashboard_task16_pages_are_rendered_read_only() -> None:
+    """Task 16.3-16.8 pages should be concrete read-only sections, not placeholders."""
+    app = Path("src/stat_arb/dashboard/app.py").read_text(encoding="utf-8")
+
+    for call in (
+        "_render_hypothesis_status(snapshot)",
+        "_render_statistical_tests(snapshot)",
+        "_render_backtests(snapshot)",
+        "_render_reports(snapshot)",
+        "_render_memory_search(snapshot)",
+        "_render_approval_queue(snapshot)",
+    ):
+        assert call in app
+
+    assert "Похожие гипотезы" in app
+    assert "Cointegration p-value" in app
+    assert "Cost attribution" in app
+    assert "Журнал ошибок" in app
+    assert "Поиск по памяти" in app
+    assert "Кнопки approve/reject отключены" in app
     assert "st.button" not in app
     assert "form_submit_button" not in app
 

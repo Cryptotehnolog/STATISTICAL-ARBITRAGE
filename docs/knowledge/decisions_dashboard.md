@@ -49,3 +49,29 @@ The list is intentionally a read-only projection over the SQLite registry. It mu
 not start stages, approve experiments, write ApeRAG memory, mutate Coordinator tasks,
 or modify lifecycle state. Interactive execution and approval controls belong to later
 explicit boundaries, not to the monitoring list view.
+
+## DEC-0090: Complete Task 16 as a safe read-only monitoring dashboard
+
+Task 16 adds concrete dashboard pages for hypotheses, statistical tests, backtests,
+report artifacts, coordinator errors, memory readiness, and the manual approval queue.
+The dashboard remains an operational monitoring surface, not an execution surface.
+
+Visualization policy:
+
+- Show tables and metric strips directly from registry rows.
+- Show cost attribution from factual backtest cost fields.
+- Do not invent equity, drawdown, z-score, or trade series from aggregate metrics.
+  Full charts require matching factual `backtest_series` sidecars.
+
+Memory policy:
+
+- The dashboard may show a read-only memory search shell and readiness context.
+- It must not instantiate ApeRAG clients or MemoryAgentService directly.
+- Real memory search belongs behind a dedicated read-only Memory Agent boundary.
+
+Approval policy:
+
+- The dashboard may display experiments eligible for human review.
+- It must not mutate experiment state with ad-hoc Streamlit buttons.
+- Approve/reject decisions must go through an audited Coordinator transition API
+  with explicit reason capture and registry persistence.

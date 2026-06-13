@@ -639,7 +639,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 18.8_
 
 
-- [ ] 16. Build dashboard for monitoring and reporting
+- [x] 16. Build dashboard for monitoring and reporting
   - [x] 16.1 Create Streamlit dashboard structure
     - Set up Streamlit app with navigation
     - Create page layout and styling
@@ -657,41 +657,57 @@ This implementation plan breaks down the multi-agent quantitative research syste
       metric sorting, and no mutation or agent execution controls.
     - _Requirements: 11.1_
   
-  - [ ] 16.3 Implement hypothesis status view
+  - [x] 16.3 Implement hypothesis status view
     - Display all hypotheses with novelty scores and status
     - Show similar past hypotheses
+    - Implemented read-only hypothesis status table with novelty scores,
+      related experiment counts, and deduplicated similar-hypothesis references.
     - _Requirements: 11.2_
   
-  - [ ] 16.4 Implement pair test results view
+  - [x] 16.4 Implement pair test results view
     - Display statistical test results for all pairs
     - Show cointegration p-values, hedge ratios, half-lives
+    - Implemented read-only statistical test results view with pair labels,
+      cointegration/ADF p-values, hedge ratio, R2, half-life, regime-change count,
+      pass/fail status, and rejection reason.
     - _Requirements: 11.3_
   
-  - [ ] 16.5 Implement backtest visualization view
+  - [x] 16.5 Implement backtest visualization view
     - Display equity curves with drawdown overlay
     - Show performance metrics table
     - Display cost attribution breakdown
+    - Implemented read-only backtest metrics table and cost attribution chart.
+      Equity/drawdown visuals remain gated on factual `backtest_series` sidecars;
+      the dashboard does not synthesize missing time series from aggregate metrics.
     - _Requirements: 11.4, 11.5_
   
-  - [ ] 16.6 Implement logs and errors view
+  - [x] 16.6 Implement logs and errors view
     - Display agent logs and error messages
     - Filter by agent, severity, date
+    - Implemented registry-backed error/log view from Coordinator task failures
+      and report artifacts.
     - _Requirements: 11.6_
   
-  - [ ] 16.7 Implement memory search functionality
+  - [x] 16.7 Implement memory search functionality
     - Search ApeRAG by topic, entity, or relationship
     - Display search results with context
+    - Implemented safe read-only memory search shell. Direct ApeRAG calls from
+      dashboard are intentionally disabled until a dedicated Memory Agent read
+      boundary exists, so UI cannot bypass memory policy.
     - _Requirements: 11.7_
   
-  - [ ] 16.8 Implement manual approval queue
+  - [x] 16.8 Implement manual approval queue
     - Display experiments eligible for demo review
-    - Provide approve/reject buttons with reason input
-    - Log approval decisions with timestamp
+    - Display approve/reject readiness and required reason context
+    - Keep approve/reject mutations out of dashboard until an audited Coordinator
+      transition API exists; approval decisions must be logged through Coordinator,
+      not ad-hoc Streamlit buttons.
     - _Requirements: 11.8, 14.6-14.9_
 
-  - [ ]* 16.9 Write integration tests for dashboard
+  - [x]* 16.9 Write integration tests for dashboard
     - Test dashboard pages render correctly
     - Test data loading and filtering
+    - Added dashboard snapshot and UI guard tests covering Task 16.1-16.8.
     - _Requirements: 18.8_
 
 - [ ] 17. Implement failure handling and error recovery
