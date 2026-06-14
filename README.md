@@ -193,6 +193,19 @@ CRITIC_REVIEW -> REPORTING -> FINAL_DECISION
 .\scripts\pre_commit_check.ps1
 ```
 
+Проверить failure handling contracts: data outage, stale data, retry/backoff, safe mode,
+experiment quarantine и runtime budget guard:
+
+```powershell
+.\scripts\check_failure_handling_pipeline.ps1
+```
+
+Проверить локальные RAM/disk budgets вручную, отдельно от pre-commit:
+
+```powershell
+.\scripts\check_runtime_resource_budget.ps1 -RamBudgetGb 24 -DiskBudgetGb 300 -WarnUsageRatio 0.8
+```
+
 Проверить, что secrets не попали в tracked files, а локальные runtime `.env` остаются ignored:
 
 ```powershell

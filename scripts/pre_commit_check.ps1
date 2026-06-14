@@ -13,6 +13,7 @@ $criticAgentBoundaryCheckScript = Join-Path $PSScriptRoot "check_critic_agent_bo
 $criticPipelineCheckScript = Join-Path $PSScriptRoot "check_critic_pipeline.ps1"
 $coordinatorAgentBoundaryCheckScript = Join-Path $PSScriptRoot "check_coordinator_agent_boundaries.ps1"
 $coordinatorPipelineCheckScript = Join-Path $PSScriptRoot "check_coordinator_pipeline.ps1"
+$failureHandlingPipelineCheckScript = Join-Path $PSScriptRoot "check_failure_handling_pipeline.ps1"
 $reportPipelineCheckScript = Join-Path $PSScriptRoot "check_report_pipeline.ps1"
 $cliPipelineCheckScript = Join-Path $PSScriptRoot "check_cli_pipeline.ps1"
 $pairScreeningPipelineCheckScript = Join-Path $PSScriptRoot "check_pair_screening_pipeline.ps1"
@@ -49,6 +50,7 @@ Write-Output "- Проверка Critic Agent boundaries: check_critic_agent_bou
 Write-Output "- Проверка Critic Agent pipeline: check_critic_pipeline.ps1"
 Write-Output "- Проверка Coordinator Agent boundaries: check_coordinator_agent_boundaries.ps1"
 Write-Output "- Проверка Coordinator Agent pipeline: check_coordinator_pipeline.ps1"
+Write-Output "- Проверка Failure Handling pipeline: check_failure_handling_pipeline.ps1"
 Write-Output "- Проверка Report Agent pipeline: check_report_pipeline.ps1"
 Write-Output "- Проверка CLI pipeline: check_cli_pipeline.ps1"
 Write-Output "- Проверка pair-screening workflow: check_pair_screening_pipeline.ps1"
@@ -75,6 +77,7 @@ try {
     Invoke-RequiredCheck $criticPipelineCheckScript
     Invoke-RequiredCheck $coordinatorAgentBoundaryCheckScript
     Invoke-RequiredCheck $coordinatorPipelineCheckScript
+    Invoke-RequiredCheck $failureHandlingPipelineCheckScript
     Invoke-RequiredCheck $reportPipelineCheckScript
     Invoke-RequiredCheck $cliPipelineCheckScript
     Invoke-RequiredCheck $pairScreeningPipelineCheckScript

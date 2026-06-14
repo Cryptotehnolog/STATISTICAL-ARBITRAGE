@@ -725,45 +725,53 @@ This implementation plan breaks down the multi-agent quantitative research syste
       covering Task 16.1-16.8b.
     - _Requirements: 18.8_
 
-- [ ] 17. Implement failure handling and error recovery
-  - [ ] 17.1 Implement data outage handling
+- [x] 17. Implement failure handling and error recovery
+  - [x] 17.1 Implement data outage handling
     - Detect data outages and log them
     - Pause affected experiments
+    - Added `DataFreshnessPolicy` and `detect_data_outage` with explicit outage age.
     - _Requirements: 15.1_
   
-  - [ ] 17.2 Implement API error handling with retries
+  - [x] 17.2 Implement API error handling with retries
     - Exponential backoff for API errors
     - Log errors and retry attempts
+    - Added `RetryPolicy` and `plan_api_retry` with explicit max attempts, delay, and multiplier.
     - _Requirements: 15.2_
   
-  - [ ] 17.3 Implement stale data detection
+  - [x] 17.3 Implement stale data detection
     - Detect stale prices and reject signals
+    - Added `detect_stale_data` that rejects signal candidates without pausing the whole experiment.
     - _Requirements: 15.3_
   
-  - [ ] 17.4 Implement abnormal condition detection
+  - [x] 17.4 Implement abnormal condition detection
     - Detect abnormal spreads and pause strategies
     - Detect missing funding rates and pause strategies
+    - Added `AbnormalConditionEvidence`, `FailureHandlingPolicy`, and `classify_abnormal_conditions`.
     - _Requirements: 15.4, 15.5_
   
-  - [ ] 17.5 Implement experiment failure handling
+  - [x] 17.5 Implement experiment failure handling
     - Log backtest failures and quarantine experiments
     - Log agent failures and alert operator
+    - Added `handle_agent_or_backtest_failure` through Coordinator task/lifecycle and MemoryWriter.
     - _Requirements: 15.6, 15.7_
   
-  - [ ] 17.6 Implement database and RAG failure handling
+  - [x] 17.6 Implement database and RAG failure handling
     - Detect failures and enter safe mode
     - Log failures and alert operator
     - Replay queued memory writes after ApeRAG recovers, or require manual operator approval when replay is unsafe
+    - Added `handle_runtime_dependency_failure` safe mode event with manual approval requirement.
     - _Requirements: 15.8_
 
-  - [ ] 17.8 Implement local resource budget monitoring
+  - [x] 17.8 Implement local resource budget monitoring
     - Warn when runtime RAM or disk usage exceeds 80% of configured budget
     - Keep Docker-supported runtime resource checks separate from ordinary pre-commit checks
+    - Added `ResourceBudgetPolicy`, `evaluate_resource_budget`, and manual `scripts/check_runtime_resource_budget.ps1`.
     - _Requirements: 31.2, 31.3, 31.4, 31.6_
   
-  - [ ]* 17.7 Write unit tests for error handling
+  - [x]* 17.7 Write unit tests for error handling
     - Test retry logic with mock failures
     - Test safe mode activation
+    - Added `tests/unit/test_failure_handling.py`, static script tests, and `scripts/check_failure_handling_pipeline.ps1`.
     - _Requirements: 18.8_
 
 

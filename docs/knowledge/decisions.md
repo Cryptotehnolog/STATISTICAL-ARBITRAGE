@@ -24,6 +24,8 @@ regular memory updates do not reprocess one oversized document.
   persistence, and memory-summary boundaries.
 - `docs/knowledge/decisions_coordinator_agent.md`: Coordinator Agent lifecycle,
   registry persistence, and memory-policy boundaries.
+- `docs/knowledge/decisions_failure_handling.md`: failure handling, safe mode,
+  retry/backoff, and local runtime budget boundaries.
 - `docs/knowledge/decisions_expert_review_hardening.md`: external expert review outcomes,
   explicit threshold policy, memory backend resilience, and research hardening scope.
 - `docs/knowledge/decisions_future_paper_live.md`: staged future paper/live trading

@@ -54,14 +54,13 @@ Related tasks: 15.x, 16.x, 18.1, 18.4.
 
 Status: open
 
-Why deferred: `apply_coordinator_approval_action` is implemented and tested, but the
-dashboard remains intentionally read-only. Adding approve/reject/quarantine controls before
-Task 17 failure handling would expose state-changing UI without enough operator feedback,
-retry/error handling, and failure recovery behavior.
+Why deferred: `apply_coordinator_approval_action` and Task 17 failure handling contracts
+are implemented and tested, but the dashboard remains intentionally read-only. Adding
+approve/reject/quarantine controls should be a focused dashboard UX task with clear
+operator feedback, registry transition status, and memory-write result display.
 
 Follow-up:
-- After Task 17 establishes failure/error UX patterns, add dashboard controls that call
-  only `apply_coordinator_approval_action`.
+- Add dashboard controls that call only `apply_coordinator_approval_action`.
 - Require actor, reason, and explicit decision selection in the UI.
 - Show registry transition result and policy-safe memory-write status.
 - Keep ad-hoc registry mutation and direct ApeRAG writes forbidden in Streamlit code.
