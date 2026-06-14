@@ -798,9 +798,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
       and task states without ApeRAG/LLM/Docker dependencies.
     - _Requirements: 18.6_
   
-  - [ ]* 18.4 Write integration tests for CI workflows
+  - [x]* 18.4 Write integration tests for CI workflows
     - Test that CI catches linting errors
     - Test that CI catches test failures
+    - Added `tests/unit/test_github_actions_ci.py` guards for Ruff, mypy, unit coverage,
+      property/integration smoke, reproducibility workflow, secret leak checks, and no
+      local Docker/ApeRAG/Infisical/OmniRoute runtime dependencies.
     - _Requirements: 18.1-18.8_
 
 - [ ] 19. Create documentation and examples
