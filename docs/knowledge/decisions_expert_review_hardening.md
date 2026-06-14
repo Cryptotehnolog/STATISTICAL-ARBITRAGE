@@ -47,3 +47,33 @@ Follow-up:
   pairs.
 - Add capacity-adjusted cost scenarios and strategy-correlation reporting when multiple
   approved strategies exist.
+
+## DEC-0091: Treat the second expert audit as checkpoint hardening, not a rewrite request
+
+Status: accepted
+
+Decision: Accept the second expert audit findings that improve enforcement and observability,
+but reject broad rewrites that would distract from the MVP sequence. Immediate action is to
+make CI measure CLI and dashboard coverage. Deferred action goes into tracked technical debt.
+
+Accepted now:
+
+- Include `stat_arb.cli` and `stat_arb.dashboard` in CI coverage measurement.
+- Keep audited approval mutations behind `apply_coordinator_approval_action`.
+- Keep dashboard approval UI disabled until failure handling and operator feedback are
+  implemented.
+
+Deferred:
+
+- Do not mass-port 69 PowerShell scripts to Python before MVP. Add portable wrappers only
+  for core Ubuntu/ARM workflows when Task 19/22 portability work starts.
+- Do not add ProcessPool/joblib pair scanning until Coordinator task claiming is atomic.
+- Do not vectorize `regime.py`, rewrite backtest loops, or cache walk-forward windows until
+  profiling identifies the actual bottleneck.
+- Do not add dashboard snapshot caching or query rewrites until registry size makes latency
+  measurable.
+
+Rationale: The audit correctly identifies risk areas, but speed work and broad portability
+rewrites should be profile- and deployment-driven. The project should continue to prefer
+explicit contracts, registry provenance, guarded memory writes, and staged implementation
+over large cross-cutting rewrites.

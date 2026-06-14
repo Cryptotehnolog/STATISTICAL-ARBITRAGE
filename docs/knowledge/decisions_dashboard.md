@@ -81,3 +81,11 @@ Approval policy:
   `apply_coordinator_approval_action`, which requires actor and reason provenance,
   persists through the registry lifecycle transition, and writes only policy-safe
   summaries through Memory Agent policy.
+
+Coverage and UI mutation policy:
+
+- CLI and dashboard packages should be included in CI coverage measurement.
+- Streamlit `app.py` can remain mostly integration/smoke tested while behavior is kept in
+  testable data/projection helpers.
+- State-changing approval controls should be added only after Task 17 failure handling
+  defines operator-facing error, retry, and degraded-state behavior.

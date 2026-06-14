@@ -32,6 +32,9 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   changes and reseed ApeRAG after updates.
 - GitHub Actions Node.js 24 migration: CI is green, but GitHub warns Node.js 20 actions are
   deprecated and must be updated before the enforced Node.js 24 transition.
+- CLI/dashboard coverage hardening: CI must measure `stat_arb.cli` and
+  `stat_arb.dashboard`; stricter dashboard-specific gates should wait until Streamlit
+  logic is further extracted into testable helpers.
 - Infisical recovery: define backup and restore discipline before deleting Docker volumes
   or rotating encryption keys.
 - Rust boundary: keep Python-first MVP; introduce Rust only after profiling identifies a
@@ -65,13 +68,16 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 - ApeRAG human graph view: ApeRAG UI is the default inspection path; build a local viewer only
   if the UI proves insufficient.
 - Queue concurrency: before enabling real multi-worker execution, add atomic Coordinator
-  task claiming, a race-condition test, and a composite queue index.
+  task claiming, a race-condition test, and a composite queue index. Parallel pair/window
+  execution is blocked on this durable claim boundary.
 - Ingestion watermarks and gap repair: Task 15.1 should track dataset freshness and fetch
   missing ranges instead of only taking a caller-provided `since`.
 - Regime-break exits: keep them out of backtest behavior until an explicit research policy
   and provenance path exist.
 - Performance work: parallel pair scanning, regime vectorization, walk-forward caching, and
   backtest core storage changes must be driven by profiling after a workflow runner exists.
+  Dashboard N+1 query reduction and `st.cache_data` should also be driven by measured
+  registry growth/latency instead of premature caching.
 - Hypothesis novelty caching: add only when repeated ApeRAG novelty lookups become a real
   workflow bottleneck, with explicit cache keys and invalidation.
 
@@ -102,3 +108,5 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   `CoordinatorApprovalActionRequest` and `apply_coordinator_approval_action`, requiring
   actor/reason provenance and routing approve/reject/quarantine through registry lifecycle
   transition plus Memory Agent policy.
+- Dashboard approve/reject/quarantine UI remains intentionally deferred until Task 17
+  failure handling provides safe operator feedback, retries, and error-state behavior.

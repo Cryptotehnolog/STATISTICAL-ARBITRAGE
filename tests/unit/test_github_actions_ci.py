@@ -27,6 +27,8 @@ def test_ci_workflow_runs_core_python_checks() -> None:
     assert "uv run mypy src" in workflow
     assert 'uv run pytest tests/unit -m "not slow"' in workflow
     assert "--cov=stat_arb.backtest" in workflow
+    assert "--cov=stat_arb.cli" in workflow
+    assert "--cov=stat_arb.dashboard" in workflow
     assert "--cov=stat_arb.statistical" in workflow
     assert "--cov=stat_arb.storage" in workflow
     assert "--cov-fail-under=70" in workflow

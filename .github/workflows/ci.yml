@@ -99,6 +99,8 @@ jobs:
           uv run pytest tests/unit -m "not slow"
           --cov=stat_arb.agents
           --cov=stat_arb.backtest
+          --cov=stat_arb.cli
+          --cov=stat_arb.dashboard
           --cov=stat_arb.data_quality
           --cov=stat_arb.domain
           --cov=stat_arb.ingestion

@@ -772,7 +772,8 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Run Ruff linting on all Python code
     - Run pytest with coverage reporting
     - Fail if coverage < 70% for core logic
-    - CI now runs coverage over core packages with `--cov-fail-under=70`
+    - CI now runs coverage over core packages plus `stat_arb.cli` and
+      `stat_arb.dashboard` with `--cov-fail-under=70`
     - _Requirements: 18.1-18.8_
   
   - [x] 18.2 Create GitHub Actions workflow for property tests

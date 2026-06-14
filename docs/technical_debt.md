@@ -8,6 +8,43 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0036: Harden CLI and dashboard coverage gates incrementally
+
+Status: open
+
+Why deferred: Expert audit found that CI measured core packages but did not include
+`stat_arb.cli` and `stat_arb.dashboard` in the coverage surface. The first fix is to make
+CI measure those packages. A stricter dashboard/UI coverage gate should be introduced only
+after more Streamlit logic is moved into testable projection functions, otherwise the gate
+can create noisy failures without improving behavior.
+
+Follow-up:
+- Keep `stat_arb.cli` and `stat_arb.dashboard` in CI coverage measurement.
+- Add focused tests for CLI stage payload parsing and dashboard projections.
+- Extract additional Streamlit formatting/render decisions into testable helpers when a
+  page grows.
+- Raise package-specific gates only after the dashboard has stable non-UI helper coverage.
+
+Related tasks: 15.x, 16.x, 18.1, 18.4.
+
+### TD-0035: Wire dashboard approvals to audited Coordinator action after failure UX exists
+
+Status: open
+
+Why deferred: `apply_coordinator_approval_action` is implemented and tested, but the
+dashboard remains intentionally read-only. Adding approve/reject/quarantine controls before
+Task 17 failure handling would expose state-changing UI without enough operator feedback,
+retry/error handling, and failure recovery behavior.
+
+Follow-up:
+- After Task 17 establishes failure/error UX patterns, add dashboard controls that call
+  only `apply_coordinator_approval_action`.
+- Require actor, reason, and explicit decision selection in the UI.
+- Show registry transition result and policy-safe memory-write status.
+- Keep ad-hoc registry mutation and direct ApeRAG writes forbidden in Streamlit code.
+
+Related tasks: 16.8b, 17.x, 13.4, 13.5.
+
 ### TD-0033: Compare native pairs pipeline against Jesse MCP ideas without adopting it as a dependency
 
 Status: open
@@ -67,6 +104,8 @@ Follow-up:
 - Add a race-condition test that proves two workers cannot claim the same pending task.
 - Add a composite queue index for `(agent_name, status, priority, created_at)` as part of
   the same storage/migration hardening.
+- Treat ProcessPool/joblib pair scanning as blocked until this queue claim behavior is
+  hardened.
 
 Related tasks: 13.1, 13.5, 14, 15.x.
 
@@ -115,6 +154,8 @@ Follow-up:
   detection, and backtest core after the first workflow runner exists.
 - Use the results to decide whether to add ProcessPool/joblib parallelism, vectorize
   `regime.py`, cache overlapping walk-forward calculations, or change backtest core storage.
+- Investigate dashboard snapshot N+1 queries and `st.cache_data` only after registry size
+  makes dashboard latency measurable.
 - Keep Python reference behavior and property tests before any Rust or columnar rewrite.
 
 Related tasks: 13.x, 15.x, 18.x, TD-0010.
@@ -396,7 +437,7 @@ Related tasks: 18.1, 18.4.
 
 ## Resolved
 
-### TD-0035: Add audited Coordinator approval transition API for dashboard actions
+### TD-RESOLVED-0035: Add audited Coordinator approval transition API for dashboard actions
 
 Status: resolved
 
