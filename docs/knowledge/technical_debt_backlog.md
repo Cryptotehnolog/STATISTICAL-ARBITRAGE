@@ -80,6 +80,12 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   registry growth/latency instead of premature caching.
 - Hypothesis novelty caching: add only when repeated ApeRAG novelty lookups become a real
   workflow bottleneck, with explicit cache keys and invalidation.
+- Multi-asset roadmap: keep the MVP crypto-first and research-first while staging future
+  multi-asset work. A new asset class requires explicit asset class, venue,
+  session/calendar, timezone, adjustment policy, cost model, source provenance, and
+  data-quality validation. Do not add live execution, hidden thresholds, fixed Kelly
+  fractions, ETF iNAV arbitrage, NLP filters, or broad provider integrations before the
+  relevant MVP boundaries are stable.
 
 ## Closed Follow-up
 

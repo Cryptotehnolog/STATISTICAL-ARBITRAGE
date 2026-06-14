@@ -26,6 +26,10 @@ regular memory updates do not reprocess one oversized document.
   registry persistence, and memory-policy boundaries.
 - `docs/knowledge/decisions_expert_review_hardening.md`: external expert review outcomes,
   explicit threshold policy, memory backend resilience, and research hardening scope.
+- `docs/knowledge/decisions_future_paper_live.md`: staged future paper/live trading
+  roles, execution realism, regime monitoring, and capital allocation boundaries.
+- `docs/knowledge/decisions_multi_asset_roadmap.md`: staged multi-asset roadmap,
+  asset-class onboarding rules, factor exposure, and rejected premature execution paths.
 
 ## Operating Rule
 

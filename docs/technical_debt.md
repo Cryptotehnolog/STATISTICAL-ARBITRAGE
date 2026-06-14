@@ -8,6 +8,29 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0037: Stage multi-asset statistical arbitrage after MVP boundaries
+
+Status: open
+
+Why deferred: External reviews correctly pushed the project toward serious multi-asset
+statistical arbitrage, including cross-asset spreads, factor exposure, session-aware data,
+portfolio risk allocation, and asset-class-specific adjustments. Implementing that now as
+a broad rewrite would bypass the current research MVP boundaries and add too many
+untested data, risk, and execution assumptions at once.
+
+Follow-up:
+- Add multi-leg signal contracts only after the current pair pipeline and failure
+  handling baseline are stable.
+- Before adding a second asset class, require asset class, venue, session calendar,
+  timezone, adjustment policy, cost model, source provenance, and data-quality validation.
+- Add factor exposure diagnostics and portfolio risk allocation as explicit policy
+  contracts before autonomous sizing.
+- Keep futures roll logic, equity corporate actions, ETF basket/iNAV logic, NLP filters,
+  and broker execution behind separate approved tasks.
+- Keep fixed Kelly fractions and hidden adaptive thresholds out of runtime defaults.
+
+Related tasks: 17.x, 19.4, 21.x, 22.5, 24.x, DEC-0092.
+
 ### TD-0036: Harden CLI and dashboard coverage gates incrementally
 
 Status: open
