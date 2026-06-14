@@ -92,6 +92,10 @@ jobs:
         shell: pwsh
         run: ./scripts/check_property_integration.ps1
 
+      - name: Check reproducibility workflow
+        shell: pwsh
+        run: ./scripts/check_reproducibility_workflow.ps1
+
       - name: Run Ruff
         run: uv run ruff check --no-cache src tests
 

@@ -790,9 +790,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Added `scripts/check_property_integration.ps1` and CI property/integration smoke step
     - _Requirements: 18.1-18.8_
   
-  - [ ] 18.3 Create GitHub Actions workflow for reproducibility checks
+  - [x] 18.3 Create GitHub Actions workflow for reproducibility checks
     - Run experiments twice with same inputs
     - Verify metrics match within 0.1% tolerance
+    - Added `scripts/check_reproducibility_workflow.ps1`, CI step, and a two-run
+      deterministic scripted workflow snapshot comparing metrics, hashes, artifacts,
+      and task states without ApeRAG/LLM/Docker dependencies.
     - _Requirements: 18.6_
   
   - [ ]* 18.4 Write integration tests for CI workflows

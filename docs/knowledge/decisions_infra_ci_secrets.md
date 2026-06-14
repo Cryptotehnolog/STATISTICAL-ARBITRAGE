@@ -118,3 +118,31 @@ language percentage.
 Risks: Python implementations may become slow for large pair universes or backtests. When
 profiling proves that, introduce Rust through a narrow optional acceleration package and
 use the installed `rust-skills` guidance for Rust code.
+
+## DEC-0094: Add deterministic CI reproducibility workflow without external services
+
+Status: accepted
+
+Decision: Task 18.3 adds `scripts/check_reproducibility_workflow.ps1` to local pre-commit
+and GitHub Actions. The check runs one scripted research workflow twice against two clean
+temporary SQLite registries, then compares a normalized snapshot of hypothesis identity,
+statistical metrics, backtest metrics, reproducibility hashes, report artifact types, and
+Coordinator task states.
+
+Rationale: Reproducibility must be proven by executing the same workflow twice, not by
+checking that a hash function exists. The CI check deliberately excludes ApeRAG, OmniRoute,
+Infisical, Docker, and live market APIs so it catches code regressions without inheriting
+provider outages or local runtime state.
+
+Alternatives considered: Run a full live experiment in CI; compare raw database files;
+compare only config hashes; leave reproducibility as a local manual command.
+
+Risks: The current reproducibility workflow uses deterministic mock data and normalized
+snapshots. Future MVP validation should add broader reproducibility checks for larger
+artifact sidecars and real fetched datasets after those workflows have stable fixtures.
+
+Verification:
+
+- `scripts/check_reproducibility_workflow.ps1`
+- `tests/integration/test_reproducibility_workflow.py`
+- `tests/unit/test_check_reproducibility_workflow.py`
