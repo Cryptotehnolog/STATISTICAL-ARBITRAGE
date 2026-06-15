@@ -1,77 +1,154 @@
-# Чеклист отложенной работы
+# Человеческий roadmap отложенной работы
 
-Этот файл нужен для контроля всех “сделаем потом”. Подробные причины, риски и связи
-хранятся в `docs/technical_debt.md`; здесь короткий human-facing контрольный список.
+Этот файл отвечает на простой вопрос: **что мы уже решили сделать позже, почему не
+делаем это прямо сейчас и когда к этому возвращаться**.
 
-Правило: если новая идея или хвост не реализуется сразу, он должен попасть сюда,
-в `docs/technical_debt.md` или в `.kiro/specs/quant-research-architecture/tasks.md`.
-Нельзя оставлять важное только в чате.
+Технические детали и точные ссылки хранятся в `docs/technical_debt.md` и
+`docs/knowledge/future_ideas.md`. Здесь намеренно написано человеческим языком. Коды
+`TD-0000` и `IDEA-0000` оставлены только как номера задач для контроля.
 
-## Можно закрывать до Task 19, если не расширяем архитектуру
+## Можно закрывать перед Task 19
 
-- [ ] TD-0011: Описать ручную очистку runtime/cache артефактов и когда безопасно запускать
-  `scripts/clean_runtime_artifacts.ps1`.
-- [ ] TD-0016: Обновить GitHub Actions под Node.js 24-compatible actions после проверки
-  актуальных upstream versions.
-- [ ] TD-0018: Принять и реализовать решение по one-bar `DataQualityReport`: явный отказ
-  до создания report или официально валидный diagnostic report.
-- [ ] TD-0036: Продолжать вынос dashboard/CLI projection logic в тестируемые helpers; строгие
-  package-specific coverage gates включать только после этого.
+- [ ] **Ручная очистка временных файлов** (`TD-0011`).
+  Нужно описать, когда безопасно запускать `scripts/clean_runtime_artifacts.ps1`, что он
+  удаляет, а какие данные трогать нельзя. Это можно сделать до основной документации.
 
-## Делать только после нового boundary или runner
+- [ ] **Обновить GitHub Actions под Node.js 24** (`TD-0016`).
+  GitHub предупреждает о смене Node.js runtime для actions. Нужно обновить версии actions
+  или совместимость, затем дождаться зеленого CI.
 
-- [ ] TD-0001 / TD-0015: Ubuntu portability hardening и подробный migration checklist.
-- [ ] TD-0002: Live CCXT smoke test, только opt-in и вне fast pre-commit.
-- [ ] TD-0003: Domain <-> parquet/storage conversion helpers, только когда появится
-  реальная service boundary, которой они нужны.
-- [ ] TD-0006 / TD-0007: Knowledge seeding automation и синхронизация curated shards после
-  крупных изменений `.kiro`/docs.
-- [ ] TD-0008: Infisical backup/restore discipline перед удалением Docker volumes или
-  rotation keys.
-- [ ] TD-0013: OmniRoute model-order rebenchmark при изменении provider behavior.
-- [ ] TD-0014: Service-level data ingestion CLI, только через quality/provenance/registry.
-- [ ] TD-0019: Agent RAG answer-quality eval после появления agent answer boundary.
-- [ ] TD-0020: Cost Assumption Agent для verified/manual-approved cost snapshots.
-- [ ] TD-0023: Full experiment runner должен передавать factual series sidecars в registry
-  перед reporting.
-- [ ] TD-0027: Hypothesis novelty cache только после измеримой latency в real workflow.
-- [ ] TD-0028: Profile-guided performance work после workflow runner и profiler output.
-- [ ] TD-0029: Regime-break exit только через explicit research policy.
-- [ ] TD-0030: Registry-backed ingestion watermarks и gap repair.
-- [ ] TD-0031: Atomic Coordinator task claiming перед multi-worker execution.
-- [ ] TD-0035: Dashboard approval controls через audited Coordinator action после UX failure
-  handling.
-- [ ] TD-0038: Arbitrary full experiment runner после mature stage boundaries для всех
-  этапов.
-- [ ] IDEA-0006: Agent execution observability UI inspired by `patoles/agent-flow`: live
-  graph, timeline, transcript, tool calls и file attention на наших structured agent
-  events. Не копировать бренд, logo или exact UI; строить собственный project-native view.
+- [ ] **Решить, что делать с one-bar DataQualityReport** (`TD-0018`).
+  Сейчас один OHLCV bar не может стать полноценным отчетом качества, потому что `start_date`
+  и `end_date` совпадают. Нужно выбрать: один bar запрещен как вход или разрешен как
+  diagnostic report.
 
-## Не делать без отдельного архитектурного решения
+- [ ] **Улучшать тестируемость CLI/dashboard без жестких coverage gates** (`TD-0036`).
+  Нужно постепенно выносить форматирование и projection logic из Streamlit/CLI в helpers.
+  Строгие отдельные coverage gates включать только когда UI-логика станет достаточно
+  тестируемой.
 
-- [ ] TD-0005 / IDEA-0001: Chroma compatibility spike, только если появится конкретная
-  потребность вне ApeRAG.
-- [ ] TD-0010: Rust implementation, только после profiling hotspot, Python reference tests,
-  stable API boundary и Windows/Ubuntu build check.
-- [ ] TD-0032: Future paper/live trading roles, только после research MVP, approvals,
-  failure handling и risk policies. Роли зафиксированы как staged roadmap, а не обещание
-  production-ready:
-  - Regime Switch Detector: сначала research-time regime robustness validation.
-  - Execution and Slippage Simulator: сначала deterministic Backtest/Critic service boundary.
-  - Dynamic Risk and Capital Allocator: сначала explicit risk policy contracts.
-- [ ] TD-0033 / IDEA-0007: Jesse MCP использовать только как reference checklist, не как
-  runtime dependency.
-- [ ] TD-0037: Multi-asset statistical arbitrage roadmap, только поэтапно после стабильного
-  pair pipeline, quality/provenance и risk boundaries.
-- [ ] IDEA-0002: Автоматический post-commit seed, только если seed runs станут быстрыми и
-  стабильными.
-- [ ] IDEA-0003: Graph extraction provider benchmark, когда provider behavior изменится или
-  качество графа начнет деградировать.
+## Делать после нового runner, workflow или service boundary
 
-## Закрыто или почти закрыто, но требует наблюдения
+- [ ] **Подготовить перенос на Ubuntu/server** (`TD-0001`, `TD-0015`).
+  Нужны Linux-friendly команды, `.sh` wrappers или точные инструкции для `uv`, Docker,
+  ApeRAG, Infisical, memory checks, SQLite, Parquet и CCXT smoke. Делать ближе к реальному
+  server deployment.
 
-- [x] Task 15 MVP CLI/scripted workflows: закрыт как safe local execution baseline.
-  Полный arbitrary runner вынесен в TD-0038.
-- [x] Task 18 CI/testing baseline: закрыт; CI не должен зависеть от local services/secrets.
-- [x] TD-0023 core guard: Report Agent не строит full charts из aggregate-only metrics.
-  Остаток относится к будущему full runner.
+- [ ] **Добавить live CCXT smoke test** (`TD-0002`).
+  Это маленькая opt-in проверка реальной биржи. Не включать в быстрый pre-commit, потому что
+  сеть, rate limits и биржи нестабильны.
+
+- [ ] **Добавить conversion helpers domain <-> storage** (`TD-0003`).
+  Нужны только когда ingestion/validation/registry/CLI реально начнут переносить
+  `OHLCVBatch`, `Dataset` или `DataQualityReport` через Parquet/SQLite boundary.
+
+- [ ] **Автоматизировать seed памяти после крупных изменений** (`TD-0006`, `TD-0007`,
+  `IDEA-0002`).
+  Сейчас seed делает Codex вручную, потому что это stateful операция с внешними LLM. Позже
+  можно сделать post-commit или scheduled workflow, если seed станет быстрым и стабильным.
+
+- [ ] **Описать backup/restore для Infisical** (`TD-0008`).
+  Перед удалением Docker volumes или rotation keys нужно понимать, что именно сохранять и
+  как проверить восстановление.
+
+- [ ] **Переизмерять порядок моделей OmniRoute** (`TD-0013`, `IDEA-0003`).
+  Когда меняется аккаунт, provider или скорость моделей, нужно заново benchmark graph
+  extraction и менять порядок не “на глаз”, а по фактам.
+
+- [ ] **Сделать полноценный data ingestion CLI/service** (`TD-0014`).
+  Команда должна fetch -> validate -> persist parquet -> write registry provenance. Нельзя
+  добавлять простой downloader, который обходит quality report и registry.
+
+- [ ] **Добавить answer-quality eval для agent RAG** (`TD-0019`).
+  Сейчас мы проверяем retrieval/freshness. Когда появится агент, который отвечает по ApeRAG,
+  нужно проверять качество финального ответа: обязательные факты, запрет hallucinations,
+  ссылки на decisions.
+
+- [ ] **Добавить Cost Assumption Agent / service** (`TD-0020`).
+  Он будет собирать и проверять fees, funding, borrow и slippage snapshots. Backtest Agent
+  не должен брать старые плановые проценты как “рыночную правду”.
+
+- [ ] **Довести factual report sidecars до полного runner** (`TD-0023`).
+  Backtest уже умеет сохранять `backtest_series`, а Report Agent не строит графики из одних
+  aggregate metrics. Следующий шаг: future full runner обязан всегда передавать factual
+  series sidecars перед reporting.
+
+- [ ] **Кэшировать novelty checks только если появится bottleneck** (`TD-0027`).
+  Hypothesis Agent может спрашивать ApeRAG о похожих идеях. Кэш нужен только если real
+  workflow покажет повторяющуюся latency.
+
+- [ ] **Оптимизировать производительность только после profiler output** (`TD-0028`).
+  Parallel pair scanning, regime vectorization, walk-forward caching, columnar storage и Rust
+  должны идти после измерений, а не из желания “сделать быстрее заранее”.
+
+- [ ] **Добавить regime-break exits только как explicit policy** (`TD-0029`).
+  Сейчас regime detection является diagnostic evidence. Автоматический выход из позиции
+  меняет стратегию и должен быть отдельной воспроизводимой policy.
+
+- [ ] **Добавить ingestion watermarks и gap repair** (`TD-0030`).
+  Data Agent должен понимать свежесть датасета и уметь добирать только пропущенные окна.
+
+- [ ] **Сделать atomic Coordinator task claiming перед multi-worker режимом** (`TD-0031`).
+  Сейчас очередь достаточна для local deterministic workflow. Перед несколькими worker
+  processes нужен atomic claim, race-condition test и индекс по queue fields.
+
+- [ ] **Добавить dashboard approval controls** (`TD-0035`).
+  UI-кнопки approve/reject/quarantine можно делать только через audited Coordinator action,
+  с actor, reason, status и memory-write result. Прямых mutation из dashboard быть не должно.
+
+- [ ] **Сделать полный experiment runner** (`TD-0038`).
+  Сейчас есть безопасный narrow pipeline `backtesting -> reporting`. Большая кнопка “run full
+  experiment” появится только когда каждый stage будет иметь explicit payload, registry
+  artifacts и factual outputs для следующего stage.
+
+- [ ] **Сделать визуализацию работы агентов** (`IDEA-0006`).
+  Идея вдохновлена `patoles/agent-flow`: live graph, timeline, transcript, tool calls и file
+  attention. Делать позже, когда наши агенты начнут писать structured events. Бренд, logo и
+  exact UI не копировать.
+
+## Делать только после отдельного архитектурного решения
+
+- [ ] **Проверить Chroma только при реальной необходимости** (`TD-0005`, `IDEA-0001`).
+  ApeRAG сейчас active backend. Chroma не трогаем, пока нет конкретной причины.
+
+- [ ] **Переходить к Rust только после profiling hotspot** (`TD-0010`).
+  Rust остается путем ускорения, но не ранним rewrite. Перед Rust нужен Python reference,
+  stable API, tests, benchmark и Windows/Ubuntu build check.
+
+- [ ] **Добавить три будущие роли для paper/live trading** (`TD-0032`).
+  Мы действительно планируем три будущие роли, но они не делают систему production-ready сами
+  по себе:
+  - `Regime Switch Detector`: проверяет смену рыночного режима сначала как research signal.
+  - `Execution and Slippage Simulator`: моделирует комиссии, spread, slippage, funding и
+    liquidity сначала как deterministic Backtest/Critic service.
+  - `Dynamic Risk and Capital Allocator`: задает risk policy для exposure, drawdown,
+    correlated positions и capital allocation сначала как explicit contracts.
+
+  Почему не сейчас: проект пока research-first. Для paper/live нужны approvals, monitoring,
+  kill switch, incident handling, execution gateway, audit logs и risk policies.
+
+- [ ] **Использовать Jesse MCP только как reference checklist** (`TD-0033`, `IDEA-0007`).
+  Полезны идеи по pairs trading, risk tools, jobs и certification gates. Нельзя подключать
+  как runtime dependency или давать live trading tools без отдельного решения.
+
+- [ ] **Развивать multi-asset statistical arbitrage поэтапно** (`TD-0037`).
+  Будут cross-asset spreads, factor exposure, session-aware data, portfolio risk allocation
+  и asset-class-specific adjustments, но только после стабильного pair pipeline и risk/data
+  boundaries.
+
+- [ ] **Оценивать внешние RAG/LLM eval репозитории как источники идей, не зависимости**
+  (`IDEA-0008`).
+  `hparreao/Awesome-AI-Evaluation-Guide` полезен как карта evaluation practices.
+  `AIAnytime/rag-evaluator` полезен как пример reference-based metrics, но его BLEU/ROUGE-
+  style подход не стоит ставить в проект без отдельного spike.
+
+## Уже закрыто, но надо наблюдать
+
+- [x] **MVP CLI/scripted workflows закрыты** (`Task 15`).
+  Полный arbitrary runner вынесен в `TD-0038`.
+
+- [x] **CI/testing baseline закрыт** (`Task 18`).
+  CI не должен зависеть от local services, secrets, ApeRAG, Infisical или OmniRoute.
+
+- [x] **Report Agent не строит полные графики из aggregate-only metrics** (`TD-0023` core).
+  Остаток относится к future full runner.

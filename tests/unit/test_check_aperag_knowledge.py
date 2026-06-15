@@ -24,6 +24,16 @@ def test_check_aperag_knowledge_can_require_expected_text() -> None:
     assert "$_.content" in script
     assert "$_.metadata.title" in script
     assert "expected text" in script
+    assert "$normalizedCombinedText" in script
+    assert '-replace "\\s+", " "' in script
+
+
+def test_check_aperag_knowledge_allows_larger_topk_for_semantic_qa() -> None:
+    """Decision QA should be able to search deeper than the default smoke test."""
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "[int]$TopK = 5" in script
+    assert "topk = $TopK" in script
 
 
 def test_check_aperag_knowledge_readiness_depends_on_required_indexes() -> None:

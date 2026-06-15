@@ -43,6 +43,10 @@ foreach ($file in $files) {
     }
 }
 
+# Перед проверкой поднимаем local embedding endpoint, чтобы memory checks не падали
+# только из-за остановленного локального сервера.
+.\scripts\start_aperag_embedding_server.ps1 -HealthWaitSeconds 180 | Write-Output
+
 .\scripts\check_aperag.ps1 -IncludeGraphSmoke:$IncludeGraphSmoke | Write-Output
 
 $indexDeadline = (Get-Date).AddSeconds($IndexWaitTimeoutSeconds)

@@ -101,3 +101,38 @@ Why later: The current MVP already has a native research pipeline. Jesse MCP sho
 evaluated after dashboard and failure-handling baselines exist, and only as a sandboxed
 external adapter or checklist source. It should not replace the current Backtest,
 Statistical Testing, Hypothesis, Critic, Coordinator, or Memory Agent boundaries.
+
+## IDEA-0008: Evaluate external RAG and AI evaluation repositories as methodology references
+
+Status: proposed
+
+Idea: Use external evaluation resources as methodology input for project-native memory and
+agent evaluation checks.
+
+References:
+- `hparreao/Awesome-AI-Evaluation-Guide`: useful as a broad guide for evaluating LLM,
+  RAG, and agentic systems, especially its separation of retrieval quality, generation
+  quality, domain-specific evaluation, and multi-agent evaluation.
+- `AIAnytime/rag-evaluator`: useful as a simple reference for traditional
+  reference-answer metrics such as BLEU, ROUGE, BERTScore-style similarity, readability,
+  and diversity.
+
+What to adopt:
+- Keep project-native memory quality checks split into runtime health, freshness, graph
+  readiness, retrieval checks, and later answer-quality checks.
+- Use curated project questions with required facts and forbidden hallucinations before
+  adding any LLM-as-judge dependency.
+- Treat reference-answer metrics as optional future diagnostics, not as proof that project
+  memory is correct.
+
+What not to adopt blindly:
+- Do not add `rag-evaluator` as a dependency before a small spike proves value on our
+  ApeRAG/project-memory workload.
+- Do not rely on BLEU/ROUGE-style overlap as the main quality signal for project decisions;
+  our memory needs decision recall, citation/source relevance, and hallucination checks.
+- Do not send secrets, raw logs, registry dumps, or metric-heavy payloads to external eval
+  providers.
+
+Why later: The immediate need is a lightweight local memory-quality guard over curated
+project decisions. Full answer-quality evaluation should wait until real agents generate
+answers from ApeRAG context.

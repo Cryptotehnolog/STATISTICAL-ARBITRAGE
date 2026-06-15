@@ -12,6 +12,9 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
 `scripts/check_deferred_work_checklist.ps1` guards that every open `TD-*` and every
 proposed `IDEA-*` is visible in `docs/deferred_work_checklist.md`, so deferred work cannot
 quietly stay in memory shards without a human-facing checklist entry.
+`scripts/check_memory_quality.ps1` checks memory quality as a layered readiness gate:
+auto-start local embedding, verify ApeRAG health/freshness/graph readiness, and run
+project-specific semantic QA queries for key decisions.
 
 ## Active Follow-up Themes
 
@@ -96,6 +99,11 @@ quietly stay in memory shards without a human-facing checklist entry.
   data-quality validation. Do not add live execution, hidden thresholds, fixed Kelly
   fractions, ETF iNAV arbitrage, NLP filters, or broad provider integrations before the
   relevant MVP boundaries are stable.
+- External evaluation references: `hparreao/Awesome-AI-Evaluation-Guide` and
+  `AIAnytime/rag-evaluator` may inform project-native memory and agent evaluation, but
+  should not become runtime dependencies without a focused spike. Prefer local curated
+  questions, required facts, retrieval/freshness checks, and later answer-quality checks
+  over generic BLEU/ROUGE-style scores for project decisions.
 
 ## Closed Follow-up
 

@@ -3,7 +3,8 @@ param(
     [string]$CollectionTitle = "stat-arb-project-knowledge",
     [string]$Query = "What are the current memory backend decisions for the Statistical Arbitrage project?",
     [string[]]$Keywords = @(),
-    [string[]]$ExpectedText = @()
+    [string[]]$ExpectedText = @(),
+    [int]$TopK = 5
 )
 
 $ErrorActionPreference = "Stop"
@@ -98,11 +99,11 @@ if ($resolvedKeywords.Count -eq 0) {
 $search = Invoke-ApeRagJson -Method "POST" -Path "/api/v1/collections/$($collection.id)/searches" -Body @{
     query = $Query
     vector_search = @{
-        topk = 5
+        topk = $TopK
         similarity = 0.1
     }
     fulltext_search = @{
-        topk = 5
+        topk = $TopK
         keywords = $resolvedKeywords
     }
     save_to_history = $false
@@ -120,9 +121,10 @@ $combinedText = (($search.items | ForEach-Object {
     }
     "$($_.content) $($_.text) $($_.source) $($_.metadata.title) $titles"
 }) -join "`n")
+$normalizedCombinedText = ($combinedText -replace "\s+", " ").Trim()
 $missingExpected = @(
     $ExpectedText | Where-Object {
-        $_ -and $combinedText -notmatch [regex]::Escape($_)
+        $_ -and $normalizedCombinedText -notmatch [regex]::Escape(($_ -replace "\s+", " ").Trim())
     }
 )
 if ($missingExpected.Count -gt 0) {
