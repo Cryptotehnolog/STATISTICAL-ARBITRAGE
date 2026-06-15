@@ -120,6 +120,8 @@ def _quality_report_record(
         alignment_score=report.alignment_score,
         quality_score=report.quality_score,
         passed=report.passed,
+        is_valid=report.is_valid,
+        invalid_reason=report.invalid_reason,
         issues=[issue.model_dump(mode="json") for issue in report.issues],
         report_path=str(report_path),
         generated_at=_naive_utc(report.generated_at),

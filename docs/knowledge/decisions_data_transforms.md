@@ -101,9 +101,11 @@ timestamps before Statistical Testing Agent work begins.
 Alternatives considered: Leave optional property tests open; rely on example-based tests;
 defer all property tests until production hardening.
 
-Update: One-bar `DataQualityReport` is now a valid diagnostic report. The report contract
-allows `start_date == end_date`, while the stricter `Dataset` contract still requires
-`end_date` after `start_date` for research-ready data.
+Update: One-bar `DataQualityReport` is now diagnostic only, not a valid quality report.
+The report contract allows `start_date == end_date` only with `is_valid=false`,
+`passed=false`, `invalid_reason="insufficient_data"`, and an `insufficient_data` ERROR
+issue. The stricter `Dataset` contract still requires `end_date` after `start_date` for
+research-ready data.
 
 ## DEC-0025: Require JSON round-trip coverage for every domain entity
 

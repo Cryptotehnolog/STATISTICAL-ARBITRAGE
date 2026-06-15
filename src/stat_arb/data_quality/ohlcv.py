@@ -66,6 +66,19 @@ def validate_ohlcv_batch(
     abnormal_volume_ratio = abnormal_volume_count / len(sorted_bars)
 
     issues: list[DataQualityIssue] = []
+    insufficient_data = len(unique_timestamps) < 2
+    if insufficient_data:
+        issues.append(
+            DataQualityIssue(
+                code="insufficient_data",
+                severity=DataQualitySeverity.ERROR,
+                message="A single OHLCV bar is diagnostic only and cannot validate data quality.",
+                count=len(unique_timestamps),
+                first_timestamp=unique_timestamps[0],
+                last_timestamp=unique_timestamps[-1],
+            )
+        )
+
     if missing_timestamps:
         severity = (
             DataQualitySeverity.ERROR
@@ -112,11 +125,15 @@ def validate_ohlcv_batch(
         )
 
     passed = not any(issue.severity == DataQualitySeverity.ERROR for issue in issues)
-    quality_score = _quality_score(
-        expected_bar_count=expected_bar_count,
-        missing_bars=len(missing_timestamps),
-        duplicate_timestamps=duplicate_count,
-        abnormal_volume_count=abnormal_volume_count,
+    quality_score = (
+        0.0
+        if insufficient_data
+        else _quality_score(
+            expected_bar_count=expected_bar_count,
+            missing_bars=len(missing_timestamps),
+            duplicate_timestamps=duplicate_count,
+            abnormal_volume_count=abnormal_volume_count,
+        )
     )
 
     return DataQualityReport(
@@ -135,6 +152,8 @@ def validate_ohlcv_batch(
         alignment_score=1.0 - missing_bar_ratio,
         quality_score=quality_score,
         passed=passed,
+        is_valid=not insufficient_data,
+        invalid_reason="insufficient_data" if insufficient_data else None,
         issues=issues,
     )
 

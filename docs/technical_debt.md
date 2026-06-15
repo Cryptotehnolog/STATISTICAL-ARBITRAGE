@@ -455,9 +455,11 @@ Related tasks: 4.9, 4.10, 15.1.
 Status: resolved
 
 Resolution: `DataQualityReport` now allows `start_date == end_date` so one-bar OHLCV
-validation can produce a valid diagnostic report instead of crashing. Reversed ranges are
-still rejected. `Dataset` remains stricter and still requires `end_date` after
-`start_date`, so a one-bar diagnostic report does not become a research-ready dataset.
+validation can produce a diagnostic trace instead of crashing, but it must be
+`is_valid=false`, `passed=false`, `invalid_reason="insufficient_data"`, and carry an
+`insufficient_data` ERROR issue. Reversed ranges are still rejected. `Dataset` remains
+stricter and still requires `end_date` after `start_date`, so a one-bar diagnostic cannot
+be mistaken for research-ready data.
 
 Closed by: one-bar DataQualityReport contract task.
 

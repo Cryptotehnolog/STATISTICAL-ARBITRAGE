@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
@@ -109,9 +109,42 @@ def init_database(db_path: Path | None = None, drop_existing: bool = False) -> E
 
     logger.info("Creating database tables...")
     Base.metadata.create_all(engine)
+    ensure_sqlite_registry_schema(engine)
     logger.info("Database initialization complete.")
 
     return engine
+
+
+def ensure_sqlite_registry_schema(engine: Engine) -> None:
+    """Apply lightweight SQLite schema compatibility fixes for local MVP registries."""
+    if engine.dialect.name != "sqlite":
+        return
+
+    inspector = inspect(engine)
+    if "data_quality_reports" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("data_quality_reports")
+    }
+    statements = []
+    if "is_valid" not in existing_columns:
+        statements.append(
+            "ALTER TABLE data_quality_reports "
+            "ADD COLUMN is_valid BOOLEAN NOT NULL DEFAULT 1"
+        )
+    if "invalid_reason" not in existing_columns:
+        statements.append(
+            "ALTER TABLE data_quality_reports "
+            "ADD COLUMN invalid_reason VARCHAR(200)"
+        )
+
+    if not statements:
+        return
+
+    with engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))
 
 
 def create_session_factory(engine: Engine) -> sessionmaker:
@@ -197,6 +230,7 @@ class DatabaseManager:
 
         logger.info("Creating database tables...")
         Base.metadata.create_all(self.engine)
+        ensure_sqlite_registry_schema(self.engine)
         logger.info("Database initialization complete.")
 
     @contextmanager

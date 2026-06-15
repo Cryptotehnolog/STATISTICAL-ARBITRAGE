@@ -222,7 +222,7 @@ def test_data_quality_report_requires_issues_for_failures() -> None:
 
 
 def test_data_quality_report_allows_single_timestamp_diagnostic_report() -> None:
-    """One-bar quality checks should be representable as diagnostic reports."""
+    """One-bar diagnostics should not masquerade as valid quality reports."""
     timestamp = datetime(2024, 1, 1, tzinfo=UTC)
 
     report = DataQualityReport(
@@ -235,12 +235,38 @@ def test_data_quality_report_allows_single_timestamp_diagnostic_report() -> None
         bar_count=1,
         expected_bar_count=1,
         timezone_normalized=True,
-        passed=True,
+        quality_score=0.0,
+        passed=False,
+        is_valid=False,
+        invalid_reason="insufficient_data",
+        issues=[
+            DataQualityIssue(
+                code="insufficient_data",
+                severity=DataQualitySeverity.ERROR,
+                message="A single OHLCV bar is diagnostic only.",
+            )
+        ],
     )
 
     assert report.start_date == timestamp
     assert report.end_date == timestamp
     assert report.bar_count == 1
+    assert report.is_valid is False
+    assert report.invalid_reason == "insufficient_data"
+
+    with pytest.raises(ValidationError, match="single-timestamp data quality reports must be invalid"):
+        DataQualityReport(
+            dataset_id=uuid4(),
+            symbol="BTC/USDT",
+            source=DatasetSource.CCXT,
+            timeframe="5m",
+            start_date=timestamp,
+            end_date=timestamp,
+            bar_count=1,
+            expected_bar_count=1,
+            timezone_normalized=True,
+            passed=True,
+        )
 
 
 def test_data_quality_report_rejects_reversed_time_range() -> None:

@@ -169,6 +169,8 @@ class DataQualityReportRecord(Base):
     alignment_score: Mapped[float] = mapped_column(Float, nullable=False)
     quality_score: Mapped[float] = mapped_column(Float, nullable=False)
     passed: Mapped[bool] = mapped_column(Boolean, nullable=False, index=True)
+    is_valid: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    invalid_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
     issues: Mapped[list | None] = mapped_column(JSON, nullable=True)
     report_path: Mapped[str] = mapped_column(String(500), nullable=False)
     generated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utc_now)

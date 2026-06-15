@@ -153,9 +153,11 @@
   `astral-sh/setup-uv@v8.2.0`; CI после обновления зеленый.
 
 - [x] **One-bar DataQualityReport решен как diagnostic report** (`TD-0018`).
-  `DataQualityReport` теперь допускает `start_date == end_date`, чтобы validator мог
-  вернуть отчет по одной свече. Это не делает одну свечу полноценным `Dataset`: dataset
-  contract по-прежнему требует `end_date > start_date`.
+  Если пришла только одна свеча, система теперь сохраняет не “чистый отчет качества”, а
+  диагностический след: `is_valid=false`, `passed=false`,
+  `invalid_reason="insufficient_data"` и issue `insufficient_data`. Это нужно, чтобы агенты
+  не приняли одну свечу за полноценные проверенные данные. `Dataset` по-прежнему требует
+  `end_date > start_date`.
 
 - [x] **Report Agent не строит полные графики из aggregate-only metrics** (`TD-0023` core).
   Остаток относится к future full runner.

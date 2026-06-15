@@ -8,17 +8,20 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.data_quality import OHLCVQualityConfig
+from stat_arb.domain import DataQualityIssue, DataQualityReport, DataQualitySeverity, DatasetSource
 from stat_arb.ingestion import CCXTOHLCVSource, OHLCVQualityError, fetch_validate_write_ohlcv
 from stat_arb.storage import (
     Base,
     DataQualityReportRecord,
     Dataset,
+    ensure_sqlite_registry_schema,
     persist_ohlcv_ingestion_result,
 )
+from stat_arb.storage.data_quality import _quality_report_record
 
 
 def _strict_quality_config() -> OHLCVQualityConfig:
@@ -173,3 +176,75 @@ def test_persist_ohlcv_ingestion_result_requires_passing_quality(session: Sessio
     finally:
         rmtree(output_root, ignore_errors=True)
         rmtree(metadata_root, ignore_errors=True)
+
+
+def test_quality_report_record_preserves_invalid_diagnostic_state() -> None:
+    """Registry records should preserve insufficient-data diagnostic status."""
+    timestamp = datetime(2024, 1, 1, tzinfo=UTC)
+    report = DataQualityReport(
+        dataset_id=uuid4(),
+        symbol="BTC/USDT",
+        source=DatasetSource.CCXT,
+        timeframe="5m",
+        start_date=timestamp,
+        end_date=timestamp,
+        bar_count=1,
+        expected_bar_count=1,
+        timezone_normalized=True,
+        quality_score=0.0,
+        passed=False,
+        is_valid=False,
+        invalid_reason="insufficient_data",
+        issues=[
+            DataQualityIssue(
+                code="insufficient_data",
+                severity=DataQualitySeverity.ERROR,
+                message="A single OHLCV bar is diagnostic only.",
+            )
+        ],
+    )
+
+    record = _quality_report_record(report, Path("quality.json"))
+
+    assert record.passed is False
+    assert record.is_valid is False
+    assert record.invalid_reason == "insufficient_data"
+
+
+def test_ensure_sqlite_registry_schema_adds_data_quality_diagnostic_columns() -> None:
+    """Existing SQLite registries should gain diagnostic columns without data loss."""
+    engine = create_engine("sqlite:///:memory:")
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE data_quality_reports (
+                    report_id VARCHAR(36) PRIMARY KEY,
+                    dataset_id VARCHAR(36) NOT NULL,
+                    symbol VARCHAR(50) NOT NULL,
+                    source VARCHAR(50) NOT NULL,
+                    timeframe VARCHAR(10) NOT NULL,
+                    start_date DATETIME NOT NULL,
+                    end_date DATETIME NOT NULL,
+                    bar_count INTEGER NOT NULL,
+                    expected_bar_count INTEGER NOT NULL,
+                    timezone_normalized BOOLEAN NOT NULL,
+                    alignment_score FLOAT NOT NULL,
+                    quality_score FLOAT NOT NULL,
+                    passed BOOLEAN NOT NULL,
+                    report_path VARCHAR(500) NOT NULL,
+                    generated_at DATETIME NOT NULL
+                )
+                """
+            )
+        )
+
+    ensure_sqlite_registry_schema(engine)
+
+    with engine.connect() as connection:
+        columns = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(data_quality_reports)"))
+        }
+
+    assert "is_valid" in columns
+    assert "invalid_reason" in columns

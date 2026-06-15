@@ -328,6 +328,8 @@ class DataQualityReport(DomainModel):
     alignment_score: float = Field(default=1.0, ge=0.0, le=1.0)
     quality_score: float = Field(default=1.0, ge=0.0, le=1.0)
     passed: bool
+    is_valid: bool = True
+    invalid_reason: str | None = Field(default=None, min_length=1, max_length=200)
     issues: list[DataQualityIssue] = Field(default_factory=list)
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -342,10 +344,18 @@ class DataQualityReport(DomainModel):
         """Validate report time range, counts, and pass/fail explanation."""
         if self.end_date < self.start_date:
             raise ValueError("end_date must be on or after start_date")
+        if self.start_date == self.end_date and self.is_valid:
+            raise ValueError("single-timestamp data quality reports must be invalid diagnostics")
         if self.bar_count > self.expected_bar_count:
             raise ValueError("bar_count cannot exceed expected_bar_count")
         if self.missing_bars > self.expected_bar_count:
             raise ValueError("missing_bars cannot exceed expected_bar_count")
+        if not self.is_valid and not self.invalid_reason:
+            raise ValueError("invalid data quality reports require invalid_reason")
+        if self.is_valid and self.invalid_reason:
+            raise ValueError("valid data quality reports cannot include invalid_reason")
+        if not self.is_valid and self.passed:
+            raise ValueError("invalid data quality reports cannot pass")
         if not self.passed and not self.issues:
             raise ValueError("failed data quality reports require issues")
         if self.passed and any(issue.severity == DataQualitySeverity.ERROR for issue in self.issues):

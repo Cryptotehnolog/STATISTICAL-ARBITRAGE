@@ -137,5 +137,7 @@ project-specific semantic QA queries for key decisions.
   `actions/setup-python@v6`, and `astral-sh/setup-uv@v8.2.0`, with tests guarding against
   older action versions.
 - One-bar data quality report contract is resolved. `DataQualityReport` allows
-  `start_date == end_date` as a diagnostic report, but `Dataset` remains stricter and still
-  requires `end_date` after `start_date` for research-ready data.
+  `start_date == end_date` only as an invalid diagnostic trace:
+  `is_valid=false`, `passed=false`, `invalid_reason="insufficient_data"`, and an
+  `insufficient_data` ERROR issue. `Dataset` remains stricter and still requires
+  `end_date` after `start_date` for research-ready data.

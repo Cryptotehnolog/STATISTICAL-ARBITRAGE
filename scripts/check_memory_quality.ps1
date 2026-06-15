@@ -98,9 +98,9 @@ try {
             -TopK 20 `
             -ExpectedText @(
                 "DataQualityReport",
-                "diagnostic report",
-                "start_date == end_date",
-                "Dataset"
+                "is_valid=false",
+                "passed=false",
+                "insufficient_data"
             ) | Write-Output
     }
 

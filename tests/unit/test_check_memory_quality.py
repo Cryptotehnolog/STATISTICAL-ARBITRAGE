@@ -30,4 +30,6 @@ def test_memory_quality_check_asks_project_specific_questions() -> None:
     assert "GitHub Actions Node.js 24" in script
     assert "actions/checkout@v6" in script
     assert "One-bar DataQualityReport" in script
-    assert "diagnostic report" in script
+    assert "is_valid=false" in script
+    assert "passed=false" in script
+    assert "insufficient_data" in script
