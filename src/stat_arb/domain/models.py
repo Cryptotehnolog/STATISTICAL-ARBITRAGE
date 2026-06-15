@@ -340,8 +340,8 @@ class DataQualityReport(DomainModel):
     @model_validator(mode="after")
     def validate_report_consistency(self) -> DataQualityReport:
         """Validate report time range, counts, and pass/fail explanation."""
-        if self.end_date <= self.start_date:
-            raise ValueError("end_date must be after start_date")
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date")
         if self.bar_count > self.expected_bar_count:
             raise ValueError("bar_count cannot exceed expected_bar_count")
         if self.missing_bars > self.expected_bar_count:

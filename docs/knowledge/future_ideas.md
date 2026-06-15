@@ -136,3 +136,35 @@ What not to adopt blindly:
 Why later: The immediate need is a lightweight local memory-quality guard over curated
 project decisions. Full answer-quality evaluation should wait until real agents generate
 answers from ApeRAG context.
+
+## IDEA-0009: Evaluate Recursive Language Models as a sandboxed long-context reasoning spike
+
+Status: proposed
+
+Idea: Compare Recursive Language Models (RLMs) against the current ApeRAG-backed memory
+path for a narrow project-memory workload, without replacing the active backend.
+
+References:
+- `alexzhang13/rlm`: official reference implementation for Recursive Language Models.
+- `Recursive Language Models` paper: describes an inference-time strategy where the model
+  treats long context as an external environment and recursively inspects/decomposes it.
+
+What to adopt:
+- Treat RLMs as a possible future reasoning harness for very large design/audit documents,
+  long experiment traces, or deep code-review context.
+- If tested, run it only in an isolated sandbox and compare against ApeRAG on the same
+  curated project questions, required facts, source relevance, latency, cost, and
+  hallucination checks.
+- Keep ApeRAG as the durable memory store; RLMs may become an inference/query strategy, not
+  the source of truth.
+
+What not to adopt blindly:
+- Do not replace ApeRAG with RLMs before a timeboxed sandbox spike proves better quality on
+  our project-memory workload.
+- Do not allow an RLM local REPL to access project files, secrets, Docker socket, Infisical,
+  or registry writes without a strict sandbox and read-only policy.
+- Do not treat RLM marketing claims as production readiness.
+
+Why later: The project currently needs stable, inspectable, source-backed memory for
+agents. RLMs are promising for long-context reasoning, but they add execution/sandbox risk
+and should be evaluated only after the existing memory quality guard is stable.

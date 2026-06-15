@@ -279,23 +279,6 @@ Follow-up:
 
 Related tasks: 11.2, 11.4, 13.4.
 
-### TD-0018: Decide one-bar DataQualityReport contract
-
-Status: open
-
-Why deferred: Completing Data Agent property tests exposed that `DataQualityReport`
-currently requires `end_date` to be after `start_date`, so one-bar OHLCV validation cannot
-produce a valid report. This is not blocking normal research batches, but it is a real
-domain boundary decision.
-
-Follow-up:
-- Decide whether one-bar datasets are invalid input or valid diagnostic reports.
-- If valid, update `DataQualityReport` validation and add an explicit unit/property test.
-- If invalid, make `validate_ohlcv_batch` fail early with a clear message before creating
-  the report.
-
-Related tasks: 4.3, 4.4.
-
 ### TD-0001: Add Ubuntu portability hardening
 
 Status: open
@@ -465,23 +448,32 @@ Follow-up:
 
 Related tasks: 4.9, 4.10, 15.1.
 
-### TD-0016: Update GitHub Actions to Node.js 24-compatible actions
+## Resolved
 
-Status: open
+### TD-RESOLVED-0018: Decide one-bar DataQualityReport contract
 
-Why deferred: The current CI run passes, but GitHub warns that Node.js 20 actions are
-deprecated and will be forced to Node.js 24 by default on June 16, 2026.
+Status: resolved
 
-Follow-up:
-- Check whether newer `actions/checkout`, `actions/setup-python`, and
-  `astral-sh/setup-uv` releases explicitly support Node.js 24.
-- Update `.github/workflows/ci.yml` action versions or set the recommended compatibility
-  environment variable when the upstream actions support it.
-- Confirm the next CI run remains green.
+Resolution: `DataQualityReport` now allows `start_date == end_date` so one-bar OHLCV
+validation can produce a valid diagnostic report instead of crashing. Reversed ranges are
+still rejected. `Dataset` remains stricter and still requires `end_date` after
+`start_date`, so a one-bar diagnostic report does not become a research-ready dataset.
+
+Closed by: one-bar DataQualityReport contract task.
+
+Related tasks: 4.3, 4.4.
+
+### TD-RESOLVED-0016: Update GitHub Actions to Node.js 24-compatible actions
+
+Status: resolved
+
+Resolution: `.github/workflows/ci.yml` now uses `actions/checkout@v6`,
+`actions/setup-python@v6`, and `astral-sh/setup-uv@v8.2.0`. Unit tests guard against
+regressing to the older action versions, and GitHub CI is green after the update.
+
+Closed by: `9082302 Update GitHub Actions Node runtime`.
 
 Related tasks: 18.1, 18.4.
-
-## Resolved
 
 ### TD-RESOLVED-0035: Add audited Coordinator approval transition API for dashboard actions
 

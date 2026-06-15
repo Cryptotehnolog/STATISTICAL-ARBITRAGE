@@ -221,6 +221,45 @@ def test_data_quality_report_requires_issues_for_failures() -> None:
         )
 
 
+def test_data_quality_report_allows_single_timestamp_diagnostic_report() -> None:
+    """One-bar quality checks should be representable as diagnostic reports."""
+    timestamp = datetime(2024, 1, 1, tzinfo=UTC)
+
+    report = DataQualityReport(
+        dataset_id=uuid4(),
+        symbol="BTC/USDT",
+        source=DatasetSource.CCXT,
+        timeframe="5m",
+        start_date=timestamp,
+        end_date=timestamp,
+        bar_count=1,
+        expected_bar_count=1,
+        timezone_normalized=True,
+        passed=True,
+    )
+
+    assert report.start_date == timestamp
+    assert report.end_date == timestamp
+    assert report.bar_count == 1
+
+
+def test_data_quality_report_rejects_reversed_time_range() -> None:
+    """Quality reports can be single-timestamp, but not reversed."""
+    with pytest.raises(ValidationError, match="on or after start_date"):
+        DataQualityReport(
+            dataset_id=uuid4(),
+            symbol="BTC/USDT",
+            source=DatasetSource.CCXT,
+            timeframe="5m",
+            start_date=datetime(2024, 1, 2, tzinfo=UTC),
+            end_date=datetime(2024, 1, 1, tzinfo=UTC),
+            bar_count=1,
+            expected_bar_count=1,
+            timezone_normalized=True,
+            passed=True,
+        )
+
+
 def test_data_quality_report_rejects_inconsistent_counts_and_passed_errors() -> None:
     """Quality reports should guard impossible counts and successful error states."""
     dataset_id = uuid4()

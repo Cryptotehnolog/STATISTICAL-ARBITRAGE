@@ -37,8 +37,6 @@ project-specific semantic QA queries for key decisions.
   followed by `scripts/check_aperag_memory_fresh.ps1 -RequireGraph`.
 - Curated shards: keep `docs/knowledge/*.md` synchronized with material Kiro planning
   changes and reseed ApeRAG after updates.
-- GitHub Actions Node.js 24 migration: CI is green, but GitHub warns Node.js 20 actions are
-  deprecated and must be updated before the enforced Node.js 24 transition.
 - CLI/dashboard coverage hardening: CI must measure `stat_arb.cli` and
   `stat_arb.dashboard`; stricter dashboard-specific gates should wait until Streamlit
   logic is further extracted into testable helpers.
@@ -59,9 +57,6 @@ project-specific semantic QA queries for key decisions.
   and dataset provenance are wired to the registry.
 - Data-quality failure memory: keep routing `DataQualityFailureSummary` through
   `MemoryAgentService`, while keeping numeric report details in the registry.
-- One-bar data quality reports: decide whether a single OHLCV bar should be invalid input
-  or a valid diagnostic `DataQualityReport`; current domain validation rejects equal
-  `start_date` and `end_date`.
 - Cost Assumption Agent: collect, verify, store, and refresh exchange/account-specific cost
   snapshots; Backtest Agent must not use old planning percentages as trusted market data.
 - Agent RAG answer-quality evaluation: add an eval script only after the first agent
@@ -104,6 +99,10 @@ project-specific semantic QA queries for key decisions.
   should not become runtime dependencies without a focused spike. Prefer local curated
   questions, required facts, retrieval/freshness checks, and later answer-quality checks
   over generic BLEU/ROUGE-style scores for project decisions.
+- Recursive Language Models: evaluate only as a future sandboxed long-context reasoning
+  spike. Do not replace ApeRAG as the durable memory backend unless a read-only comparison
+  proves better quality on curated project questions, required facts, source relevance,
+  latency, cost, and hallucination checks.
 
 ## Closed Follow-up
 
@@ -134,3 +133,9 @@ project-specific semantic QA queries for key decisions.
   transition plus Memory Agent policy.
 - Dashboard approve/reject/quarantine UI remains intentionally deferred until Task 17
   failure handling provides safe operator feedback, retries, and error-state behavior.
+- GitHub Actions Node.js 24 migration is resolved. CI uses `actions/checkout@v6`,
+  `actions/setup-python@v6`, and `astral-sh/setup-uv@v8.2.0`, with tests guarding against
+  older action versions.
+- One-bar data quality report contract is resolved. `DataQualityReport` allows
+  `start_date == end_date` as a diagnostic report, but `Dataset` remains stricter and still
+  requires `end_date` after `start_date` for research-ready data.

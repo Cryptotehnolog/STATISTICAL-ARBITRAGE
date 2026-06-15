@@ -66,6 +66,20 @@ def test_validate_ohlcv_batch_passes_complete_series() -> None:
     assert report.issues == []
 
 
+def test_validate_ohlcv_batch_returns_single_bar_diagnostic_report() -> None:
+    """A single bar should return a diagnostic report instead of crashing."""
+    bar = _bar(0)
+
+    report = validate_ohlcv_batch([bar], config=_strict_quality_config())
+
+    assert report.passed is True
+    assert report.start_date == bar.timestamp
+    assert report.end_date == bar.timestamp
+    assert report.bar_count == 1
+    assert report.expected_bar_count == 1
+    assert report.quality_score == 1.0
+
+
 def test_validate_ohlcv_batch_detects_missing_bars() -> None:
     """Missing timestamps should be counted and fail strict validation."""
     report = validate_ohlcv_batch([_bar(0), _bar(2)], config=_strict_quality_config())

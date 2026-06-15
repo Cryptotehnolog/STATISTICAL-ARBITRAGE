@@ -13,15 +13,6 @@
   Нужно описать, когда безопасно запускать `scripts/clean_runtime_artifacts.ps1`, что он
   удаляет, а какие данные трогать нельзя. Это можно сделать до основной документации.
 
-- [ ] **Обновить GitHub Actions под Node.js 24** (`TD-0016`).
-  GitHub предупреждает о смене Node.js runtime для actions. Нужно обновить версии actions
-  или совместимость, затем дождаться зеленого CI.
-
-- [ ] **Решить, что делать с one-bar DataQualityReport** (`TD-0018`).
-  Сейчас один OHLCV bar не может стать полноценным отчетом качества, потому что `start_date`
-  и `end_date` совпадают. Нужно выбрать: один bar запрещен как вход или разрешен как
-  diagnostic report.
-
 - [ ] **Улучшать тестируемость CLI/dashboard без жестких coverage gates** (`TD-0036`).
   Нужно постепенно выносить форматирование и projection logic из Streamlit/CLI в helpers.
   Строгие отдельные coverage gates включать только когда UI-логика станет достаточно
@@ -142,6 +133,13 @@
   `AIAnytime/rag-evaluator` полезен как пример reference-based metrics, но его BLEU/ROUGE-
   style подход не стоит ставить в проект без отдельного spike.
 
+- [ ] **Проверить Recursive Language Models как sandbox-spike, не как замену ApeRAG**
+  (`IDEA-0009`).
+  RLMs могут быть полезны для длинных документов и глубокого reasoning по большому
+  контексту, но это execution harness с sandbox-рисками. Сначала только read-only
+  сравнение на наших curated questions, required facts, latency, cost и hallucination
+  checks.
+
 ## Уже закрыто, но надо наблюдать
 
 - [x] **MVP CLI/scripted workflows закрыты** (`Task 15`).
@@ -149,6 +147,15 @@
 
 - [x] **CI/testing baseline закрыт** (`Task 18`).
   CI не должен зависеть от local services, secrets, ApeRAG, Infisical или OmniRoute.
+
+- [x] **GitHub Actions обновлен под Node.js 24-compatible actions** (`TD-0016`).
+  Workflow использует `actions/checkout@v6`, `actions/setup-python@v6` и
+  `astral-sh/setup-uv@v8.2.0`; CI после обновления зеленый.
+
+- [x] **One-bar DataQualityReport решен как diagnostic report** (`TD-0018`).
+  `DataQualityReport` теперь допускает `start_date == end_date`, чтобы validator мог
+  вернуть отчет по одной свече. Это не делает одну свечу полноценным `Dataset`: dataset
+  contract по-прежнему требует `end_date > start_date`.
 
 - [x] **Report Agent не строит полные графики из aggregate-only metrics** (`TD-0023` core).
   Остаток относится к future full runner.

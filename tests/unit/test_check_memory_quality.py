@@ -27,3 +27,7 @@ def test_memory_quality_check_asks_project_specific_questions() -> None:
     assert "patoles/agent-flow" in script
     assert "Rust" in script
     assert "ApeRAG" in script
+    assert "GitHub Actions Node.js 24" in script
+    assert "actions/checkout@v6" in script
+    assert "One-bar DataQualityReport" in script
+    assert "diagnostic report" in script

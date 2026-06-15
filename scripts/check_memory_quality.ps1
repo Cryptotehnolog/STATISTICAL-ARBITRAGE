@@ -76,6 +76,32 @@ try {
                 "stat-arb-agent-memory",
                 "Memory Agent policy"
             ) | Write-Output
+
+        Write-Output "- Semantic QA: GitHub Actions Node.js 24 migration"
+        .\scripts\check_aperag_knowledge.ps1 `
+            -EnvFile $EnvFile `
+            -Query "What is the status of the GitHub Actions Node.js 24 migration?" `
+            -Keywords @("GitHub", "Actions", "Node.js", "24", "checkout", "setup-python", "setup-uv") `
+            -TopK 20 `
+            -ExpectedText @(
+                "GitHub Actions Node.js 24",
+                "actions/checkout@v6",
+                "actions/setup-python@v6",
+                "astral-sh/setup-uv@v8.2.0"
+            ) | Write-Output
+
+        Write-Output "- Semantic QA: One-bar DataQualityReport"
+        .\scripts\check_aperag_knowledge.ps1 `
+            -EnvFile $EnvFile `
+            -Query "What is the one-bar DataQualityReport contract decision?" `
+            -Keywords @("One-bar", "DataQualityReport", "diagnostic", "Dataset", "start_date", "end_date") `
+            -TopK 20 `
+            -ExpectedText @(
+                "DataQualityReport",
+                "diagnostic report",
+                "start_date == end_date",
+                "Dataset"
+            ) | Write-Output
     }
 
     Write-Output "Memory quality OK."
