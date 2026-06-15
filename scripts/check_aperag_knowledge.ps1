@@ -4,6 +4,7 @@ param(
     [string]$Query = "What are the current memory backend decisions for the Statistical Arbitrage project?",
     [string[]]$Keywords = @(),
     [string[]]$ExpectedText = @(),
+    [string[]]$ForbiddenText = @(),
     [int]$TopK = 5
 )
 
@@ -129,6 +130,15 @@ $missingExpected = @(
 )
 if ($missingExpected.Count -gt 0) {
     Write-Error "ApeRAG search results не содержат expected text: $($missingExpected -join ', ')"
+}
+
+$forbiddenMatches = @(
+    $ForbiddenText | Where-Object {
+        $_ -and $normalizedCombinedText -match [regex]::Escape(($_ -replace "\s+", " ").Trim())
+    }
+)
+if ($forbiddenMatches.Count -gt 0) {
+    Write-Error "ApeRAG search results содержат forbidden text: $($forbiddenMatches -join ', ')"
 }
 
 Write-Output "ApeRAG knowledge OK: docs=$($docs.items.Count), search_results=$($search.items.Count), keywords=$($resolvedKeywords -join ', ')"

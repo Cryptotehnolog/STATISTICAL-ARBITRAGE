@@ -59,9 +59,10 @@ project-specific semantic QA queries for key decisions.
   `MemoryAgentService`, while keeping numeric report details in the registry.
 - Cost Assumption Agent: collect, verify, store, and refresh exchange/account-specific cost
   snapshots; Backtest Agent must not use old planning percentages as trusted market data.
-- Agent RAG answer-quality evaluation: add an eval script only after the first agent
-  generates answers from ApeRAG context; current checks validate retrieval readiness, not
-  final answer quality.
+- Agent RAG answer-quality evaluation: `scripts/check_memory_quality.ps1` now includes a
+  deterministic answer-eval guard for key project-memory questions with required facts and
+  forbidden claims. Full generated-answer evaluation remains deferred until the first
+  agent produces final answers from ApeRAG context.
 - Report chart series sidecars: Backtest Agent can now persist factual chart series as a
   registry-linked `backtest_series` JSON artifact, and Report Agent can load it for visual
   artifacts. CLI reporting execution is now guarded by matching `backtest_series`

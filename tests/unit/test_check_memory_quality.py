@@ -13,7 +13,10 @@ def test_memory_quality_check_combines_health_freshness_and_semantic_qa() -> Non
     assert "check_aperag_memory_fresh.ps1" in script
     assert "-RequireCuratedGraph" in script
     assert "check_aperag_knowledge.ps1" in script
+    assert "check_aperag_answer_eval.ps1" in script
     assert "Semantic QA" in script
+    assert "Answer eval" in script
+    assert "SkipAnswerEval" in script
 
 
 def test_memory_quality_check_asks_project_specific_questions() -> None:
@@ -33,3 +36,14 @@ def test_memory_quality_check_asks_project_specific_questions() -> None:
     assert "is_valid=false" in script
     assert "passed=false" in script
     assert "insufficient_data" in script
+
+
+def test_memory_quality_answer_eval_has_required_and_forbidden_claims() -> None:
+    """Memory quality should verify both required facts and forbidden hallucinations."""
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "RequiredFacts" in script
+    assert "ForbiddenClaims" in script
+    assert "one-bar DataQualityReport passed=true" in script
+    assert "RLMs should replace ApeRAG now" in script
+    assert "Context Engine may bypass Memory Agent policy" in script

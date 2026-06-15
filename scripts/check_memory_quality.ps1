@@ -2,7 +2,8 @@ param(
     [string]$EnvFile = "data\aperag\.env",
     [int]$IndexWaitTimeoutSeconds = 300,
     [switch]$SkipGraph,
-    [switch]$SkipSemanticQa
+    [switch]$SkipSemanticQa,
+    [switch]$SkipAnswerEval
 )
 
 $ErrorActionPreference = "Stop"
@@ -101,6 +102,44 @@ try {
                 "is_valid=false",
                 "passed=false",
                 "insufficient_data"
+            ) | Write-Output
+    }
+
+    if (-not $SkipAnswerEval) {
+        Write-Output "- Answer eval: контракт One-bar DataQualityReport"
+        .\scripts\check_aperag_answer_eval.ps1 `
+            -EnvFile $EnvFile `
+            -Question "What is the one-bar DataQualityReport contract decision?" `
+            -Keywords @("One-bar", "DataQualityReport", "diagnostic", "insufficient_data") `
+            -TopK 20 `
+            -RequiredFacts @(
+                "DataQualityReport",
+                "is_valid=false",
+                "passed=false",
+                "insufficient_data"
+            ) `
+            -ForbiddenClaims @(
+                "one-bar DataQualityReport passed=true",
+                "one-bar data is clean",
+                "single bar is sufficient for quality metrics"
+            ) | Write-Output
+
+        Write-Output "- Answer eval: границы RLM и Context Engine routing"
+        .\scripts\check_aperag_answer_eval.ps1 `
+            -EnvFile $EnvFile `
+            -Question "Should RLMs or a Context Engine replace ApeRAG now?" `
+            -Keywords @("RLM", "Context", "Engine", "ApeRAG", "routing", "provenance") `
+            -TopK 20 `
+            -RequiredFacts @(
+                "ApeRAG",
+                "RLM",
+                "Context Engine",
+                "routing"
+            ) `
+            -ForbiddenClaims @(
+                "RLMs should replace ApeRAG now",
+                "Context Engine may bypass Memory Agent policy",
+                "invisible provenance is acceptable"
             ) | Write-Output
     }
 

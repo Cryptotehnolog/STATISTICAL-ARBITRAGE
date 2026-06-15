@@ -28,6 +28,16 @@ def test_check_aperag_knowledge_can_require_expected_text() -> None:
     assert '-replace "\\s+", " "' in script
 
 
+def test_check_aperag_knowledge_can_reject_forbidden_text() -> None:
+    """Answer eval needs negative assertions against known-wrong claims."""
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "[string[]]$ForbiddenText" in script
+    assert "$forbiddenMatches" in script
+    assert "forbidden text" in script
+    assert "$normalizedCombinedText" in script
+
+
 def test_check_aperag_knowledge_allows_larger_topk_for_semantic_qa() -> None:
     """Decision QA should be able to search deeper than the default smoke test."""
     script = SCRIPT_PATH.read_text(encoding="utf-8")

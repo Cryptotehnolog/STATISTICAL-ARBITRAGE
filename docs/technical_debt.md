@@ -266,16 +266,19 @@ Related tasks: 7.2, 7.8, 10.5, 11.1, 15.6.
 Status: open
 
 Why deferred: ApeRAG retrieval checks now validate indexed documents, topic-specific
-keywords, graph readiness, and expected retrieved markers. A full answer-quality evaluation
-requires a real agent boundary that asks ApeRAG and generates a final answer, which does
-not exist yet.
+keywords, graph readiness, expected retrieved markers, and a deterministic answer-eval
+guard with required facts plus forbidden claims for key project-memory questions. A full
+answer-quality evaluation still requires a real agent boundary that asks ApeRAG and
+generates a final answer, which does not exist yet.
 
 Follow-up:
-- Add a small eval script after the first agent produces answers from ApeRAG context.
+- Extend the existing deterministic eval after the first agent produces answers from
+  ApeRAG context.
 - Use fixed project questions with required facts, forbidden hallucinations, and expected
   decision IDs.
-- Keep retrieval readiness checks separate from answer-quality checks so backend health and
-  agent reasoning failures are easy to distinguish.
+- Keep retrieval readiness, deterministic project-memory answer eval, and generated-answer
+  quality eval separate so backend health and agent reasoning failures are easy to
+  distinguish.
 
 Related tasks: 11.2, 11.4, 13.4.
 

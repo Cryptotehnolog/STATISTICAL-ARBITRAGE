@@ -51,9 +51,11 @@
   добавлять простой downloader, который обходит quality report и registry.
 
 - [ ] **Добавить answer-quality eval для agent RAG** (`TD-0019`).
-  Сейчас мы проверяем retrieval/freshness. Когда появится агент, который отвечает по ApeRAG,
-  нужно проверять качество финального ответа: обязательные факты, запрет hallucinations,
-  ссылки на decisions.
+  Сейчас есть deterministic answer-eval для ключевых вопросов проектной памяти: он
+  проверяет обязательные факты и запрещенные ложные утверждения в retrieved ApeRAG context.
+  Когда появится агент, который сам формирует финальный ответ по ApeRAG, нужно добавить
+  отдельную проверку качества уже сгенерированного ответа: обязательные факты, запрет
+  hallucinations, ссылки на decisions.
 
 - [ ] **Добавить Cost Assumption Agent / service** (`TD-0020`).
   Он будет собирать и проверять fees, funding, borrow и slippage snapshots. Backtest Agent
