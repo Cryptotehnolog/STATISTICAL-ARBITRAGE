@@ -168,3 +168,38 @@ What not to adopt blindly:
 Why later: The project currently needs stable, inspectable, source-backed memory for
 agents. RLMs are promising for long-context reasoning, but they add execution/sandbox risk
 and should be evaluated only after the existing memory quality guard is stable.
+
+## IDEA-0010: Evaluate a Context Engine routing layer
+
+Status: proposed
+
+Idea: Evaluate a project-native Context Engine that routes memory/reasoning requests by
+workload instead of forcing every task through the same backend.
+
+Reference:
+- Vikram Moorjani, `RAG vs. RLMs vs. Context Engines: The Real Split in Enterprise AI`
+  argues that the durable advantage is not choosing RAG or RLMs globally, but routing by
+  workload constraints such as latency, accuracy, cost, and error tolerance.
+
+What to adopt:
+- Treat ApeRAG/RAG as the durable source-backed memory and fast retrieval path.
+- Treat RLMs as a possible future long-context reasoning mode for high-accuracy,
+  batch-style audit/research tasks after sandbox evaluation.
+- Add a router only after there are at least two proven memory/reasoning modes and a
+  measurable need to choose between them.
+- Make routing decisions explicit, logged, reproducible, and tied to policy: task type,
+  required accuracy, latency budget, cost budget, source requirements, and sandbox level.
+
+What not to adopt blindly:
+- Do not build a routing platform before the current ApeRAG memory and agent answer-quality
+  evaluation are proven.
+- Do not hide routing choices from registry/audit trails; invisible user experience is fine,
+  invisible provenance is not.
+- Do not let a future Context Engine bypass Memory Agent policy, registry records,
+  Coordinator permissions, or secret boundaries.
+- Do not route financial decisions to an experimental RLM path without strict read-only
+  sandboxing and human approval.
+
+Why later: The project currently has one active durable memory backend, ApeRAG. A Context
+Engine becomes valuable only when multiple evaluated strategies exist and agents start
+making real workload-specific memory/reasoning calls.

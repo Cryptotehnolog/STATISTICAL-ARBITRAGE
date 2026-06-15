@@ -140,6 +140,14 @@
   сравнение на наших curated questions, required facts, latency, cost и hallucination
   checks.
 
+- [ ] **Проверить Context Engine как будущий routing layer** (`IDEA-0010`).
+  Идея из статьи Vikram Moorjani: не выбирать один backend “на все случаи”, а маршрутизировать
+  задачу по ограничениям: скорость, точность, цена, допустимость ошибки и требование к
+  источникам. Для нас это значит: ApeRAG остается durable memory, RLM может стать отдельным
+  sandboxed reasoning mode, а router появится только когда будет минимум два проверенных
+  режима. Важно: routing не должен скрывать provenance от registry/audit и не должен
+  обходить Memory Agent policy.
+
 ## Уже закрыто, но надо наблюдать
 
 - [x] **MVP CLI/scripted workflows закрыты** (`Task 15`).

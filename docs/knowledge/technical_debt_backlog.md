@@ -103,6 +103,11 @@ project-specific semantic QA queries for key decisions.
   spike. Do not replace ApeRAG as the durable memory backend unless a read-only comparison
   proves better quality on curated project questions, required facts, source relevance,
   latency, cost, and hallucination checks.
+- Context Engine routing: evaluate only after at least two memory/reasoning strategies are
+  proven. ApeRAG remains the durable memory path; future RLM-style reasoning may become a
+  separate sandboxed mode. Any router must log task type, accuracy/latency/cost constraints,
+  source requirements, selected backend, and provenance, and must not bypass Memory Agent
+  policy, registry records, Coordinator permissions, or secret boundaries.
 
 ## Closed Follow-up
 
