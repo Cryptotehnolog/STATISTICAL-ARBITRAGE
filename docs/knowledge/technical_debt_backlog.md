@@ -2,6 +2,7 @@
 
 This shard summarizes deferred follow-up work that must not be kept only in chat.
 The full tracked backlog is `docs/technical_debt.md`.
+The human-facing control checklist is `docs/deferred_work_checklist.md`.
 
 ## Operating Rule
 
@@ -65,6 +66,12 @@ to `docs/technical_debt.md`. If it matters for agent memory, also update a curat
   artifacts. CLI reporting execution is now guarded by matching `backtest_series`
   presence. Remaining work is to make the future full experiment runner provide and
   persist these sidecars before queuing reporting work.
+- Arbitrary full experiment runner: Task 15.3 is complete for the current safe local CLI
+  execution baseline, including lifecycle visibility, explicit stage queuing, mature
+  single-stage execution, and the narrow artifact-gated `backtesting,reporting` pipeline.
+  A broad full-run command remains deferred until every included stage has explicit payload
+  contracts, registry persistence, Coordinator permission checks, and factual artifacts
+  required by the next stage.
 - ApeRAG human graph view: ApeRAG UI is the default inspection path; build a local viewer only
   if the UI proves insufficient.
 - Queue concurrency: before enabling real multi-worker execution, add atomic Coordinator

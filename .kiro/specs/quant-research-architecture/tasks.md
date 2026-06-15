@@ -522,7 +522,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     registry references, report artifacts, final Coordinator decision, and
     Memory Agent policy summaries.
 
-- [ ] 15. Build CLI tools and scripted workflows
+- [x] 15. Build CLI tools and scripted workflows
   - [x] 15.1 Create CLI for data ingestion
     - Command to download OHLCV data for specified symbols
     - Command to validate data quality
@@ -542,7 +542,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
       configuration; no hidden thresholds are introduced.
     - _Requirements: 22.9_
   
-  - [ ] 15.3 Create CLI for experiment execution
+  - [x] 15.3 Create CLI for experiment execution
     - Command to run full experiment (hypothesis → backtest → report)
     - Command to run individual stages (data validation, statistical testing, backtesting)
     - Command to query experiment status
@@ -583,6 +583,10 @@ This implementation plan breaks down the multi-agent quantitative research syste
       requires the produced `backtest_series` sidecar, queues reporting from that factual
       artifact, and then executes the guarded reporting task. This is intentionally not a
       full experiment runner yet.
+    - MVP status: complete for safe local CLI experiment execution. A broad arbitrary
+      full experiment runner remains intentionally deferred until every stage has a mature
+      service boundary, explicit inputs, registry artifacts, and factual sidecars required
+      by the next stage.
     - _Requirements: 22.10_
   
   - [x] 15.4 Create scripted pair-screening workflow
@@ -775,7 +779,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - _Requirements: 18.8_
 
 
-- [ ] 18. Set up continuous integration and testing
+- [x] 18. Set up continuous integration and testing
   - [x] 18.1 Create GitHub Actions workflow for Python
     - Run Ruff linting on all Python code
     - Run pytest with coverage reporting

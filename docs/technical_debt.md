@@ -8,6 +8,30 @@ work, add it here in the same task unless it is already represented in `.kiro/ta
 
 ## Open
 
+### TD-0038: Add arbitrary full experiment runner only after all stages have mature boundaries
+
+Status: open
+
+Why deferred: Task 15.3 now has safe local experiment execution commands for lifecycle
+visibility, explicit stage queuing, mature single-stage execution, and a narrow
+artifact-gated `backtesting,reporting` pipeline. A broad "run the whole experiment" button
+would still be premature because `data_validation`, arbitrary stage chains, final decision
+routing, and future factual artifact handoffs are not all mature enough to be executed
+blindly.
+
+Follow-up:
+- Add full-run orchestration only after every included stage has explicit payload
+  contracts, registry persistence, Coordinator permission checks, and factual artifacts
+  required by the next stage.
+- Keep `run-pipeline` narrow and fail-closed until the next stage chain has the same
+  evidence quality as `backtesting,reporting`.
+- Do not let a future full runner write directly to ApeRAG, mutate registry rows outside
+  approved service boundaries, or generate reports from aggregate-only metrics.
+- Include the selected stages, payload hashes, artifact IDs, registry IDs, and reproducible
+  command in the run manifest.
+
+Related tasks: 15.3, 15.7, 12.x, 13.x, 14, TD-0023.
+
 ### TD-0037: Stage multi-asset statistical arbitrage after MVP boundaries
 
 Status: open
