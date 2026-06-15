@@ -7,6 +7,7 @@ SCRIPT_PATH = Path("scripts/check_deferred_work_checklist.ps1")
 CHECKLIST_PATH = Path("docs/deferred_work_checklist.md")
 TECH_DEBT_PATH = Path("docs/technical_debt.md")
 FUTURE_IDEAS_PATH = Path("docs/knowledge/future_ideas.md")
+TECH_DEBT_BACKLOG_PATH = Path("docs/knowledge/technical_debt_backlog.md")
 
 
 def _ids(pattern: str, text: str) -> set[str]:
@@ -53,3 +54,17 @@ def test_deferred_work_guard_is_wired_into_pre_commit() -> None:
     assert "docs\\deferred_work_checklist.md" in script
     assert "check_deferred_work_checklist.ps1" in pre_commit
     assert "Invoke-RequiredCheck $deferredWorkChecklistScript" in pre_commit
+
+
+def test_human_checklist_and_memory_backlog_describe_answer_eval_state() -> None:
+    """Deferred roadmap should describe the current memory-quality layer accurately."""
+    checklist = CHECKLIST_PATH.read_text(encoding="utf-8")
+    backlog = TECH_DEBT_BACKLOG_PATH.read_text(encoding="utf-8")
+
+    assert "deterministic answer-eval" in checklist
+    assert "обязательные факты" in checklist
+    assert "запрещенные ложные утверждения" in checklist
+    assert "deterministic answer-eval" in backlog
+    assert "required facts" in backlog
+    assert "forbidden claims" in backlog
+    assert "all 10 curated shards" not in backlog

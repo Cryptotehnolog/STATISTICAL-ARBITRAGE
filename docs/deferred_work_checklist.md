@@ -169,5 +169,12 @@
   не приняли одну свечу за полноценные проверенные данные. `Dataset` по-прежнему требует
   `end_date > start_date`.
 
+- [x] **Базовый deterministic answer-eval для проектной памяти добавлен** (`TD-0019` baseline).
+  `scripts/check_memory_quality.ps1` теперь проверяет не только “память отвечает на поиск”,
+  но и “память не говорит опасную ерунду” по ключевым вопросам: one-bar
+  `DataQualityReport`, ApeRAG/RLM/Context Engine boundaries. Это не заменяет будущую
+  проверку финальных ответов агентов, но уже ловит отсутствие обязательных фактов и
+  запрещенные ложные утверждения в retrieved ApeRAG context.
+
 - [x] **Report Agent не строит полные графики из aggregate-only metrics** (`TD-0023` core).
   Остаток относится к future full runner.

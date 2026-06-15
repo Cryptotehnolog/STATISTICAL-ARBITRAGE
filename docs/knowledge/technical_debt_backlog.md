@@ -14,7 +14,9 @@ proposed `IDEA-*` is visible in `docs/deferred_work_checklist.md`, so deferred w
 quietly stay in memory shards without a human-facing checklist entry.
 `scripts/check_memory_quality.ps1` checks memory quality as a layered readiness gate:
 auto-start local embedding, verify ApeRAG health/freshness/graph readiness, and run
-project-specific semantic QA queries for key decisions.
+project-specific semantic QA plus deterministic answer-eval queries for key decisions.
+The deterministic answer-eval layer checks required facts and forbidden claims in
+retrieved ApeRAG context; it is not a generative LLM judge.
 
 ## Active Follow-up Themes
 
@@ -118,8 +120,9 @@ project-specific semantic QA queries for key decisions.
   `decisions_memory_aperag.md`, `decisions_infra_ci_secrets.md`, and
   `decisions_data_pipeline.md`.
 - ApeRAG graph parity is proven for the main curated collection. `stat-arb-project-knowledge`
-  has vector, full-text, and graph indexes active for all 10 curated shards, and graph endpoints
-  returned non-empty labels, nodes, and edges.
+  has vector, full-text, and graph indexes active for the current curated shard set, and
+  graph endpoints returned non-empty labels, nodes, and edges. The latest checked curated
+  rebuild used 22 shards.
 - ApeRAG client boundary exists in `ApeRAGMemoryClient` with typed search/readiness/graph
   contracts and `MemoryWriteRequest` for policy-controlled Memory Agent writes.
 - Memory Agent policy layer exists in `MemoryAgentService`; agents must write
