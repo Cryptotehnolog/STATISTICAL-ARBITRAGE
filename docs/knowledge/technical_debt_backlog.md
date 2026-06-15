@@ -9,6 +9,9 @@ The human-facing control checklist is `docs/deferred_work_checklist.md`.
 Any "do later" item must be implemented immediately, added to `.kiro/tasks.md`, or added
 to `docs/technical_debt.md`. If it matters for agent memory, also update a curated
 `docs/knowledge/*.md` shard.
+`scripts/check_deferred_work_checklist.ps1` guards that every open `TD-*` and every
+proposed `IDEA-*` is visible in `docs/deferred_work_checklist.md`, so deferred work cannot
+quietly stay in memory shards without a human-facing checklist entry.
 
 ## Active Follow-up Themes
 

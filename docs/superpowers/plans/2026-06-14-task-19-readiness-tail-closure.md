@@ -118,6 +118,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check_aperag_memor
 Run:
 
 ```powershell
-git add .kiro/specs/quant-research-architecture/tasks.md docs/deferred_work_checklist.md docs/technical_debt.md docs/knowledge/technical_debt_backlog.md docs/superpowers/plans/2026-06-14-task-19-readiness-tail-closure.md
+git add <changed-readiness-files>
 git commit -m "Align Task 19 readiness backlog"
 ```

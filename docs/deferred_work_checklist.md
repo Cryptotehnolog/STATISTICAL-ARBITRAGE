@@ -43,6 +43,9 @@
   handling.
 - [ ] TD-0038: Arbitrary full experiment runner после mature stage boundaries для всех
   этапов.
+- [ ] IDEA-0006: Agent execution observability UI inspired by `patoles/agent-flow`: live
+  graph, timeline, transcript, tool calls и file attention на наших structured agent
+  events. Не копировать бренд, logo или exact UI; строить собственный project-native view.
 
 ## Не делать без отдельного архитектурного решения
 
@@ -51,7 +54,11 @@
 - [ ] TD-0010: Rust implementation, только после profiling hotspot, Python reference tests,
   stable API boundary и Windows/Ubuntu build check.
 - [ ] TD-0032: Future paper/live trading roles, только после research MVP, approvals,
-  failure handling и risk policies.
+  failure handling и risk policies. Роли зафиксированы как staged roadmap, а не обещание
+  production-ready:
+  - Regime Switch Detector: сначала research-time regime robustness validation.
+  - Execution and Slippage Simulator: сначала deterministic Backtest/Critic service boundary.
+  - Dynamic Risk and Capital Allocator: сначала explicit risk policy contracts.
 - [ ] TD-0033 / IDEA-0007: Jesse MCP использовать только как reference checklist, не как
   runtime dependency.
 - [ ] TD-0037: Multi-asset statistical arbitrage roadmap, только поэтапно после стабильного
@@ -60,8 +67,6 @@
   стабильными.
 - [ ] IDEA-0003: Graph extraction provider benchmark, когда provider behavior изменится или
   качество графа начнет деградировать.
-- [ ] IDEA-0006: Agent execution observability UI, когда настоящие agents начнут писать
-  structured events.
 
 ## Закрыто или почти закрыто, но требует наблюдения
 
