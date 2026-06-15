@@ -224,11 +224,14 @@ experiment quarantine и runtime budget guard:
 .\scripts\clean_runtime_artifacts.ps1
 ```
 
-Удалить найденные runtime/cache artifacts:
+Удалить найденные runtime/cache artifacts вручную:
 
 ```powershell
 .\scripts\clean_runtime_artifacts.ps1 -Apply
 ```
+
+Правила безопасной очистки описаны в `docs/runtime_maintenance.md`. Скрипт не должен
+удалять persistent ApeRAG/registry/Infisical/Docker state.
 
 Проверить, что user-facing labels и messages остаются русифицированными:
 

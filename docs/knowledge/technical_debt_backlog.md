@@ -47,7 +47,10 @@ retrieved ApeRAG context; it is not a generative LLM judge.
 - Rust boundary: keep Python-first MVP; introduce Rust only after profiling identifies a
   stable compute hotspot with Python reference tests, stable API boundary, benchmark, and
   Ubuntu/Windows build check.
-- Runtime cleanup: keep cleanup manual and scoped to regenerable artifacts.
+- Runtime cleanup: documented in `docs/runtime_maintenance.md`; keep cleanup manual,
+  dry-run-first, and scoped to regenerable artifacts. Do not delete `data/aperag`,
+  registry data, `infra/infisical/.env`, Docker volumes, or provider runtime state through
+  ordinary cleanup.
 - GitHub CLI in Codex: use `scripts/gh_no_proxy.ps1` for `gh` commands because this session
   can inherit broken process proxy variables pointing at `127.0.0.1:9`.
 - OmniRoute benchmarking: re-run model ordering benchmark when provider behavior changes.

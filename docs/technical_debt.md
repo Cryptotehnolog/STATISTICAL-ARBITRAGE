@@ -410,20 +410,6 @@ Follow-up:
 
 Related tasks: 6.x, 7.x, 22.5.
 
-### TD-0011: Add manual maintenance checklist for runtime cleanup
-
-Status: open
-
-Why deferred: Cleanup should not run automatically in pre-commit because runtime state can
-be valuable.
-
-Follow-up:
-- Document when to run `scripts/clean_runtime_artifacts.ps1`.
-- Keep destructive cleanup opt-in and scoped to regenerable artifacts.
-- Add Linux equivalent during Ubuntu portability work.
-
-Related tasks: 19.1, TD-0001.
-
 ### TD-0013: Add OmniRoute model-order rebenchmark workflow when provider behavior changes
 
 Status: open
@@ -452,6 +438,20 @@ Follow-up:
 Related tasks: 4.9, 4.10, 15.1.
 
 ## Resolved
+
+### TD-RESOLVED-0011: Add manual maintenance checklist for runtime cleanup
+
+Status: resolved
+
+Resolution: Added `docs/runtime_maintenance.md` and linked it from README/repository
+structure docs. Runtime cleanup is documented as a manual dry-run-first maintenance action
+using `scripts/clean_runtime_artifacts.ps1`; it is not part of pre-commit and must not
+delete persistent ApeRAG data, registry state, Infisical `.env`, Docker volumes, or
+provider runtime state.
+
+Closed by: Task 19 readiness cleanup documentation.
+
+Related tasks: 19.1, TD-0001.
 
 ### TD-RESOLVED-0018: Decide one-bar DataQualityReport contract
 

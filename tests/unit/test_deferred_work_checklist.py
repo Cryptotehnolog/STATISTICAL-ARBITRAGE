@@ -68,3 +68,20 @@ def test_human_checklist_and_memory_backlog_describe_answer_eval_state() -> None
     assert "required facts" in backlog
     assert "forbidden claims" in backlog
     assert "all 10 curated shards" not in backlog
+
+
+def test_runtime_cleanup_is_documented_as_manual_and_safe() -> None:
+    """Runtime cleanup should be a documented manual maintenance action, not hidden automation."""
+    checklist = CHECKLIST_PATH.read_text(encoding="utf-8")
+    technical_debt = TECH_DEBT_PATH.read_text(encoding="utf-8")
+    maintenance_doc = Path("docs/runtime_maintenance.md").read_text(encoding="utf-8")
+
+    assert "TD-0011" in checklist
+    assert "Runtime cleanup" in technical_debt
+    assert "clean_runtime_artifacts.ps1" in maintenance_doc
+    assert "dry-run" in maintenance_doc
+    assert "-Apply" in maintenance_doc
+    assert "data/lightrag" not in maintenance_doc
+    assert "data/aperag" in maintenance_doc
+    assert "infra/infisical/.env" in maintenance_doc
+    assert "Docker volumes" in maintenance_doc
