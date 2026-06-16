@@ -14,9 +14,11 @@
   ApeRAG, Infisical, memory checks, SQLite, Parquet и CCXT smoke. Делать ближе к реальному
   server deployment.
 
-- [ ] **Добавить live CCXT smoke test** (`TD-0002`).
-  Это маленькая opt-in проверка реальной биржи. Не включать в быстрый pre-commit, потому что
-  сеть, rate limits и биржи нестабильны.
+- [x] **Добавить live CCXT smoke test** (`TD-0002`).
+  Закрыто opt-in командой `.\scripts\check_live_market_data_acceptance.ps1`: Bybit-first
+  smoke проверяет 50 active `USDT` swap symbols и пишет отчет в
+  `data/live_market_data_acceptance/report.json`. Команда остается ручной readiness
+  проверкой и не входит в pre-commit/CI, потому что сеть, rate limits и биржи нестабильны.
 
 - [ ] **Добавить conversion helpers domain <-> storage** (`TD-0003`).
   Нужны только когда ingestion/validation/registry/CLI реально начнут переносить

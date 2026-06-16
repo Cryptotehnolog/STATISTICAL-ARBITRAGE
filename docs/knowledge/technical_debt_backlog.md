@@ -25,8 +25,11 @@ retrieved ApeRAG context; it is not a generative LLM judge.
   on Ubuntu before server deployment.
 - Ubuntu migration checklist: write exact Ubuntu operator commands, expected paths,
   environment variables, and validation steps before server migration.
-- Live CCXT smoke: keep live exchange checks outside fast pre-commit; add the smoke after
-  data quality validation exists.
+- Live CCXT smoke: `scripts/check_live_market_data_acceptance.ps1` is the opt-in
+  Bybit-first live market-data acceptance smoke. It checks 50 active `USDT` swap symbols by
+  default, writes `data/live_market_data_acceptance/report.json`, and stays outside
+  pre-commit/CI because live exchanges depend on network state, rate limits, and venue
+  behavior.
 - Domain conversion helpers: add domain to parquet/storage helpers only when ingestion,
   validation, registry, or CLI code first needs that boundary.
 - Runtime memory backend: ApeRAG is the active backend; add alternatives only through a fresh

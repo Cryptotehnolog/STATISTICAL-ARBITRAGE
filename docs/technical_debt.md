@@ -294,15 +294,17 @@ Related tasks: TD-0001, 19.1, 22.4.
 
 ### TD-0002: Add live CCXT smoke test after data quality validation exists
 
-Status: open
+Status: closed
 
-Why deferred: Task 4.1 is intentionally unit-tested with a fake exchange. A live exchange
-smoke test depends on network availability, rate limits, and exchange behavior.
+Resolution: `scripts/check_live_market_data_acceptance.ps1` is an opt-in Bybit-first live
+market-data acceptance smoke. It checks 50 active `USDT` swap symbols by default, requires
+all 50 to return OHLCV rows, and writes `data/live_market_data_acceptance/report.json`.
 
-Follow-up:
-- Add a small opt-in script that fetches a tiny OHLCV sample from one exchange.
-- Run it only outside the fast pre-commit baseline.
-- Feed the result through the data quality validator once task 4.3 exists.
+Boundary:
+- Run it only outside the fast pre-commit baseline and CI.
+- Treat failures as live readiness failures, not deterministic code regressions.
+- Keep future exchange expansion explicit: Bybit first, then Binance, OKX, and Deribit when
+  their contracts are deliberately added.
 
 Related tasks: 4.1, 4.3, 15.1.
 

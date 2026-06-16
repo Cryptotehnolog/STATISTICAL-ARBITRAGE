@@ -47,6 +47,18 @@ pre-commit должны проходить без платных market data sub
 Live checks запускаются вручную или отдельным readiness workflow, когда нужно проверить
 реальную интеграцию с venue.
 
+Для Bybit-first handoff smoke есть отдельная opt-in команда:
+
+```powershell
+.\scripts\check_live_market_data_acceptance.ps1
+```
+
+По умолчанию она проверяет 50 active `USDT` swap symbols на Bybit и требует успешный
+OHLCV ответ по всем 50 symbols. Отчет пишется в
+`data/live_market_data_acceptance/report.json`. Команду можно запускать перед реальной
+research сессией или user acceptance testing, но ее нельзя добавлять в `pre-commit` или CI:
+она зависит от внешнего venue, сети и rate limits.
+
 ## Проверенные источники
 
 - Bybit API docs: <https://bybit-exchange.github.io/docs/v5/market/kline>

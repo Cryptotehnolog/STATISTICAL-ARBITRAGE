@@ -977,11 +977,19 @@ This implementation plan breaks down the multi-agent quantitative research syste
       `docs/deferred_work_checklist.md`, `docs/technical_debt.md`, and knowledge decisions
     - _Requirements: 24.1-24.12_
 
-- [ ] 23. Final review and handoff
+- [x] 23. Final review and handoff
   - Ensure all tests pass, ask the user if questions arise.
   - Review all documentation for completeness
   - Verify all MVP acceptance criteria met
   - Prepare system for user acceptance testing
+  - Completed staged final audit: tasks, README/docs, CI state, memory-quality notes,
+    runtime notes, known limitations, and MVP acceptance documents.
+  - Added opt-in Bybit-first live market-data acceptance smoke:
+    `scripts/check_live_market_data_acceptance.ps1`.
+  - Verified full Bybit live smoke locally: 50 selected active `USDT` swap symbols, 50
+    successful OHLCV responses, report in `data/live_market_data_acceptance/report.json`.
+  - Kept live market-data acceptance outside pre-commit/CI because it depends on external
+    exchange availability, network state, and rate limits.
 
 - [ ] 24. Expert-review research hardening
   - [ ] 24.1 Add statistical residual diagnostics
