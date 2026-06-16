@@ -34,6 +34,11 @@ Free datasets можно использовать для deterministic tests, ex
 Их нельзя автоматически считать production-quality market data: часто ограничены
 history depth, survivorship bias, corporate actions, delayed data и условиями лицензии.
 
+Для v1 research MVP действует **No paid data dependency**: acceptance, CI, scripted examples и
+pre-commit должны проходить без платных market data subscriptions. Платные источники можно
+рассматривать позже только как отдельный approved data-source task с явной проверкой
+лицензии, стоимости, historical depth и rate limits.
+
 ## Почему live CCXT smoke остается opt-in
 
 `live CCXT smoke` не входит в `pre-commit`, потому что он зависит от внешней сети,

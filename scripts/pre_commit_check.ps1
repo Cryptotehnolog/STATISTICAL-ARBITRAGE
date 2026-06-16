@@ -22,6 +22,7 @@ $pairScreeningPipelineCheckScript = Join-Path $PSScriptRoot "check_pair_screenin
 $statisticalTestingWorkflowCheckScript = Join-Path $PSScriptRoot "check_statistical_testing_workflow.ps1"
 $backtestWorkflowCheckScript = Join-Path $PSScriptRoot "check_backtest_workflow.ps1"
 $reproducibilityWorkflowCheckScript = Join-Path $PSScriptRoot "check_reproducibility_workflow.ps1"
+$mvpAcceptanceCheckScript = Join-Path $PSScriptRoot "check_mvp_acceptance.ps1"
 $agentsCheckpointScript = Join-Path $PSScriptRoot "check_agents_checkpoint.ps1"
 $dashboardStructureCheckScript = Join-Path $PSScriptRoot "check_dashboard_structure.ps1"
 $propertyIntegrationCheckScript = Join-Path $PSScriptRoot "check_property_integration.ps1"
@@ -62,6 +63,7 @@ Write-Output "- Проверка pair-screening workflow: check_pair_screening_p
 Write-Output "- Проверка statistical-testing workflow: check_statistical_testing_workflow.ps1"
 Write-Output "- Проверка backtest workflow: check_backtest_workflow.ps1"
 Write-Output "- Проверка reproducibility workflow: check_reproducibility_workflow.ps1"
+Write-Output "- Проверка Task 22 MVP acceptance: check_mvp_acceptance.ps1"
 Write-Output "- Проверка Task 14 agents checkpoint: check_agents_checkpoint.ps1"
 Write-Output "- Проверка dashboard structure: check_dashboard_structure.ps1"
 Write-Output "- Property/integration smoke: check_property_integration.ps1"
@@ -92,6 +94,7 @@ try {
     Invoke-RequiredCheck $statisticalTestingWorkflowCheckScript
     Invoke-RequiredCheck $backtestWorkflowCheckScript
     Invoke-RequiredCheck $reproducibilityWorkflowCheckScript
+    Invoke-RequiredCheck $mvpAcceptanceCheckScript
     Invoke-RequiredCheck $agentsCheckpointScript
     Invoke-RequiredCheck $dashboardStructureCheckScript
     Invoke-RequiredCheck $propertyIntegrationCheckScript

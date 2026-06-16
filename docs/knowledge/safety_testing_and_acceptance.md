@@ -46,6 +46,14 @@ Non-functional acceptance includes local PC support, Oracle Cloud Always Free co
 reasonable memory and disk usage, no paid data dependency in v1, Infisical-managed secrets,
 and a full experiment runtime target suitable for iterative research.
 
+Task 22 is guarded by `scripts/check_mvp_acceptance.ps1`. The command builds a
+deterministic local registry fixture with 50 synthetic crypto assets, at least 10 tested
+pairs, and at least 5 completed experiments with backtest report artifacts. This proves the
+MVP registry/reporting/acceptance shape without depending on live exchanges, Docker
+services, external LLM providers, or secrets. Live-scale market-data validation for Bybit,
+Binance, OKX, or Deribit remains an explicit opt-in readiness run, not a pre-commit or CI
+dependency.
+
 ## Source References
 
 - `.kiro/specs/quant-research-architecture/requirements.md`
