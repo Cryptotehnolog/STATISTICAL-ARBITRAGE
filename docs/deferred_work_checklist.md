@@ -7,13 +7,6 @@
 `docs/knowledge/future_ideas.md`. Здесь намеренно написано человеческим языком. Коды
 `TD-0000` и `IDEA-0000` оставлены только как номера задач для контроля.
 
-## Можно закрывать перед Task 19
-
-- [ ] **Улучшать тестируемость CLI/dashboard без жестких coverage gates** (`TD-0036`).
-  Нужно постепенно выносить форматирование и projection logic из Streamlit/CLI в helpers.
-  Строгие отдельные coverage gates включать только когда UI-логика станет достаточно
-  тестируемой.
-
 ## Делать после нового runner, workflow или service boundary
 
 - [ ] **Подготовить перенос на Ubuntu/server** (`TD-0001`, `TD-0015`).
@@ -180,3 +173,10 @@
   `docs/runtime_maintenance.md` объясняет, когда запускать
   `scripts/clean_runtime_artifacts.ps1`, почему сначала нужен dry-run, что удаляется, и
   какие persistent данные нельзя трогать обычной cleanup-командой.
+
+- [x] **Тестируемость CLI/dashboard усилена без жестких UI coverage gates**
+  (`TD-0036`).
+  CI уже измеряет `stat_arb.cli` и `stat_arb.dashboard`; dashboard получил отдельный
+  `presentation` helper module для labels, metric formatting и visible-column projection.
+  Это дает focused tests без brittle Streamlit UI checks. Строгие отдельные UI gates пока
+  не нужны: они начнут мешать больше, чем помогать.

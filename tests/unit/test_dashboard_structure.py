@@ -6,6 +6,7 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from stat_arb.dashboard.data import (
@@ -15,6 +16,12 @@ from stat_arb.dashboard.data import (
     get_dashboard_navigation,
     load_dashboard_snapshot,
     run_dashboard_memory_search,
+)
+from stat_arb.dashboard.presentation import (
+    dashboard_column_label,
+    dashboard_metric_value,
+    dashboard_numeric_mean,
+    dashboard_visible_columns,
 )
 from stat_arb.memory import (
     ApeRAGGraphSummary,
@@ -447,6 +454,26 @@ def test_dashboard_navigation_is_read_only_and_russian() -> None:
         "Очередь одобрения",
     ]
     assert all(item.mode == "read_only" for item in navigation)
+
+
+def test_dashboard_presentation_helpers_are_streamlit_free() -> None:
+    """Dashboard formatting/projection logic should be testable without importing Streamlit."""
+    table = pd.DataFrame(
+        [
+            {"net_pnl": 100.12345, "missing": None, "pair": "BTC/USDT / ETH/USDT"},
+            {"net_pnl": None, "missing": None, "pair": "SOL/USDT / ADA/USDT"},
+        ]
+    )
+
+    assert dashboard_column_label("net_pnl") == "Net PnL"
+    assert dashboard_column_label("unknown_field") == "unknown_field"
+    assert dashboard_numeric_mean(table, "net_pnl") == 50.0617
+    assert dashboard_numeric_mean(table, "does_not_exist") == 0.0
+    assert dashboard_metric_value(("not", "streamlit")) == "('not', 'streamlit')"
+    assert dashboard_visible_columns(table, ["pair", "net_pnl", "absent"]) == [
+        "pair",
+        "net_pnl",
+    ]
 
 
 def test_dashboard_experiment_list_ui_exposes_filters_and_sorting() -> None:

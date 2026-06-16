@@ -55,25 +55,6 @@ Follow-up:
 
 Related tasks: 17.x, 19.4, 21.x, 22.5, 24.x, DEC-0092.
 
-### TD-0036: Harden CLI and dashboard coverage gates incrementally
-
-Status: open
-
-Why deferred: Expert audit found that CI measured core packages but did not include
-`stat_arb.cli` and `stat_arb.dashboard` in the coverage surface. The first fix is to make
-CI measure those packages. A stricter dashboard/UI coverage gate should be introduced only
-after more Streamlit logic is moved into testable projection functions, otherwise the gate
-can create noisy failures without improving behavior.
-
-Follow-up:
-- Keep `stat_arb.cli` and `stat_arb.dashboard` in CI coverage measurement.
-- Add focused tests for CLI stage payload parsing and dashboard projections.
-- Extract additional Streamlit formatting/render decisions into testable helpers when a
-  page grows.
-- Raise package-specific gates only after the dashboard has stable non-UI helper coverage.
-
-Related tasks: 15.x, 16.x, 18.1, 18.4.
-
 ### TD-0035: Wire dashboard approvals to audited Coordinator action after failure UX exists
 
 Status: open
@@ -438,6 +419,20 @@ Follow-up:
 Related tasks: 4.9, 4.10, 15.1.
 
 ## Resolved
+
+### TD-RESOLVED-0036: Harden CLI and dashboard coverage gates incrementally
+
+Status: resolved
+
+Resolution: CI already measures `stat_arb.cli` and `stat_arb.dashboard`. Added
+`stat_arb.dashboard.presentation` as a Streamlit-free helper module for dashboard column
+labels, metric normalization, numeric means, and visible-column projection, with focused
+unit coverage. No stricter dashboard-specific coverage gate was added because the current
+UI layer is still intentionally small and read-only; premature UI gates would be noisy.
+
+Closed by: Task 19 readiness CLI/dashboard testability baseline.
+
+Related tasks: 15.x, 16.x, 18.1, 18.4.
 
 ### TD-RESOLVED-0011: Add manual maintenance checklist for runtime cleanup
 

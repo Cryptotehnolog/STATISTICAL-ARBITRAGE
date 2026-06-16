@@ -39,9 +39,11 @@ retrieved ApeRAG context; it is not a generative LLM judge.
   followed by `scripts/check_aperag_memory_fresh.ps1 -RequireGraph`.
 - Curated shards: keep `docs/knowledge/*.md` synchronized with material Kiro planning
   changes and reseed ApeRAG after updates.
-- CLI/dashboard coverage hardening: CI must measure `stat_arb.cli` and
-  `stat_arb.dashboard`; stricter dashboard-specific gates should wait until Streamlit
-  logic is further extracted into testable helpers.
+- CLI/dashboard coverage hardening baseline is closed: CI measures `stat_arb.cli` and
+  `stat_arb.dashboard`, while dashboard labels, metric formatting, and visible-column
+  projection live in a Streamlit-free `stat_arb.dashboard.presentation` helper with
+  focused tests. Do not add stricter dashboard-specific gates until UI logic is mature
+  enough that the gate improves behavior instead of creating noise.
 - Infisical recovery: define backup and restore discipline before deleting Docker volumes
   or rotating encryption keys.
 - Rust boundary: keep Python-first MVP; introduce Rust only after profiling identifies a

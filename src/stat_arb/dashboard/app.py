@@ -16,76 +16,13 @@ from stat_arb.dashboard.data import (
     get_dashboard_navigation,
     load_dashboard_snapshot,
 )
+from stat_arb.dashboard.presentation import (
+    dashboard_column_labels,
+    dashboard_metric_value,
+    dashboard_numeric_mean,
+    dashboard_visible_columns,
+)
 from stat_arb.memory.dashboard_query import query_dashboard_memory
-
-_COLUMN_LABELS = {
-    "experiment_id": "ID эксперимента",
-    "hypothesis_id": "ID гипотезы",
-    "status": "Статус",
-    "current_agent": "Текущий агент",
-    "final_decision": "Финальное решение",
-    "pair": "Пара",
-    "asset_a": "Актив A",
-    "asset_b": "Актив B",
-    "hypothesis_status": "Статус гипотезы",
-    "data_quality_passed": "Data quality пройдена",
-    "statistical_tests_passed": "Статтесты пройдены",
-    "backtest_completed": "Бэктест завершен",
-    "critic_approved": "Critic одобрил",
-    "novelty_score": "Novelty score",
-    "latest_test_id": "Последний stat test",
-    "latest_cointegration_p_value": "Cointegration p-value",
-    "latest_hedge_ratio": "Hedge ratio",
-    "latest_half_life_days": "Half-life, дни",
-    "latest_backtest_id": "Последний бэктест",
-    "latest_net_pnl": "Net PnL",
-    "latest_sharpe_ratio": "Sharpe",
-    "latest_max_drawdown": "Max drawdown",
-    "latest_critic_status": "Статус Critic",
-    "source": "Источник",
-    "created_by": "Создано",
-    "created_at": "Создано в",
-    "similar_hypotheses_count": "Похожие гипотезы",
-    "similar_hypotheses": "Ссылки на похожие",
-    "related_experiments": "Эксперименты",
-    "test_id": "ID stat test",
-    "passed": "Пройден",
-    "cointegration_p_value": "Cointegration p-value",
-    "adf_p_value": "ADF p-value",
-    "hedge_ratio": "Hedge ratio",
-    "hedge_ratio_r_squared": "Hedge R2",
-    "half_life_days": "Half-life, дни",
-    "regime_changes_detected": "Regime changes",
-    "rejection_reason": "Причина отклонения",
-    "tested_at": "Проверено в",
-    "backtest_id": "ID бэктеста",
-    "gross_pnl": "Gross PnL",
-    "net_pnl": "Net PnL",
-    "commission_cost": "Commission",
-    "spread_cost": "Spread",
-    "slippage_cost": "Slippage",
-    "funding_cost": "Funding",
-    "borrow_cost": "Borrow",
-    "total_cost": "Total cost",
-    "num_trades": "Сделки",
-    "turnover": "Turnover",
-    "avg_holding_time_hours": "Среднее удержание, ч",
-    "sortino_ratio": "Sortino",
-    "win_rate": "Win rate",
-    "profit_factor": "Profit factor",
-    "has_series_sidecar": "Series sidecar",
-    "artifact_id": "ID artifact",
-    "artifact_type": "Тип artifact",
-    "format": "Формат",
-    "file_path": "Путь",
-    "task_id": "ID задачи",
-    "task_type": "Тип задачи",
-    "agent_name": "Агент",
-    "attempts": "Попытки",
-    "last_error": "Ошибка",
-    "started_at": "Начато в",
-    "completed_at": "Завершено в",
-}
 
 _EXPERIMENT_STATUS_OPTIONS = [
     "new",
@@ -259,7 +196,7 @@ def _render_experiment_list(snapshot: DashboardSnapshot) -> None:
     table = pd.DataFrame(snapshot.experiments)
     table = table[[column for column in visible_columns if column in table.columns]]
     st.dataframe(
-        table.rename(columns=_COLUMN_LABELS),
+        table.rename(columns=dashboard_column_labels()),
         use_container_width=True,
         hide_index=True,
     )
@@ -275,7 +212,7 @@ def _render_hypothesis_status(snapshot: DashboardSnapshot) -> None:
     _render_metric_strip(
         [
             ("Всего гипотез", len(table)),
-            ("Средний novelty score", _mean_or_zero(table, "novelty_score")),
+            ("Средний novelty score", dashboard_numeric_mean(table, "novelty_score")),
             ("С похожими", int((table["similar_hypotheses_count"] > 0).sum())),
         ]
     )
@@ -304,7 +241,7 @@ def _render_statistical_tests(snapshot: DashboardSnapshot) -> None:
         [
             ("Всего tests", len(table)),
             ("Пройдено", int(table["passed"].sum())),
-            ("Средний hedge ratio", _mean_or_zero(table, "hedge_ratio")),
+            ("Средний hedge ratio", dashboard_numeric_mean(table, "hedge_ratio")),
         ]
     )
     visible_columns = [
@@ -333,7 +270,7 @@ def _render_backtests(snapshot: DashboardSnapshot) -> None:
     _render_metric_strip(
         [
             ("Всего бэктестов", len(table)),
-            ("Средний Net PnL", _mean_or_zero(table, "net_pnl")),
+            ("Средний Net PnL", dashboard_numeric_mean(table, "net_pnl")),
             ("Series sidecars", int(table["has_series_sidecar"].sum())),
         ]
     )
@@ -344,7 +281,7 @@ def _render_backtests(snapshot: DashboardSnapshot) -> None:
         "funding_cost",
         "borrow_cost",
     ]
-    cost_frame = table[cost_columns].sum().rename(index=_COLUMN_LABELS)
+    cost_frame = table[cost_columns].sum().rename(index=dashboard_column_labels())
     st.markdown("#### Cost attribution")
     st.bar_chart(cost_frame)
     visible_columns = [
@@ -477,14 +414,14 @@ def _render_table(title: str, rows: list[dict[str, object]]) -> None:
     if not rows:
         st.info("В registry пока нет данных для этого раздела.")
         return
-    table = pd.DataFrame(rows).rename(columns=_COLUMN_LABELS)
+    table = pd.DataFrame(rows).rename(columns=dashboard_column_labels())
     st.dataframe(table, use_container_width=True, hide_index=True)
 
 
 def _render_dataframe(table: pd.DataFrame, visible_columns: list[str]) -> None:
-    columns = [column for column in visible_columns if column in table.columns]
+    columns = dashboard_visible_columns(table, visible_columns)
     st.dataframe(
-        table[columns].rename(columns=_COLUMN_LABELS),
+        table[columns].rename(columns=dashboard_column_labels()),
         use_container_width=True,
         hide_index=True,
     )
@@ -494,19 +431,7 @@ def _render_metric_strip(metrics: list[tuple[str, object]]) -> None:
     columns = st.columns(min(4, max(1, len(metrics))))
     for column, (label, value) in zip(columns, metrics, strict=False):
         with column:
-            st.metric(label, _metric_value(value))
-
-
-def _mean_or_zero(table: pd.DataFrame, column: str) -> float:
-    if column not in table.columns or table.empty:
-        return 0.0
-    return round(float(table[column].fillna(0.0).mean()), 4)
-
-
-def _metric_value(value: object) -> int | float | str | None:
-    if value is None or isinstance(value, (int, float, str)):
-        return value
-    return str(value)
+            st.metric(label, dashboard_metric_value(value))
 
 
 def _render_placeholder(title: str, description: str) -> None:
