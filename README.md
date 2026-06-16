@@ -575,6 +575,10 @@ Dashboard:
 
 ## Документация
 
+- **Архитектура**: `docs/architecture.md`.
+- **Агенты и права доступа**: `docs/agents.md`.
+- **Данные и качество**: `docs/data.md`.
+- **Structured Registry schema**: `docs/schema.md`.
 - **Структура repository**: `docs/repository_structure.md`.
 - **Безопасная runtime cleanup**: `docs/runtime_maintenance.md`.
 - **Rust strategy**: `docs/rust_strategy.md`.

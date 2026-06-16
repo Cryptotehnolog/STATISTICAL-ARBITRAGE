@@ -814,6 +814,9 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - Initial documentation hardening slice completed: README and repository structure now
     describe the current ApeRAG/CLI/dashboard layout, and `scripts/check_docs_links.ps1`
     guards local markdown references in README/docs/Kiro specs.
+  - Added initial core docs for current architecture, agent permissions, data quality, and
+    Structured Registry schema: `docs/architecture.md`, `docs/agents.md`, `docs/data.md`,
+    `docs/schema.md`.
 
   - [ ] 19.1 Write comprehensive README.md
     - Project overview and architecture

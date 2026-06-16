@@ -26,12 +26,17 @@ def test_docs_link_guard_is_wired_into_pre_commit_checklist() -> None:
     assert "Invoke-RequiredCheck $docsLinksCheckScript" in pre_commit
 
 
-def test_readme_does_not_reference_missing_local_markdown_docs_in_backticks() -> None:
-    """README should not advertise local docs that do not exist."""
+def test_readme_core_docs_references_point_to_existing_files() -> None:
+    """README may advertise core docs only when the files exist."""
     readme = Path("README.md").read_text(encoding="utf-8")
 
-    assert "`docs/architecture.md`" not in readme
-    assert "`docs/agents.md`" not in readme
-    assert "`docs/data.md`" not in readme
+    for path in (
+        "docs/architecture.md",
+        "docs/agents.md",
+        "docs/data.md",
+        "docs/schema.md",
+    ):
+        assert f"`{path}`" in readme
+        assert Path(path).exists()
+
     assert "`docs/api.md`" not in readme
-    assert "`docs/schema.md`" not in readme
