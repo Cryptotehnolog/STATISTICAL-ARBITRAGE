@@ -8,6 +8,7 @@ AGENTS_PATH = Path("docs/agents.md")
 DATA_PATH = Path("docs/data.md")
 SCHEMA_PATH = Path("docs/schema.md")
 DATA_SOURCES_PATH = Path("docs/data_sources.md")
+EXAMPLES_PATH = Path("docs/examples.md")
 
 
 def test_readme_links_core_task_19_documentation() -> None:
@@ -19,6 +20,7 @@ def test_readme_links_core_task_19_documentation() -> None:
         "docs/agents.md",
         "docs/data.md",
         "docs/data_sources.md",
+        "docs/examples.md",
         "docs/schema.md",
     ):
         assert f"`{path}`" in readme
@@ -114,3 +116,27 @@ def test_data_source_doc_keeps_live_exchange_smoke_opt_in() -> None:
     assert "pre-commit" in text
     assert "rate limits" in text
     assert "terms of service" in text
+
+
+def test_example_workflows_document_real_guarded_entrypoints() -> None:
+    """Task 19.5 examples should point to real guarded scripts and CLI commands."""
+    text = EXAMPLES_PATH.read_text(encoding="utf-8")
+    readme = README_PATH.read_text(encoding="utf-8")
+
+    for command in (
+        ".\\scripts\\screen_pairs.ps1",
+        ".\\scripts\\run_statistical_testing.ps1",
+        ".\\scripts\\run_backtest.ps1",
+        ".\\scripts\\check_cli_scripted_workflows.ps1",
+        "uv run stat-arb data download",
+        "uv run stat-arb hypothesis generate",
+        "uv run stat-arb experiment run-stage",
+        "uv run stat-arb experiment execute-stage",
+        "uv run stat-arb experiment run-pipeline",
+    ):
+        assert command in text
+
+    assert "Bybit" in text
+    assert "guarded reporting" in text
+    assert "не является full autonomous experiment runner" in text
+    assert "`docs/examples.md`" in readme

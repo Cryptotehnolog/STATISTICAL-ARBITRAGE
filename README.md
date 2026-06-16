@@ -579,6 +579,7 @@ Dashboard:
 - **Агенты и права доступа**: `docs/agents.md`.
 - **Данные и качество**: `docs/data.md`.
 - **Источники данных**: `docs/data_sources.md`.
+- **Примеры workflows**: `docs/examples.md`.
 - **Structured Registry schema**: `docs/schema.md`.
 - **Структура repository**: `docs/repository_structure.md`.
 - **Безопасная runtime cleanup**: `docs/runtime_maintenance.md`.

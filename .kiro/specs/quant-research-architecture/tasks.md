@@ -847,11 +847,13 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Documented why live CCXT smoke remains opt-in and outside pre-commit
     - _Requirements: 20.1-20.12_
   
-  - [ ] 19.5 Create example workflows
+  - [x] 19.5 Create example workflows
     - Example: Ingest crypto data from Bybit
     - Example: Screen pairs by sector
     - Example: Run statistical tests on pair
     - Example: Run backtest and generate report
+    - Documented real workflow entrypoints in `docs/examples.md`
+    - Added docs guard for referenced script commands and supported `stat-arb` subcommands
     - _Requirements: 22.9, 22.10_
   
   - [ ] 19.6 Document legal disclaimers

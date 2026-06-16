@@ -58,6 +58,10 @@ Coordinator task queue while keeping Report Agent sidecar guards active. It does
 live market data, call external LLM providers, or replace the future full experiment
 runner.
 
+Task 19.5 documents the same real entrypoints in `docs/examples.md`. Documentation must not
+advertise script paths or `stat-arb` subcommands that are not present in the repository;
+`scripts/check_docs_links.ps1` guards this user-facing surface.
+
 ## Defaults Policy
 
 Hidden research defaults are not allowed when a value changes statistical conclusions,

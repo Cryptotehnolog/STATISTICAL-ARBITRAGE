@@ -110,6 +110,40 @@ function Test-WildcardTargetExists {
     return $null -ne ($matches | Select-Object -First 1)
 }
 
+function Test-IsSupportedStatArbCommand {
+    param([string]$Line)
+
+    $supportedStatArbCommands = @(
+        "data download",
+        "data list",
+        "data validate",
+        "experiment advance",
+        "experiment execute-stage",
+        "experiment list",
+        "experiment run-pipeline",
+        "experiment run-stage",
+        "experiment status",
+        "hypothesis add",
+        "hypothesis generate",
+        "hypothesis list"
+    )
+
+    $match = [regex]::Match(
+        $Line,
+        '\buv\s+run\s+stat-arb\s+([A-Za-z0-9_-]+)(?:\s+([A-Za-z0-9_-]+))?'
+    )
+    if (-not $match.Success) {
+        return $false
+    }
+
+    $command = $match.Groups[1].Value
+    if ($match.Groups[2].Success) {
+        $command = "$command $($match.Groups[2].Value)"
+    }
+
+    return $supportedStatArbCommands -contains $command
+}
+
 $violations = @()
 $linkPattern = '(?<!\!)\[[^\]]+\]\(([^)]+)\)'
 $inlineMarkdownPathPattern = '`([^`]+\.md(?:#[^`]*)?)`'
@@ -237,12 +271,22 @@ foreach ($file in Get-MarkdownFiles | Sort-Object FullName -Unique) {
             }
         }
 
-        if ($lines[$index] -match $statArbCommandPattern -and $pyprojectText -notmatch '(?m)^\s*stat-arb\s*=') {
-            $violations += [pscustomobject]@{
-                File = $relative
-                Line = $index + 1
-                Target = "uv run stat-arb"
-                Kind = "referenced stat-arb commands"
+        if ($lines[$index] -match $statArbCommandPattern) {
+            if ($pyprojectText -notmatch '(?m)^\s*stat-arb\s*=') {
+                $violations += [pscustomobject]@{
+                    File = $relative
+                    Line = $index + 1
+                    Target = "uv run stat-arb"
+                    Kind = "referenced stat-arb commands"
+                }
+            }
+            elseif (-not (Test-IsSupportedStatArbCommand -Line $lines[$index])) {
+                $violations += [pscustomobject]@{
+                    File = $relative
+                    Line = $index + 1
+                    Target = $lines[$index].Trim()
+                    Kind = "unsupported stat-arb commands"
+                }
             }
         }
     }
