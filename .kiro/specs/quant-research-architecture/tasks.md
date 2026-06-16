@@ -1014,10 +1014,18 @@ This implementation plan breaks down the multi-agent quantitative research syste
       `scripts/pre_commit_check.ps1`
     - _Requirements: 4.1-4.12, 7.4_
 
-  - [ ] 24.3 Add explicit capacity and cost realism scenarios
+  - [x] 24.3 Add explicit capacity and cost realism scenarios
     - Add capacity-adjusted Sharpe scenarios for configured capital sizes
     - Add liquidity-aware slippage and market-impact scenarios where source data supports them
     - Add explicit leg-risk and execution-delay scenarios without hidden default rates
+    - Implemented `CapacityRealismScenario`, `LiquidityImpactScenario`,
+      `ExecutionDelayScenario`, `LegRiskScenario`, and
+      `run_capacity_cost_realism_scenarios`
+    - Extended Critic cost-realism evidence/policy so promotion can require named
+      capacity scenarios, capacity-adjusted Sharpe, liquidity participation,
+      realism net PnL, and execution-delay evidence
+    - Guarded by `scripts/check_cost_realism_pipeline.ps1`, now part of
+      `scripts/pre_commit_check.ps1`
     - _Requirements: 5.1-5.14, 6.10, 7.6, 7.7_
 
   - [ ] 24.4 Clarify and implement asset-class-specific data adjustments

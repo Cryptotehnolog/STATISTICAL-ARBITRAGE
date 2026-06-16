@@ -179,3 +179,27 @@ pre-commit; test persistence only in integration scripts.
 
 Risks: The checkpoint remains a unit-level baseline. It does not prove real ApeRAG writes
 or live registry migrations, which are covered by separate memory/backend checks.
+
+## DEC-0057: Promotion requires explicit capacity/cost realism evidence
+
+Status: accepted
+
+Decision: Critic cost-realism policy now supports required capacity scenario names,
+minimum capacity-adjusted Sharpe, maximum liquidity participation rate, negative realism
+net PnL flagging, and maximum execution-delay cost. Critic receives those values through
+`CriticCostRealismEvidence`; it does not compute scenarios itself and does not invent
+thresholds.
+
+Rationale: Promotion should not rely only on aggregate net PnL and ordinary cost
+sensitivity. A strategy can pass basic costs and still fail when capital size, liquidity,
+market impact, delayed execution, or one-leg execution risk is considered. Keeping the
+thresholds in `CriticCostRealismPolicy` makes promotion rules explicit and auditable.
+
+Alternatives considered: Let Backtest Agent reject capacity failures directly; hard-code
+common participation or Sharpe thresholds; defer capacity checks until live trading work.
+Those alternatives either mix responsibilities or let weak research pass through the
+promotion boundary.
+
+Risks: Missing capacity evidence now becomes a Critic concern when policy requires it.
+That is desirable: agents must provide the scenario evidence before asking Coordinator to
+promote a candidate.

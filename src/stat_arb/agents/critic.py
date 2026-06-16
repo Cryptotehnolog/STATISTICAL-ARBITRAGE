@@ -351,6 +351,11 @@ class CriticCostRealismPolicy:
     max_turnover: float | None
     max_slippage_rate_to_snapshot_ratio: float | None
     allowed_cost_snapshot_statuses: tuple[str, ...]
+    required_capacity_scenarios: tuple[str, ...] = ()
+    min_capacity_adjusted_sharpe: float | None = None
+    max_liquidity_participation_rate: float | None = None
+    flag_negative_realism_net_pnl: bool = False
+    max_execution_delay_cost: float | None = None
 
     def __post_init__(self) -> None:
         if not any(
@@ -359,11 +364,18 @@ class CriticCostRealismPolicy:
                 self.max_turnover is not None,
                 self.max_slippage_rate_to_snapshot_ratio is not None,
                 bool(self.allowed_cost_snapshot_statuses),
+                bool(self.required_capacity_scenarios),
+                self.min_capacity_adjusted_sharpe is not None,
+                self.max_liquidity_participation_rate is not None,
+                self.flag_negative_realism_net_pnl,
+                self.max_execution_delay_cost is not None,
             )
         ):
             raise ValueError("at least one cost-realism rule must be enabled")
         if not isinstance(self.flag_negative_net_pnl, bool):
             raise TypeError("flag_negative_net_pnl must be a bool")
+        if not isinstance(self.flag_negative_realism_net_pnl, bool):
+            raise TypeError("flag_negative_realism_net_pnl must be a bool")
         if self.max_turnover is not None:
             _validate_positive_float(self.max_turnover, label="max_turnover")
         if self.max_slippage_rate_to_snapshot_ratio is not None:
@@ -376,6 +388,21 @@ class CriticCostRealismPolicy:
                     "allowed_cost_snapshot_statuses is required with slippage realism"
                 )
         _validate_status_names(self.allowed_cost_snapshot_statuses)
+        _validate_sensitivity_scenario_names(self.required_capacity_scenarios)
+        if self.min_capacity_adjusted_sharpe is not None and not isfinite(
+            self.min_capacity_adjusted_sharpe
+        ):
+            raise ValueError("min_capacity_adjusted_sharpe must be finite")
+        if self.max_liquidity_participation_rate is not None:
+            _validate_positive_float(
+                self.max_liquidity_participation_rate,
+                label="max_liquidity_participation_rate",
+            )
+        if self.max_execution_delay_cost is not None:
+            _validate_non_negative_float(
+                self.max_execution_delay_cost,
+                label="max_execution_delay_cost",
+            )
 
 
 @dataclass(frozen=True)
@@ -389,6 +416,11 @@ class CriticCostRealismEvidence:
     snapshot_slippage_rate: float
     cost_snapshot_status: str
     cost_snapshot_source: str
+    capacity_scenario_names: tuple[str, ...] = ()
+    worst_capacity_adjusted_sharpe: float | None = None
+    max_liquidity_participation_rate: float | None = None
+    min_realism_net_pnl: float | None = None
+    max_execution_delay_cost: float | None = None
 
     def __post_init__(self) -> None:
         for label, value in (
@@ -409,6 +441,30 @@ class CriticCostRealismEvidence:
         _validate_status_names((self.cost_snapshot_status,))
         if not isinstance(self.cost_snapshot_source, str) or not self.cost_snapshot_source.strip():
             raise ValueError("cost_snapshot_source is required")
+        _validate_sensitivity_scenario_names(self.capacity_scenario_names)
+        _validate_optional_finite_float(
+            self.worst_capacity_adjusted_sharpe,
+            label="worst_capacity_adjusted_sharpe",
+        )
+        _validate_optional_finite_float(
+            self.max_liquidity_participation_rate,
+            label="max_liquidity_participation_rate",
+        )
+        _validate_optional_finite_float(
+            self.min_realism_net_pnl,
+            label="min_realism_net_pnl",
+        )
+        _validate_optional_finite_float(
+            self.max_execution_delay_cost,
+            label="max_execution_delay_cost",
+        )
+        if (
+            self.max_liquidity_participation_rate is not None
+            and self.max_liquidity_participation_rate < 0.0
+        ):
+            raise ValueError("max_liquidity_participation_rate must be non-negative")
+        if self.max_execution_delay_cost is not None and self.max_execution_delay_cost < 0.0:
+            raise ValueError("max_execution_delay_cost must be non-negative")
 
 
 @dataclass(frozen=True)
@@ -842,6 +898,63 @@ def detect_cost_realism(
                 f"above allowed {policy.max_slippage_rate_to_snapshot_ratio:.4f}"
             )
 
+    if policy.required_capacity_scenarios:
+        checked_rules.append("required_capacity_realism_scenarios")
+        observed = set(_normalized_sensitivity_scenarios(evidence.capacity_scenario_names))
+        missing = tuple(
+            scenario
+            for scenario in _normalized_sensitivity_scenarios(policy.required_capacity_scenarios)
+            if scenario not in observed
+        )
+        if missing:
+            indicators.append(
+                "required_capacity_realism_scenarios: missing scenarios "
+                + ", ".join(missing)
+            )
+
+    if policy.min_capacity_adjusted_sharpe is not None:
+        checked_rules.append("capacity_adjusted_sharpe")
+        if evidence.worst_capacity_adjusted_sharpe is None:
+            indicators.append("capacity_adjusted_sharpe: worst capacity-adjusted Sharpe is missing")
+        elif evidence.worst_capacity_adjusted_sharpe < policy.min_capacity_adjusted_sharpe:
+            indicators.append(
+                "capacity_adjusted_sharpe: "
+                f"worst capacity-adjusted Sharpe {evidence.worst_capacity_adjusted_sharpe:.4f} "
+                f"is below required {policy.min_capacity_adjusted_sharpe:.4f}"
+            )
+
+    if policy.max_liquidity_participation_rate is not None:
+        checked_rules.append("liquidity_participation_rate")
+        if evidence.max_liquidity_participation_rate is None:
+            indicators.append("liquidity_participation_rate: max participation rate is missing")
+        elif evidence.max_liquidity_participation_rate > policy.max_liquidity_participation_rate:
+            indicators.append(
+                "liquidity_participation_rate: "
+                f"max participation rate {evidence.max_liquidity_participation_rate:.4f} "
+                f"exceeds policy maximum {policy.max_liquidity_participation_rate:.4f}"
+            )
+
+    if policy.flag_negative_realism_net_pnl:
+        checked_rules.append("negative_realism_net_pnl")
+        if evidence.min_realism_net_pnl is None:
+            indicators.append("negative_realism_net_pnl: min realism net PnL is missing")
+        elif evidence.min_realism_net_pnl < 0.0:
+            indicators.append(
+                "negative_realism_net_pnl: "
+                f"min realism net PnL {evidence.min_realism_net_pnl:.4f} is below 0.0000"
+            )
+
+    if policy.max_execution_delay_cost is not None:
+        checked_rules.append("execution_delay_cost")
+        if evidence.max_execution_delay_cost is None:
+            indicators.append("execution_delay_cost: max execution-delay cost is missing")
+        elif evidence.max_execution_delay_cost > policy.max_execution_delay_cost:
+            indicators.append(
+                "execution_delay_cost: "
+                f"max execution-delay cost {evidence.max_execution_delay_cost:.4f} "
+                f"exceeds policy maximum {policy.max_execution_delay_cost:.4f}"
+            )
+
     return CriticCostRealismAssessment(
         cost_realism_concerns_detected=bool(indicators),
         indicators=tuple(indicators),
@@ -1007,6 +1120,11 @@ def _validate_positive_float(value: float, *, label: str) -> None:
 def _validate_non_negative_float(value: float, *, label: str) -> None:
     if not isfinite(value) or value < 0.0:
         raise ValueError(f"{label} must be finite and non-negative")
+
+
+def _validate_optional_finite_float(value: float | None, *, label: str) -> None:
+    if value is not None and not isfinite(value):
+        raise ValueError(f"{label} must be finite")
 
 
 def _validate_sensitivity_scenario_names(scenarios: tuple[str, ...]) -> None:

@@ -855,6 +855,53 @@ def test_critic_cost_realism_detection_reports_multiple_cost_concerns() -> None:
     )
 
 
+def test_critic_cost_realism_detection_flags_capacity_and_execution_scenarios() -> None:
+    """Promotion should require explicit capacity, liquidity, and delay evidence."""
+    assessment = detect_cost_realism(
+        CriticCostRealismEvidence(
+            gross_pnl=100.0,
+            net_pnl=82.0,
+            turnover=1.5,
+            assumed_slippage_rate=0.0002,
+            snapshot_slippage_rate=0.00025,
+            cost_snapshot_status="verified",
+            cost_snapshot_source="exchange-fee-snapshot-2026-06-08",
+            capacity_scenario_names=("capital_100k",),
+            worst_capacity_adjusted_sharpe=0.4,
+            max_liquidity_participation_rate=0.35,
+            min_realism_net_pnl=-10.0,
+            max_execution_delay_cost=50.0,
+        ),
+        policy=CriticCostRealismPolicy(
+            flag_negative_net_pnl=False,
+            max_turnover=None,
+            max_slippage_rate_to_snapshot_ratio=None,
+            allowed_cost_snapshot_statuses=("verified",),
+            required_capacity_scenarios=("capital_100k", "capital_250k"),
+            min_capacity_adjusted_sharpe=0.8,
+            max_liquidity_participation_rate=0.2,
+            flag_negative_realism_net_pnl=True,
+            max_execution_delay_cost=25.0,
+        ),
+    )
+
+    assert assessment.cost_realism_concerns_detected is True
+    assert assessment.indicators == (
+        "required_capacity_realism_scenarios: missing scenarios capital_250k",
+        "capacity_adjusted_sharpe: worst capacity-adjusted Sharpe 0.4000 is below required 0.8000",
+        "liquidity_participation_rate: max participation rate 0.3500 exceeds policy maximum 0.2000",
+        "negative_realism_net_pnl: min realism net PnL -10.0000 is below 0.0000",
+        "execution_delay_cost: max execution-delay cost 50.0000 exceeds policy maximum 25.0000",
+    )
+    assert assessment.checked_rules[-5:] == (
+        "required_capacity_realism_scenarios",
+        "capacity_adjusted_sharpe",
+        "liquidity_participation_rate",
+        "negative_realism_net_pnl",
+        "execution_delay_cost",
+    )
+
+
 def test_critic_cost_realism_detection_flags_nonzero_slippage_against_zero_snapshot() -> None:
     """Zero snapshot slippage is an explicit edge case, not a silent divide-by-zero."""
     assessment = detect_cost_realism(

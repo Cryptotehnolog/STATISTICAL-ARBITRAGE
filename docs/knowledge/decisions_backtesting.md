@@ -319,3 +319,30 @@ Verification:
 Risks: This wrapper does not replace full scripted end-to-end testing. Task 15.7 remains
 responsible for seeded mock-data workflows that prove pair screening, statistical testing,
 backtesting, reporting, and registry artifacts work as a chain.
+
+## DEC-0081: Capacity and cost realism scenarios are explicit evidence
+
+Status: accepted
+
+Decision: Backtest capacity/cost realism is implemented through explicit
+`CapacityRealismScenario` inputs. Each scenario must provide capital size, liquidity
+evidence, market-impact rate, execution-delay stress, leg-risk stress, and cost multiplier.
+The helper `run_capacity_cost_realism_scenarios` produces scenario-level PnL, participation
+rate, market-impact cost, execution-delay cost, leg-risk cost, realism net PnL, and
+capacity-adjusted Sharpe. It does not contain hidden capital, liquidity, impact, delay, or
+leg-risk defaults.
+
+Rationale: Capacity and liquidity can turn an attractive backtest into an untradeable
+strategy. The backtest layer may calculate the consequences of an explicit scenario, but
+it must not invent capital sizes or market microstructure assumptions. Liquidity-aware
+impact is allowed only when the caller supplies supporting liquidity evidence such as
+average daily quote volume.
+
+Alternatives considered: Add common capital tiers and slippage assumptions as defaults;
+fold capacity into ordinary cost sensitivity; let the Critic Agent infer capacity risk from
+aggregate metrics. All three options would hide research assumptions or produce weak audit
+trails.
+
+Risks: Scenario configuration becomes more verbose. That is intentional: future agents
+must persist the exact capital, liquidity, delay, and leg-risk assumptions that affected
+promotion decisions.

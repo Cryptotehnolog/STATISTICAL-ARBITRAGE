@@ -58,6 +58,17 @@ def test_research_impacting_defaults_are_not_hidden_in_runtime_boundaries() -> N
             "exit_threshold: float =",
             "exit_policy: BacktestExitPolicyConfig =",
         ),
+        "src/stat_arb/backtest/realism.py": (
+            "capital_size: float =",
+            "average_daily_quote_volume: float =",
+            "market_impact_rate: float =",
+            "delay_bars: int =",
+            "adverse_return_per_bar: float =",
+            "unhedged_notional_fraction: float =",
+            "adverse_move_rate: float =",
+            "cost_multiplier: float =",
+            "scenarios: tuple[CapacityRealismScenario, ...] =",
+        ),
     }
 
     for path, patterns in forbidden_patterns.items():
