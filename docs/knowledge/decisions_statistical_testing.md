@@ -239,6 +239,12 @@ Critic Agent.
 Risks: Residual diagnostics add more evidence that future reports must explain. Keep the
 thresholds explicit and include them in experiment reproducibility hashes.
 
+Task 24.1 checkpoint: `scripts/check_residual_diagnostics_pipeline.ps1` guards the residual
+diagnostics boundary by running unit coverage for `diagnose_residuals`, the registry-backed
+Statistical Testing Agent, and the Critic weak-assumption signal that consumes residual
+diagnostic evidence. The checkpoint is included in `scripts/pre_commit_check.ps1` so the
+hardening cannot silently regress.
+
 ## DEC-0079: Script statistical testing through Coordinator-backed CLI stages
 
 Status: accepted

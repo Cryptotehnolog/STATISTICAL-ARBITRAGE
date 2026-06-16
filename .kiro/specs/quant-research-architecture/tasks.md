@@ -992,10 +992,15 @@ This implementation plan breaks down the multi-agent quantitative research syste
     exchange availability, network state, and rate limits.
 
 - [ ] 24. Expert-review research hardening
-  - [ ] 24.1 Add statistical residual diagnostics
+  - [x] 24.1 Add statistical residual diagnostics
     - Add residual autocorrelation diagnostics such as Ljung-Box where configured
     - Add residual distribution-shape diagnostics such as Jarque-Bera or Shapiro where configured
     - Treat diagnostic failures as explicit Critic signals unless policy configuration defines rejection behavior
+    - Implemented residual diagnostics with explicit Ljung-Box lags, Jarque-Bera p-value,
+      excess kurtosis, Statistical Testing Agent persistence, and Critic weak-assumption
+      indicators controlled by explicit policy thresholds.
+    - Guarded by `scripts/check_residual_diagnostics_pipeline.ps1`, now part of
+      `scripts/pre_commit_check.ps1`.
     - _Requirements: 4.1-4.12, 7.4, 31.1_
 
   - [ ] 24.2 Add cointegration and hedge-ratio stability diagnostics
