@@ -856,10 +856,12 @@ This implementation plan breaks down the multi-agent quantitative research syste
     - Added docs guard for referenced script commands and supported `stat-arb` subcommands
     - _Requirements: 22.9, 22.10_
   
-  - [ ] 19.6 Document legal disclaimers
+  - [x] 19.6 Document legal disclaimers
     - State system is research tool, not financial advice
     - Document exchange terms of service requirements
     - Document audit log requirements
+    - Added `docs/legal_disclaimer.md` with research-only, no live trading, human approval,
+      market risk, secrets, terms of service, and audit trail boundaries
     - _Requirements: 26.1-26.10_
 
 - [ ] 20. **[OPTIONAL/DEFERRED]** Implement general Docker Compose packaging for production-like testing

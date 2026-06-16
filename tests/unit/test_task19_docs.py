@@ -9,6 +9,7 @@ DATA_PATH = Path("docs/data.md")
 SCHEMA_PATH = Path("docs/schema.md")
 DATA_SOURCES_PATH = Path("docs/data_sources.md")
 EXAMPLES_PATH = Path("docs/examples.md")
+LEGAL_DISCLAIMER_PATH = Path("docs/legal_disclaimer.md")
 
 
 def test_readme_links_core_task_19_documentation() -> None:
@@ -21,6 +22,7 @@ def test_readme_links_core_task_19_documentation() -> None:
         "docs/data.md",
         "docs/data_sources.md",
         "docs/examples.md",
+        "docs/legal_disclaimer.md",
         "docs/schema.md",
     ):
         assert f"`{path}`" in readme
@@ -140,3 +142,24 @@ def test_example_workflows_document_real_guarded_entrypoints() -> None:
     assert "guarded reporting" in text
     assert "не является full autonomous experiment runner" in text
     assert "`docs/examples.md`" in readme
+
+
+def test_legal_disclaimer_sets_research_and_approval_boundaries() -> None:
+    """Task 19.6 should state the project is research-only and approval-gated."""
+    text = LEGAL_DISCLAIMER_PATH.read_text(encoding="utf-8")
+    readme = README_PATH.read_text(encoding="utf-8")
+
+    for phrase in (
+        "research tool",
+        "not financial advice",
+        "не является live trading системой",
+        "human approval",
+        "market risk",
+        "no guarantee of profitability",
+        "Infisical",
+        "terms of service",
+    ):
+        assert phrase in text
+
+    assert "автономно отправлять ордера" in text
+    assert "`docs/legal_disclaimer.md`" in readme

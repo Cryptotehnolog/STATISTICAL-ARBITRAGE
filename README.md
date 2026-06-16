@@ -586,6 +586,7 @@ Dashboard:
 - **Rust strategy**: `docs/rust_strategy.md`.
 - **Deferred roadmap**: `docs/deferred_work_checklist.md`.
 - **Technical debt**: `docs/technical_debt.md`.
+- **Юридические предупреждения**: `docs/legal_disclaimer.md`.
 - **Architecture decisions и agent memory**: `docs/knowledge/*.md`.
 
 ## Юридические предупреждения
@@ -595,6 +596,7 @@ Dashboard:
 - Нет гарантий прибыльности или performance.
 - Past performance does not indicate future results.
 - Использование на свой риск.
+- Проект не является live trading системой; любые действия с реальными средствами требуют human approval.
 
 Exchange terms of service:
 
