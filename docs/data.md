@@ -42,5 +42,21 @@ CCXT является текущим crypto source adapter. Live exchange smoke 
 Deribit остаются active planned venues для cross-venue validation и будущего расширения.
 Исключенные legacy venues не входят в активный roadmap проекта.
 
+## Asset-class adjustment policy
+
+Текущий v1 режим — **crypto-first**. Для `CCXT` crypto datasets raw OHLCV допустимы только
+с `adjustment_mode=none`, потому что split/dividend corporate actions к таким рядам не
+применяются.
+
+Equities workflows пока fail-closed: `Yahoo`, `Alpaca` и `Polygon` datasets нельзя
+сохранять как raw `adjustment_mode=none`. Для equities разрешен только
+`adjustment_mode=split_dividend`, то есть данные должны быть уже приведены с учетом split
+и dividend adjustments. Это защищает statistical testing и backtesting от ложных скачков
+цен из-за corporate actions.
+
+Иными словами: crypto можно исследовать сейчас через CCXT, а equities подключаем только
+после явного adjusted-data/provenance слоя. Это не отказ от equities, а защита от
+некачественных рядов.
+
 Подробная оценка limitations, licensing, rate limits и historical depth вынесена в
 `docs/data_sources.md`.

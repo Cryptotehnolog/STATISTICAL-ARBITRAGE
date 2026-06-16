@@ -1028,9 +1028,17 @@ This implementation plan breaks down the multi-agent quantitative research syste
       `scripts/pre_commit_check.ps1`
     - _Requirements: 5.1-5.14, 6.10, 7.6, 7.7_
 
-  - [ ] 24.4 Clarify and implement asset-class-specific data adjustments
+  - [x] 24.4 Clarify and implement asset-class-specific data adjustments
     - Document v1 crypto-first behavior and adjusted-price-only equities policy
     - Add split/dividend handling before enabling raw equity OHLCV workflows
+    - Implemented `AdjustmentMode.SPLIT_DIVIDEND` and
+      `validate_dataset_adjustment_policy`
+    - Crypto `CCXT` datasets are explicitly raw OHLCV with `adjustment_mode=none`
+    - Equity sources (`Yahoo`, `Alpaca`, `Polygon`) now fail closed unless
+      `adjustment_mode=split_dividend`
+    - Registry persistence validates the same policy before writing dataset rows
+    - Guarded by `scripts/check_asset_adjustment_policy.ps1`, now part of
+      `scripts/pre_commit_check.ps1`
     - _Requirements: 2.10, 20.1-20.12_
 
 ## Notes

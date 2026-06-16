@@ -72,7 +72,7 @@ def test_dataset_validates_range_and_score() -> None:
         missing_bars=1,
         outlier_count=0,
         quality_score=0.99,
-        adjustment_mode=AdjustmentMode.SPLIT,
+        adjustment_mode=AdjustmentMode.SPLIT_DIVIDEND,
         file_path="data/parquet/msft.parquet",
     )
 
@@ -90,6 +90,45 @@ def test_dataset_validates_range_and_score() -> None:
             bar_count=100,
             file_path="data/parquet/msft.parquet",
         )
+
+
+def test_dataset_enforces_asset_class_specific_adjustment_policy() -> None:
+    """Crypto can remain raw OHLCV, while equities require split/dividend adjusted data."""
+    crypto = Dataset(
+        symbol="BTC/USDT",
+        source=DatasetSource.CCXT,
+        timeframe="15m",
+        start_date=datetime(2024, 1, 1, tzinfo=UTC),
+        end_date=datetime(2024, 1, 2, tzinfo=UTC),
+        bar_count=96,
+        adjustment_mode=AdjustmentMode.NONE,
+        file_path="data/parquet/btc.parquet",
+    )
+
+    assert crypto.adjustment_mode == AdjustmentMode.NONE
+
+    equity_common = {
+        "symbol": "MSFT",
+        "source": DatasetSource.ALPACA,
+        "timeframe": "15m",
+        "start_date": datetime(2024, 1, 1, tzinfo=UTC),
+        "end_date": datetime(2024, 1, 2, tzinfo=UTC),
+        "bar_count": 26,
+        "file_path": "data/parquet/msft.parquet",
+    }
+
+    with pytest.raises(ValidationError, match="equity datasets require split_dividend"):
+        Dataset(adjustment_mode=AdjustmentMode.NONE, **equity_common)
+
+    with pytest.raises(ValidationError, match="equity datasets require split_dividend"):
+        Dataset(adjustment_mode=AdjustmentMode.SPLIT, **equity_common)
+
+    adjusted = Dataset(
+        adjustment_mode=AdjustmentMode.SPLIT_DIVIDEND,
+        metadata={"corporate_action_adjustment": "split_dividend"},
+        **equity_common,
+    )
+    assert adjusted.adjustment_mode == AdjustmentMode.SPLIT_DIVIDEND
 
 
 def test_ohlcv_bar_normalizes_symbols_and_validates_candle_bounds() -> None:

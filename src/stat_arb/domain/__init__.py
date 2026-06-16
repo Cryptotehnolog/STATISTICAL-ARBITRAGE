@@ -23,6 +23,7 @@ from stat_arb.domain.models import (
     ReportArtifact,
     ReviewStatus,
     StatisticalTestResult,
+    validate_dataset_adjustment_policy,
 )
 
 __all__ = [
@@ -48,4 +49,5 @@ __all__ = [
     "ReportArtifact",
     "ReviewStatus",
     "StatisticalTestResult",
+    "validate_dataset_adjustment_policy",
 ]

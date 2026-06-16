@@ -57,3 +57,31 @@ the current pair pipeline is accepted.
 
 Risks: Staging multi-asset work means some useful strategies wait longer, but it protects
 the MVP from becoming a fragile collection of unverified integrations.
+
+## DEC-0093: Keep v1 crypto-first and fail closed on raw equities
+
+Status: accepted
+
+Decision: The active v1 data policy is crypto-first. `CCXT` crypto datasets must use
+`adjustment_mode=none`. Equity-like sources (`Yahoo`, `Alpaca`, `Polygon`) must use
+`adjustment_mode=split_dividend`; raw equity datasets and partial split-only or
+dividend-only adjustment modes are rejected before registry persistence.
+
+Rationale: Equity price series can contain jumps from splits and dividends that look like
+statistical signals but are only corporate-action artifacts. Statistical testing and
+backtesting should never consume raw equity OHLCV as if it were comparable to crypto
+exchange candles. The project can still add equities later, but only through an explicit
+adjusted-data and provenance boundary.
+
+Implementation: `AdjustmentMode.SPLIT_DIVIDEND` and
+`validate_dataset_adjustment_policy` define the domain rule. The `Dataset` domain model
+and `persist_ohlcv_ingestion_result` registry helper both enforce the same policy.
+`scripts/check_asset_adjustment_policy.ps1` is part of the local pre-commit checklist.
+
+Alternatives considered: Treat `split` or `dividend` alone as enough; let each future
+source adapter decide its own policy; keep equities in docs only without executable
+guards. Those options are too easy for agents to bypass.
+
+Risks: This blocks quick raw-equity experiments. That is intentional until an equities
+pipeline can prove adjusted prices, licensing, calendars, source provenance, and data
+quality semantics.

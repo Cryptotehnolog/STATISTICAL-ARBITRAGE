@@ -10,7 +10,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from stat_arb.domain import AdjustmentMode, DataQualityReport
+from stat_arb.domain import AdjustmentMode, DataQualityReport, validate_dataset_adjustment_policy
 from stat_arb.ingestion import OHLCVIngestionResult
 from stat_arb.storage.models import DataQualityReportRecord, Dataset
 
@@ -39,6 +39,7 @@ def persist_ohlcv_ingestion_result(
         raise ValueError("Only passed OHLCV ingestion results can be persisted as datasets")
     if not result.parquet_paths:
         raise ValueError("OHLCV ingestion result must include at least one parquet path")
+    validate_dataset_adjustment_policy(result.batch.source, adjustment_mode)
 
     metadata_dir = _metadata_directory(metadata_root, result)
     metadata_dir.mkdir(parents=True, exist_ok=True)

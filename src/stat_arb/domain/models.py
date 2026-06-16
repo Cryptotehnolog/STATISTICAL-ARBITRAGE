@@ -49,6 +49,7 @@ class AdjustmentMode(StrEnum):
 
     SPLIT = "split"
     DIVIDEND = "dividend"
+    SPLIT_DIVIDEND = "split_dividend"
     NONE = "none"
 
 
@@ -193,6 +194,7 @@ class Dataset(DomainModel):
         """Ensure dataset time range is ordered."""
         if self.end_date <= self.start_date:
             raise ValueError("end_date must be after start_date")
+        validate_dataset_adjustment_policy(self.source, self.adjustment_mode)
         return self
 
 
@@ -591,3 +593,22 @@ class ReportArtifact(DomainModel):
     file_path: Path
     format: ArtifactFormat
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+def validate_dataset_adjustment_policy(
+    source: DatasetSource | str,
+    adjustment_mode: AdjustmentMode | str,
+) -> None:
+    """Validate asset-class-specific adjustment rules for dataset metadata."""
+    source_value = str(source)
+    adjustment_value = str(adjustment_mode)
+
+    if source_value in {
+        DatasetSource.YAHOO.value,
+        DatasetSource.ALPACA.value,
+        DatasetSource.POLYGON.value,
+    } and adjustment_value != AdjustmentMode.SPLIT_DIVIDEND.value:
+        raise ValueError("equity datasets require split_dividend adjustment_mode")
+
+    if source_value == DatasetSource.CCXT.value and adjustment_value != AdjustmentMode.NONE.value:
+        raise ValueError("ccxt crypto datasets require none adjustment_mode")

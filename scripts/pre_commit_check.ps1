@@ -8,6 +8,7 @@ $deferredWorkChecklistScript = Join-Path $PSScriptRoot "check_deferred_work_chec
 $secretLeakCheckScript = Join-Path $PSScriptRoot "check_secret_leaks.ps1"
 $memoryContractsCheckScript = Join-Path $PSScriptRoot "check_memory_contracts.ps1"
 $researchDefaultsCheckScript = Join-Path $PSScriptRoot "check_research_defaults.ps1"
+$assetAdjustmentPolicyCheckScript = Join-Path $PSScriptRoot "check_asset_adjustment_policy.ps1"
 $pairAlignmentBoundaryCheckScript = Join-Path $PSScriptRoot "check_pair_alignment_boundary.ps1"
 $hypothesisAgentBoundaryCheckScript = Join-Path $PSScriptRoot "check_hypothesis_agent_boundaries.ps1"
 $backtestAgentBoundaryCheckScript = Join-Path $PSScriptRoot "check_backtest_agent_boundaries.ps1"
@@ -52,6 +53,7 @@ Write-Output "- Проверка deferred work checklist: check_deferred_work_ch
 Write-Output "- Secret leak guard: check_secret_leaks.ps1"
 Write-Output "- Проверка memory contracts: check_memory_contracts.ps1"
 Write-Output "- Проверка research defaults: check_research_defaults.ps1"
+Write-Output "- Проверка asset-class adjustment policy: check_asset_adjustment_policy.ps1"
 Write-Output "- Проверка pair alignment boundary: check_pair_alignment_boundary.ps1"
 Write-Output "- Проверка Hypothesis Agent boundaries: check_hypothesis_agent_boundaries.ps1"
 Write-Output "- Проверка Backtest Agent boundaries: check_backtest_agent_boundaries.ps1"
@@ -86,6 +88,7 @@ try {
     Invoke-RequiredCheck $secretLeakCheckScript
     Invoke-RequiredCheck $memoryContractsCheckScript
     Invoke-RequiredCheck $researchDefaultsCheckScript
+    Invoke-RequiredCheck $assetAdjustmentPolicyCheckScript
     Invoke-RequiredCheck $pairAlignmentBoundaryCheckScript
     Invoke-RequiredCheck $hypothesisAgentBoundaryCheckScript
     Invoke-RequiredCheck $backtestAgentBoundaryCheckScript

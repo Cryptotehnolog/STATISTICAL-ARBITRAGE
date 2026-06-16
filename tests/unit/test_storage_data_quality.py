@@ -12,8 +12,19 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.data_quality import OHLCVQualityConfig
-from stat_arb.domain import DataQualityIssue, DataQualityReport, DataQualitySeverity, DatasetSource
-from stat_arb.ingestion import CCXTOHLCVSource, OHLCVQualityError, fetch_validate_write_ohlcv
+from stat_arb.domain import (
+    AdjustmentMode,
+    DataQualityIssue,
+    DataQualityReport,
+    DataQualitySeverity,
+    DatasetSource,
+)
+from stat_arb.ingestion import (
+    CCXTOHLCVSource,
+    OHLCVIngestionResult,
+    OHLCVQualityError,
+    fetch_validate_write_ohlcv,
+)
 from stat_arb.storage import (
     Base,
     DataQualityReportRecord,
@@ -173,6 +184,52 @@ def test_persist_ohlcv_ingestion_result_requires_passing_quality(session: Sessio
         assert session.query(Dataset).count() == 0
         assert session.query(DataQualityReportRecord).count() == 0
         assert not metadata_root.exists()
+    finally:
+        rmtree(output_root, ignore_errors=True)
+        rmtree(metadata_root, ignore_errors=True)
+
+
+def test_persist_ohlcv_ingestion_result_rejects_raw_equity_adjustments(session: Session) -> None:
+    """Registry persistence should not bypass equity adjustment policy."""
+    output_root = Path("data/test_tmp") / f"storage-dq-equity-{uuid4()}"
+    metadata_root = Path("data/test_tmp") / f"storage-dq-equity-meta-{uuid4()}"
+    source = CCXTOHLCVSource(
+        exchange_id="fake",
+        exchange=FakeExchange(
+            [
+                _row(datetime(2024, 1, 1, 0, 0, tzinfo=UTC), 100.0),
+                _row(datetime(2024, 1, 1, 0, 5, tzinfo=UTC), 101.0),
+            ]
+        ),
+        sleep=lambda _: None,
+    )
+
+    try:
+        ingestion_result = fetch_validate_write_ohlcv(
+            source,
+            symbol="MSFT",
+            timeframe="5m",
+            output_root=output_root,
+            quality_config=_strict_quality_config(),
+        )
+        equity_batch = ingestion_result.batch.model_copy(update={"source": DatasetSource.ALPACA})
+        equity_report = ingestion_result.quality_report.model_copy(
+            update={"source": DatasetSource.ALPACA}
+        )
+        equity_result = OHLCVIngestionResult(
+            batch=equity_batch,
+            quality_report=equity_report,
+            parquet_paths=ingestion_result.parquet_paths,
+        )
+
+        with pytest.raises(ValueError, match="equity datasets require split_dividend"):
+            persist_ohlcv_ingestion_result(
+                session,
+                equity_result,
+                metadata_root,
+                adjustment_mode=AdjustmentMode.NONE,
+            )
+        assert session.query(Dataset).count() == 0
     finally:
         rmtree(output_root, ignore_errors=True)
         rmtree(metadata_root, ignore_errors=True)
