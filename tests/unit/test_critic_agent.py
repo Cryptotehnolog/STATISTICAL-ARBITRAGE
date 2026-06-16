@@ -493,6 +493,50 @@ def test_critic_weak_assumption_detection_flags_residual_diagnostics() -> None:
     )
 
 
+def test_critic_weak_assumption_detection_flags_stability_diagnostics() -> None:
+    """Rolling stability diagnostics should be explicit weak-assumption indicators."""
+    assessment = detect_weak_assumptions(
+        CriticWeakAssumptionEvidence(
+            cointegration_p_value=0.01,
+            half_life_days=5.0,
+            regime_changes_detected=False,
+            hedge_ratio_r_squared=0.82,
+            residual_ljung_box_p_value=None,
+            residual_jarque_bera_p_value=None,
+            residual_excess_kurtosis=None,
+            hedge_ratio_stability_std=0.42,
+            hedge_ratio_stability_max_abs_change=0.91,
+            cointegration_stability_pass_ratio=0.4,
+        ),
+        policy=CriticWeakAssumptionPolicy(
+            cointegration_alpha=None,
+            p_value_warning_margin=None,
+            min_half_life_days=None,
+            max_half_life_days=None,
+            flag_unaddressed_regime_changes=False,
+            min_hedge_ratio_r_squared=None,
+            min_ljung_box_p_value=None,
+            min_jarque_bera_p_value=None,
+            max_abs_excess_kurtosis=None,
+            max_hedge_ratio_stability_std=0.3,
+            max_hedge_ratio_stability_max_abs_change=0.8,
+            min_cointegration_stability_pass_ratio=0.75,
+        ),
+    )
+
+    assert assessment.weak_assumptions_detected is True
+    assert assessment.indicators == (
+        "hedge_ratio_stability_std: rolling hedge-ratio std 0.420000 exceeds 0.300000",
+        "hedge_ratio_stability_max_abs_change: rolling hedge-ratio max change 0.910000 exceeds 0.800000",
+        "cointegration_stability_pass_ratio: rolling pass ratio 0.400000 is below required 0.750000",
+    )
+    assert assessment.checked_rules == (
+        "hedge_ratio_stability_std",
+        "hedge_ratio_stability_max_abs_change",
+        "cointegration_stability_pass_ratio",
+    )
+
+
 def test_critic_weak_assumption_policy_rejects_hidden_noop_policy() -> None:
     """At least one weak-assumption rule must be active."""
     with pytest.raises(ValueError, match="at least one"):

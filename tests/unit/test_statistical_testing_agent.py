@@ -59,6 +59,8 @@ def test_run_statistical_testing_persists_registry_result_and_memory(session: Se
             adf_autolag="AIC",
             periods_per_day=96.0,
             residual_diagnostics_lags=10,
+            stability_window=60,
+            stability_step=30,
             regime_window=60,
             regime_mean_shift_threshold=3.0,
             regime_volatility_ratio_threshold=2.5,
@@ -76,8 +78,17 @@ def test_run_statistical_testing_persists_registry_result_and_memory(session: Se
     assert 0.0 <= stored.residual_ljung_box_p_value <= 1.0
     assert 0.0 <= stored.residual_jarque_bera_p_value <= 1.0
     assert stored.residual_diagnostics_lags == 10
+    assert stored.stability_window == 60
+    assert stored.stability_step == 30
+    assert stored.stability_window_count > 1
+    assert stored.hedge_ratio_stability_std >= 0.0
+    assert stored.hedge_ratio_stability_max_abs_change >= 0.0
+    assert 0.0 <= stored.cointegration_stability_pass_ratio <= 1.0
     assert result.domain_result.residual_excess_kurtosis == pytest.approx(
         stored.residual_excess_kurtosis
+    )
+    assert result.domain_result.hedge_ratio_stability_std == pytest.approx(
+        stored.hedge_ratio_stability_std
     )
     assert stored.passed is True
     assert result.memory_written is True
@@ -105,7 +116,9 @@ def test_run_statistical_testing_requires_passed_quality_reports(session: Sessio
                 adf_regression="c",
                 adf_autolag="AIC",
                 periods_per_day=96.0,
-            residual_diagnostics_lags=10,
+                residual_diagnostics_lags=10,
+                stability_window=60,
+                stability_step=30,
                 regime_window=60,
                 regime_mean_shift_threshold=3.0,
                 regime_volatility_ratio_threshold=2.5,
@@ -147,7 +160,9 @@ def test_run_statistical_testing_rejects_hypothesis_dataset_mismatch(session: Se
                 adf_regression="c",
                 adf_autolag="AIC",
                 periods_per_day=96.0,
-            residual_diagnostics_lags=10,
+                residual_diagnostics_lags=10,
+                stability_window=60,
+                stability_step=30,
                 regime_window=60,
                 regime_mean_shift_threshold=3.0,
                 regime_volatility_ratio_threshold=2.5,
@@ -179,7 +194,9 @@ def test_run_statistical_testing_validates_chronological_inputs(session: Session
                 adf_regression="c",
                 adf_autolag="AIC",
                 periods_per_day=96.0,
-            residual_diagnostics_lags=10,
+                residual_diagnostics_lags=10,
+                stability_window=60,
+                stability_step=30,
                 regime_window=60,
                 regime_mean_shift_threshold=3.0,
                 regime_volatility_ratio_threshold=2.5,

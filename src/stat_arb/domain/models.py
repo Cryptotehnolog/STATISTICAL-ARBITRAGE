@@ -415,6 +415,12 @@ class StatisticalTestResult(DomainModel):
     residual_jarque_bera_p_value: float = Field(ge=0.0, le=1.0)
     residual_excess_kurtosis: float
     residual_diagnostics_lags: int = Field(gt=0)
+    stability_window: int | None = Field(default=None, gt=0)
+    stability_step: int | None = Field(default=None, gt=0)
+    stability_window_count: int | None = Field(default=None, gt=1)
+    hedge_ratio_stability_std: float | None = Field(default=None, ge=0.0)
+    hedge_ratio_stability_max_abs_change: float | None = Field(default=None, ge=0.0)
+    cointegration_stability_pass_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
     regime_changes_detected: bool = False
     passed: bool
     rejection_reason: str | None = None

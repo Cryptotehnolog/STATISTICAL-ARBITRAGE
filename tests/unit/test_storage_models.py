@@ -217,6 +217,12 @@ def test_statistical_test_result_creation(session: Session):
         residual_jarque_bera_p_value=0.5,
         residual_excess_kurtosis=0.1,
         residual_diagnostics_lags=10,
+        stability_window=60,
+        stability_step=30,
+        stability_window_count=5,
+        hedge_ratio_stability_std=0.02,
+        hedge_ratio_stability_max_abs_change=0.04,
+        cointegration_stability_pass_ratio=1.0,
         regime_changes_detected=False,
         passed=True,
     )
@@ -229,6 +235,8 @@ def test_statistical_test_result_creation(session: Session):
     assert result is not None
     assert result.cointegration_p_value == 0.012
     assert result.hedge_ratio == 1.5
+    assert result.stability_window == 60
+    assert result.cointegration_stability_pass_ratio == 1.0
     assert result.passed is True
 
 

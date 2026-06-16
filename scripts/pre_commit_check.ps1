@@ -21,6 +21,7 @@ $cliPipelineCheckScript = Join-Path $PSScriptRoot "check_cli_pipeline.ps1"
 $pairScreeningPipelineCheckScript = Join-Path $PSScriptRoot "check_pair_screening_pipeline.ps1"
 $statisticalTestingWorkflowCheckScript = Join-Path $PSScriptRoot "check_statistical_testing_workflow.ps1"
 $residualDiagnosticsPipelineCheckScript = Join-Path $PSScriptRoot "check_residual_diagnostics_pipeline.ps1"
+$stabilityDiagnosticsPipelineCheckScript = Join-Path $PSScriptRoot "check_stability_diagnostics_pipeline.ps1"
 $backtestWorkflowCheckScript = Join-Path $PSScriptRoot "check_backtest_workflow.ps1"
 $reproducibilityWorkflowCheckScript = Join-Path $PSScriptRoot "check_reproducibility_workflow.ps1"
 $mvpAcceptanceCheckScript = Join-Path $PSScriptRoot "check_mvp_acceptance.ps1"
@@ -63,6 +64,7 @@ Write-Output "- Проверка CLI pipeline: check_cli_pipeline.ps1"
 Write-Output "- Проверка pair-screening workflow: check_pair_screening_pipeline.ps1"
 Write-Output "- Проверка statistical-testing workflow: check_statistical_testing_workflow.ps1"
 Write-Output "- Проверка residual diagnostics pipeline: check_residual_diagnostics_pipeline.ps1"
+Write-Output "- Проверка rolling stability diagnostics pipeline: check_stability_diagnostics_pipeline.ps1"
 Write-Output "- Проверка backtest workflow: check_backtest_workflow.ps1"
 Write-Output "- Проверка reproducibility workflow: check_reproducibility_workflow.ps1"
 Write-Output "- Проверка Task 22 MVP acceptance: check_mvp_acceptance.ps1"
@@ -95,6 +97,7 @@ try {
     Invoke-RequiredCheck $pairScreeningPipelineCheckScript
     Invoke-RequiredCheck $statisticalTestingWorkflowCheckScript
     Invoke-RequiredCheck $residualDiagnosticsPipelineCheckScript
+    Invoke-RequiredCheck $stabilityDiagnosticsPipelineCheckScript
     Invoke-RequiredCheck $backtestWorkflowCheckScript
     Invoke-RequiredCheck $reproducibilityWorkflowCheckScript
     Invoke-RequiredCheck $mvpAcceptanceCheckScript

@@ -121,7 +121,8 @@ def ensure_sqlite_registry_schema(engine: Engine) -> None:
         return
 
     inspector = inspect(engine)
-    if "data_quality_reports" not in inspector.get_table_names():
+    table_names = inspector.get_table_names()
+    if "data_quality_reports" not in table_names:
         return
 
     existing_columns = {
@@ -138,6 +139,23 @@ def ensure_sqlite_registry_schema(engine: Engine) -> None:
             "ALTER TABLE data_quality_reports "
             "ADD COLUMN invalid_reason VARCHAR(200)"
         )
+
+    if "statistical_test_results" in table_names:
+        statistical_columns = {
+            column["name"] for column in inspector.get_columns("statistical_test_results")
+        }
+        for column_name, column_type in (
+            ("stability_window", "INTEGER"),
+            ("stability_step", "INTEGER"),
+            ("stability_window_count", "INTEGER"),
+            ("hedge_ratio_stability_std", "FLOAT"),
+            ("hedge_ratio_stability_max_abs_change", "FLOAT"),
+            ("cointegration_stability_pass_ratio", "FLOAT"),
+        ):
+            if column_name not in statistical_columns:
+                statements.append(
+                    f"ALTER TABLE statistical_test_results ADD COLUMN {column_name} {column_type}"
+                )
 
     if not statements:
         return

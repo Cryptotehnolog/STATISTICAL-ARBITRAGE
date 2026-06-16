@@ -16,9 +16,11 @@ from stat_arb.domain import StatisticalTestResult as DomainStatisticalTestResult
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
 from stat_arb.statistical import (
     MultipleTestingMethod,
+    StabilityDiagnosticsConfig,
     adf_stationarity_test,
     chronological_train_test_split,
     detect_regime_changes,
+    diagnose_pair_stability,
     diagnose_residuals,
     engle_granger_cointegration_test,
     estimate_half_life,
@@ -57,6 +59,8 @@ class StatisticalTestingInput:
     adf_autolag: str | None
     periods_per_day: float
     residual_diagnostics_lags: int
+    stability_window: int
+    stability_step: int
     regime_window: int
     regime_mean_shift_threshold: float
     regime_volatility_ratio_threshold: float
@@ -122,6 +126,17 @@ def run_statistical_testing(
         residuals,
         ljung_box_lags=request.residual_diagnostics_lags,
     )
+    stability = diagnose_pair_stability(
+        train_a,
+        train_b,
+        config=StabilityDiagnosticsConfig(
+            window_size=request.stability_window,
+            step_size=request.stability_step,
+            alpha=request.alpha,
+            multiple_testing_method=MultipleTestingMethod.NONE,
+            include_intercept=True,
+        ),
+    )
     regime = detect_regime_changes(
         residuals,
         window=min(request.regime_window, max(5, residuals.size // 2)),
@@ -154,6 +169,12 @@ def run_statistical_testing(
         residual_jarque_bera_p_value=residual_diagnostics.jarque_bera_p_value,
         residual_excess_kurtosis=residual_diagnostics.excess_kurtosis,
         residual_diagnostics_lags=residual_diagnostics.lags,
+        stability_window=request.stability_window,
+        stability_step=request.stability_step,
+        stability_window_count=stability.window_count,
+        hedge_ratio_stability_std=stability.hedge_ratio_std,
+        hedge_ratio_stability_max_abs_change=stability.hedge_ratio_max_abs_change,
+        cointegration_stability_pass_ratio=stability.cointegration_pass_ratio,
         regime_changes_detected=regime.has_regime_change,
         passed=passed,
         rejection_reason="; ".join(rejection_reasons) if rejection_reasons else None,
@@ -280,6 +301,12 @@ def _persist_statistical_result(
         residual_jarque_bera_p_value=result.residual_jarque_bera_p_value,
         residual_excess_kurtosis=result.residual_excess_kurtosis,
         residual_diagnostics_lags=result.residual_diagnostics_lags,
+        stability_window=result.stability_window,
+        stability_step=result.stability_step,
+        stability_window_count=result.stability_window_count,
+        hedge_ratio_stability_std=result.hedge_ratio_stability_std,
+        hedge_ratio_stability_max_abs_change=result.hedge_ratio_stability_max_abs_change,
+        cointegration_stability_pass_ratio=result.cointegration_stability_pass_ratio,
         regime_changes_detected=result.regime_changes_detected,
         passed=result.passed,
         rejection_reason=result.rejection_reason,

@@ -17,6 +17,11 @@ from stat_arb.statistical.residual_diagnostics import (
     ResidualDiagnosticsResult,
     diagnose_residuals,
 )
+from stat_arb.statistical.stability import (
+    StabilityDiagnosticsConfig,
+    StabilityDiagnosticsResult,
+    diagnose_pair_stability,
+)
 from stat_arb.statistical.stationarity import ADFTestResult, adf_stationarity_test
 from stat_arb.statistical.validation import (
     IndexWindow,
@@ -38,6 +43,8 @@ __all__ = [
     "RegimeChangePoint",
     "RegimeChangeResult",
     "ResidualDiagnosticsResult",
+    "StabilityDiagnosticsConfig",
+    "StabilityDiagnosticsResult",
     "TrainTestSplit",
     "WalkForwardWindow",
     "ZScoreResult",
@@ -48,6 +55,7 @@ __all__ = [
     "construct_rolling_zscore",
     "detect_regime_changes",
     "diagnose_residuals",
+    "diagnose_pair_stability",
     "engle_granger_cointegration_test",
     "estimate_half_life",
     "estimate_hedge_ratio",

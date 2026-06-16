@@ -1174,6 +1174,8 @@ def _seed_statistical_testing_task(db_path: Path) -> str:
                     "adf_autolag": "AIC",
                     "periods_per_day": 96.0,
                     "residual_diagnostics_lags": 10,
+                    "stability_window": 60,
+                    "stability_step": 30,
                     "regime_window": 60,
                     "regime_mean_shift_threshold": 3.0,
                     "regime_volatility_ratio_threshold": 2.5,

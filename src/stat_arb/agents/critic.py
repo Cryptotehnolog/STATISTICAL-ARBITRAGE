@@ -153,6 +153,9 @@ class CriticWeakAssumptionPolicy:
     min_ljung_box_p_value: float | None
     min_jarque_bera_p_value: float | None
     max_abs_excess_kurtosis: float | None
+    max_hedge_ratio_stability_std: float | None = None
+    max_hedge_ratio_stability_max_abs_change: float | None = None
+    min_cointegration_stability_pass_ratio: float | None = None
 
     def __post_init__(self) -> None:
         if not any(
@@ -164,6 +167,9 @@ class CriticWeakAssumptionPolicy:
                 self.min_ljung_box_p_value is not None,
                 self.min_jarque_bera_p_value is not None,
                 self.max_abs_excess_kurtosis is not None,
+                self.max_hedge_ratio_stability_std is not None,
+                self.max_hedge_ratio_stability_max_abs_change is not None,
+                self.min_cointegration_stability_pass_ratio is not None,
             )
         ):
             raise ValueError("at least one weak-assumption rule must be enabled")
@@ -200,6 +206,21 @@ class CriticWeakAssumptionPolicy:
                 self.max_abs_excess_kurtosis,
                 label="max_abs_excess_kurtosis",
             )
+        if self.max_hedge_ratio_stability_std is not None:
+            _validate_non_negative_float(
+                self.max_hedge_ratio_stability_std,
+                label="max_hedge_ratio_stability_std",
+            )
+        if self.max_hedge_ratio_stability_max_abs_change is not None:
+            _validate_non_negative_float(
+                self.max_hedge_ratio_stability_max_abs_change,
+                label="max_hedge_ratio_stability_max_abs_change",
+            )
+        if self.min_cointegration_stability_pass_ratio is not None:
+            _validate_probability(
+                self.min_cointegration_stability_pass_ratio,
+                label="min_cointegration_stability_pass_ratio",
+            )
 
 
 @dataclass(frozen=True)
@@ -213,6 +234,9 @@ class CriticWeakAssumptionEvidence:
     residual_ljung_box_p_value: float | None
     residual_jarque_bera_p_value: float | None
     residual_excess_kurtosis: float | None
+    hedge_ratio_stability_std: float | None = None
+    hedge_ratio_stability_max_abs_change: float | None = None
+    cointegration_stability_pass_ratio: float | None = None
 
     def __post_init__(self) -> None:
         _validate_probability(self.cointegration_p_value, label="cointegration_p_value")
@@ -234,6 +258,21 @@ class CriticWeakAssumptionEvidence:
             self.residual_excess_kurtosis
         ):
             raise ValueError("residual_excess_kurtosis must be finite")
+        if self.hedge_ratio_stability_std is not None:
+            _validate_non_negative_float(
+                self.hedge_ratio_stability_std,
+                label="hedge_ratio_stability_std",
+            )
+        if self.hedge_ratio_stability_max_abs_change is not None:
+            _validate_non_negative_float(
+                self.hedge_ratio_stability_max_abs_change,
+                label="hedge_ratio_stability_max_abs_change",
+            )
+        if self.cointegration_stability_pass_ratio is not None:
+            _validate_probability(
+                self.cointegration_stability_pass_ratio,
+                label="cointegration_stability_pass_ratio",
+            )
 
 
 @dataclass(frozen=True)
@@ -652,6 +691,50 @@ def detect_weak_assumptions(
                 "residual_excess_kurtosis: "
                 f"absolute excess kurtosis {abs(evidence.residual_excess_kurtosis):.6f} "
                 f"exceeds {policy.max_abs_excess_kurtosis:.6f}"
+            )
+
+    if policy.max_hedge_ratio_stability_std is not None:
+        checked_rules.append("hedge_ratio_stability_std")
+        if evidence.hedge_ratio_stability_std is None:
+            indicators.append("hedge_ratio_stability_std: rolling hedge-ratio std is missing")
+        elif evidence.hedge_ratio_stability_std > policy.max_hedge_ratio_stability_std:
+            indicators.append(
+                "hedge_ratio_stability_std: "
+                f"rolling hedge-ratio std {evidence.hedge_ratio_stability_std:.6f} "
+                f"exceeds {policy.max_hedge_ratio_stability_std:.6f}"
+            )
+
+    if policy.max_hedge_ratio_stability_max_abs_change is not None:
+        checked_rules.append("hedge_ratio_stability_max_abs_change")
+        if evidence.hedge_ratio_stability_max_abs_change is None:
+            indicators.append(
+                "hedge_ratio_stability_max_abs_change: rolling hedge-ratio max change is missing"
+            )
+        elif (
+            evidence.hedge_ratio_stability_max_abs_change
+            > policy.max_hedge_ratio_stability_max_abs_change
+        ):
+            indicators.append(
+                "hedge_ratio_stability_max_abs_change: "
+                "rolling hedge-ratio max change "
+                f"{evidence.hedge_ratio_stability_max_abs_change:.6f} "
+                f"exceeds {policy.max_hedge_ratio_stability_max_abs_change:.6f}"
+            )
+
+    if policy.min_cointegration_stability_pass_ratio is not None:
+        checked_rules.append("cointegration_stability_pass_ratio")
+        if evidence.cointegration_stability_pass_ratio is None:
+            indicators.append(
+                "cointegration_stability_pass_ratio: rolling cointegration pass ratio is missing"
+            )
+        elif (
+            evidence.cointegration_stability_pass_ratio
+            < policy.min_cointegration_stability_pass_ratio
+        ):
+            indicators.append(
+                "cointegration_stability_pass_ratio: "
+                f"rolling pass ratio {evidence.cointegration_stability_pass_ratio:.6f} "
+                f"is below required {policy.min_cointegration_stability_pass_ratio:.6f}"
             )
 
     return CriticWeakAssumptionAssessment(

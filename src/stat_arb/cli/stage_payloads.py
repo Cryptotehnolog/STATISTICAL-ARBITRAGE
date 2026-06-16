@@ -52,6 +52,8 @@ def build_statistical_testing_input(payload: dict[str, object]) -> StatisticalTe
         adf_autolag=_payload_optional_string(payload, "adf_autolag"),
         periods_per_day=_payload_float(payload, "periods_per_day"),
         residual_diagnostics_lags=_payload_int(payload, "residual_diagnostics_lags"),
+        stability_window=_payload_int(payload, "stability_window"),
+        stability_step=_payload_int(payload, "stability_step"),
         regime_window=_payload_int(payload, "regime_window"),
         regime_mean_shift_threshold=_payload_float(
             payload,

@@ -11,6 +11,7 @@ try {
         tests/unit/test_cointegration.py `
         tests/unit/test_stationarity.py `
         tests/unit/test_hedge_ratio.py `
+        tests/unit/test_stability_diagnostics.py `
         tests/unit/test_mean_reversion.py `
         tests/unit/test_regime.py `
         tests/unit/test_zscore.py `

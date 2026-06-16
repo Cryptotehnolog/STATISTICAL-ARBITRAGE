@@ -229,6 +229,14 @@ class StatisticalTestResult(Base):
     residual_excess_kurtosis: Mapped[float] = mapped_column(Float, nullable=False)
     residual_diagnostics_lags: Mapped[int] = mapped_column(Integer, nullable=False)
 
+    # Rolling stability diagnostics
+    stability_window: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stability_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stability_window_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    hedge_ratio_stability_std: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hedge_ratio_stability_max_abs_change: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cointegration_stability_pass_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     # Regime detection
     regime_changes_detected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

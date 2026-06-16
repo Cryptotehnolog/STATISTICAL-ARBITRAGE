@@ -81,6 +81,12 @@ def test_provenance_migration_round_trips_on_legacy_schema(tmp_path: Path) -> No
     assert "residual_jarque_bera_p_value" in statistical_columns
     assert "residual_excess_kurtosis" in statistical_columns
     assert "residual_diagnostics_lags" in statistical_columns
+    assert "stability_window" in statistical_columns
+    assert "stability_step" in statistical_columns
+    assert "stability_window_count" in statistical_columns
+    assert "hedge_ratio_stability_std" in statistical_columns
+    assert "hedge_ratio_stability_max_abs_change" in statistical_columns
+    assert "cointegration_stability_pass_ratio" in statistical_columns
     assert "risk_exit_policy" in backtest_columns
     assert "risk_exit_policy_disabled_reason" in backtest_columns
     upgraded_engine.dispose()
@@ -91,5 +97,6 @@ def test_provenance_migration_round_trips_on_legacy_schema(tmp_path: Path) -> No
     statistical_columns = {column["name"] for column in inspector.get_columns("statistical_test_results")}
     backtest_columns = {column["name"] for column in inspector.get_columns("backtest_results")}
     assert "residual_ljung_box_p_value" not in statistical_columns
+    assert "stability_window" not in statistical_columns
     assert "risk_exit_policy" not in backtest_columns
     downgraded_engine.dispose()

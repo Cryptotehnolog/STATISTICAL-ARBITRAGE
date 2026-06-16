@@ -1003,10 +1003,15 @@ This implementation plan breaks down the multi-agent quantitative research syste
       `scripts/pre_commit_check.ps1`.
     - _Requirements: 4.1-4.12, 7.4, 31.1_
 
-  - [ ] 24.2 Add cointegration and hedge-ratio stability diagnostics
+  - [x] 24.2 Add cointegration and hedge-ratio stability diagnostics
     - Add rolling hedge-ratio stability metrics before promoting crypto pairs
     - Add rolling or recursive cointegration stability checks
     - Keep Kalman, Johansen, and Markov-switching models as explicit extension paths, not hidden replacements for Engle-Granger
+    - Implemented explicit `StabilityDiagnosticsConfig`, `diagnose_pair_stability`,
+      Statistical Testing Agent persistence, Critic weak-assumption indicators, and
+      nullable migration fields for legacy registry rows
+    - Guarded by `scripts/check_stability_diagnostics_pipeline.ps1`, now part of
+      `scripts/pre_commit_check.ps1`
     - _Requirements: 4.1-4.12, 7.4_
 
   - [ ] 24.3 Add explicit capacity and cost realism scenarios

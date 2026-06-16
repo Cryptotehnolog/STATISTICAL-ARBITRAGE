@@ -245,6 +245,34 @@ Statistical Testing Agent, and the Critic weak-assumption signal that consumes r
 diagnostic evidence. The checkpoint is included in `scripts/pre_commit_check.ps1` so the
 hardening cannot silently regress.
 
+## DEC-0041: Treat rolling pair stability as explicit diagnostic evidence
+
+Status: accepted
+
+Decision: Add rolling hedge-ratio and cointegration stability diagnostics around the
+existing Engle-Granger/OLS boundary. `diagnose_pair_stability` requires explicit
+`window_size`, `step_size`, `alpha`, multiple-testing method, and intercept policy. The
+Statistical Testing Agent persists aggregate stability evidence for the train window:
+window count, hedge-ratio dispersion, maximum rolling hedge-ratio change, and rolling
+cointegration pass ratio.
+
+Rationale: Crypto pairs can look valid in one full-sample test while the relationship is
+fragile across rolling windows. Stability diagnostics should make that fragility visible
+before a pair is promoted to backtesting or later paper/live workflows.
+
+Alternatives considered: Replace Engle-Granger with Kalman filtering, Johansen tests, or
+Markov-switching models immediately; add hidden default stability thresholds inside the
+Statistical Testing Agent; store fake zero values for old registry rows.
+
+Risks: Stability evidence increases the amount of statistical context future reports must
+explain. Legacy registry rows may have `NULL` stability fields; Critic policies that require
+stability checks must treat missing evidence as a weakness instead of silently approving.
+
+Task 24.2 checkpoint: `scripts/check_stability_diagnostics_pipeline.ps1` guards the rolling
+stability boundary by running unit coverage for `diagnose_pair_stability`, the
+registry-backed Statistical Testing Agent, and the Critic weak-assumption signal that
+consumes stability evidence. The checkpoint is included in `scripts/pre_commit_check.ps1`.
+
 ## DEC-0079: Script statistical testing through Coordinator-backed CLI stages
 
 Status: accepted

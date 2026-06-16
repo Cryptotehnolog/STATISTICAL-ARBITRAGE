@@ -40,6 +40,12 @@ def test_research_impacting_defaults_are_not_hidden_in_runtime_boundaries() -> N
             "mean_shift_threshold: float =",
             "volatility_ratio_threshold: float =",
         ),
+        "src/stat_arb/statistical/stability.py": (
+            "window_size: int =",
+            "step_size: int =",
+            "alpha: float =",
+            "multiple_testing_method: MultipleTestingMethod =",
+        ),
         "src/stat_arb/data_quality/ohlcv.py": (
             "max_missing_bar_ratio: float =",
             "max_abnormal_volume_ratio: float =",
