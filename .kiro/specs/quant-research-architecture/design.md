@@ -247,7 +247,7 @@ NEW → DATA_VALIDATION → STATISTICAL_TESTING → BACKTESTING → CRITIC_REVIE
 
 **For Cryptocurrency:**
 - **Primary**: CCXT library with multiple exchange support
-  - Exchanges: Binance, Coinbase Pro, Kraken, etc.
+  - Exchanges: Bybit first, then Binance, OKX, Deribit.
   - Advantages: Free, reliable, excellent intraday coverage, standardized API
   - Limitations: Rate limits vary by exchange, requires API keys for some features
   - Intraday availability: Excellent (1-minute to 1-hour bars)
@@ -2594,7 +2594,7 @@ The v1 milestone is complete when the system can:
 
 2. **Ingest and validate data**
    - At least one data source integrated:
-     - **For crypto**: CCXT with Binance or Coinbase
+     - **For crypto**: CCXT with Bybit first, then Binance, OKX, Deribit
      - **For equities**: Alpaca API (free tier)
    - Ingest intraday OHLCV data for 50-100 liquid assets
    - Generate data quality reports before tests and backtests
@@ -2942,7 +2942,7 @@ The v1 milestone is complete when the system can:
    - **Recommendation**: Start with deterministic logic, add LLM optionally in v1.1
 
 2. **Data Sources**: Which data source to prioritize for v1?
-   - **For crypto**: CCXT with Binance (most liquid, reliable, free)
+   - **For crypto**: CCXT with Bybit first; Binance, OKX, and Deribit remain active planned venues
    - **For equities**: Alpaca API free tier (good intraday, US stocks only)
    - **Avoid**: Yahoo Finance (unreliable intraday, frequent gaps)
    - **Recommendation**: Choose based on target asset universe - crypto for 24/7 trading, equities for traditional markets

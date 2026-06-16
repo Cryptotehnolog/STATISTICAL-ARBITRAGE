@@ -7,6 +7,7 @@ ARCHITECTURE_PATH = Path("docs/architecture.md")
 AGENTS_PATH = Path("docs/agents.md")
 DATA_PATH = Path("docs/data.md")
 SCHEMA_PATH = Path("docs/schema.md")
+DATA_SOURCES_PATH = Path("docs/data_sources.md")
 
 
 def test_readme_links_core_task_19_documentation() -> None:
@@ -17,6 +18,7 @@ def test_readme_links_core_task_19_documentation() -> None:
         "docs/architecture.md",
         "docs/agents.md",
         "docs/data.md",
+        "docs/data_sources.md",
         "docs/schema.md",
     ):
         assert f"`{path}`" in readme
@@ -84,3 +86,31 @@ def test_schema_doc_documents_registry_as_numeric_source_of_truth() -> None:
     assert "hypotheses" in text
     assert "experiments" in text
     assert "backtest" in text
+
+
+def test_data_source_doc_sets_bybit_first_policy_and_excludes_coinbase_kraken() -> None:
+    """Task 19.4 should document the actual crypto exchange roadmap."""
+    text = DATA_SOURCES_PATH.read_text(encoding="utf-8")
+    readme = README_PATH.read_text(encoding="utf-8")
+
+    assert "Bybit" in text
+    assert "primary стартовая crypto exchange" in text
+    assert "Binance" in text
+    assert "OKX" in text
+    assert "Deribit" in text
+    assert "Coinbase Pro" not in text
+    assert "Kraken" not in text
+    assert "--exchange bybit" in readme
+    assert "Coinbase Pro" not in readme
+    assert "Kraken" not in readme
+
+
+def test_data_source_doc_keeps_live_exchange_smoke_opt_in() -> None:
+    """Live exchange checks should stay outside deterministic commit checks."""
+    text = DATA_SOURCES_PATH.read_text(encoding="utf-8")
+
+    assert "live CCXT smoke" in text
+    assert "opt-in" in text
+    assert "pre-commit" in text
+    assert "rate limits" in text
+    assert "terms of service" in text

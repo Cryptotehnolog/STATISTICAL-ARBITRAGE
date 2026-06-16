@@ -104,7 +104,7 @@ class CCXTOHLCVSource:
 
     def __init__(
         self,
-        exchange_id: str = "binance",
+        exchange_id: str = "bybit",
         exchange: CCXTExchange | None = None,
         *,
         max_retries: int = 3,

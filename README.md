@@ -263,10 +263,10 @@ CLI examples:
 
 ```bash
 # Скачать OHLCV, проверить качество и сохранить registry records
-uv run stat-arb data download --exchange binance --symbol BTC/USDT --timeframe 15m --since 2024-01-01T00:00:00+00:00 --limit 500 --raw-output-root data/raw --metadata-root data/registry --db-path data/registry.db --max-missing-bar-ratio 0 --max-abnormal-volume-ratio 0 --volume-spike-multiplier 10
+uv run stat-arb data download --exchange bybit --symbol BTC/USDT --timeframe 15m --since 2024-01-01T00:00:00+00:00 --limit 500 --raw-output-root data/raw --metadata-root data/registry --db-path data/registry.db --max-missing-bar-ratio 0 --max-abnormal-volume-ratio 0 --volume-spike-multiplier 10
 
 # Проверить OHLCV sample без записи в registry
-uv run stat-arb data validate --exchange binance --symbol BTC/USDT --timeframe 15m --since 2024-01-01T00:00:00+00:00 --limit 500 --max-missing-bar-ratio 0 --max-abnormal-volume-ratio 0 --volume-spike-multiplier 10
+uv run stat-arb data validate --exchange bybit --symbol BTC/USDT --timeframe 15m --since 2024-01-01T00:00:00+00:00 --limit 500 --max-missing-bar-ratio 0 --max-abnormal-volume-ratio 0 --volume-spike-multiplier 10
 
 # Показать сохраненные datasets
 uv run stat-arb data list --db-path data/registry.db
@@ -306,7 +306,7 @@ uv run stat-arb experiment execute-stage --task-id <uuid> --stage critic_review 
 
 ### Cryptocurrency
 
-- **CCXT Library**: поддержка нескольких exchanges, включая Binance, Coinbase Pro и Kraken.
+- **CCXT Library**: стартовый crypto venue — Bybit; Binance, OKX и Deribit остаются активными planned venues.
 - **Плюсы**: бесплатно, надежно, хорошее intraday coverage.
 - **Ограничения**: rate limits зависят от exchange.
 - **Intraday availability**: от 1-minute до 1-hour bars.
@@ -407,7 +407,7 @@ Pre-commit checks:
 
 Все secrets должны храниться через Infisical:
 
-- API keys для exchanges: Binance, Coinbase, Kraken, Alpaca.
+- API keys для exchanges: Bybit, Binance, OKX, Deribit, Alpaca.
 - Database passwords, если будет PostgreSQL.
 - LLM API keys.
 - Webhook tokens и Telegram bot tokens.
@@ -464,7 +464,7 @@ Pre-commit checks:
 
 ```bash
 uv run stat-arb data download \
-  --exchange binance \
+  --exchange bybit \
   --symbol BTC/USDT \
   --timeframe 15m \
   --since 2024-07-01T00:00:00+00:00 \
@@ -578,6 +578,7 @@ Dashboard:
 - **Архитектура**: `docs/architecture.md`.
 - **Агенты и права доступа**: `docs/agents.md`.
 - **Данные и качество**: `docs/data.md`.
+- **Источники данных**: `docs/data_sources.md`.
 - **Structured Registry schema**: `docs/schema.md`.
 - **Структура repository**: `docs/repository_structure.md`.
 - **Безопасная runtime cleanup**: `docs/runtime_maintenance.md`.

@@ -37,3 +37,10 @@ Data layer отвечает за то, чтобы Statistical Testing Agent и B
 CCXT является текущим crypto source adapter. Live exchange smoke tests должны быть opt-in,
 потому что network, rate limits и exchange behavior нестабильны. Yahoo Finance не
 рекомендуется для intraday research.
+
+Стартовый crypto venue для live CCXT smoke и ручных проверок — Bybit. Binance, OKX и
+Deribit остаются active planned venues для cross-venue validation и будущего расширения.
+Исключенные legacy venues не входят в активный roadmap проекта.
+
+Подробная оценка limitations, licensing, rate limits и historical depth вынесена в
+`docs/data_sources.md`.

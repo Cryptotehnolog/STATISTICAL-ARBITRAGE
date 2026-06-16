@@ -58,6 +58,22 @@ def _row(timestamp: datetime, open_price: float = 100.0) -> list[Any]:
     ]
 
 
+def test_ccxt_source_defaults_to_bybit_as_initial_exchange(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The implicit CCXT venue should match the documented startup exchange policy."""
+    created_exchange_ids: list[str] = []
+
+    def fake_create_exchange(exchange_id: str) -> FakeExchange:
+        created_exchange_ids.append(exchange_id)
+        return FakeExchange(rows=[])
+
+    monkeypatch.setattr(CCXTOHLCVSource, "_create_exchange", staticmethod(fake_create_exchange))
+
+    source = CCXTOHLCVSource()
+
+    assert source.exchange_id == "bybit"
+    assert created_exchange_ids == ["bybit"]
+
+
 def test_ccxt_source_fetches_and_normalizes_ohlcv_batch() -> None:
     """CCXT rows should become normalized OHLCV domain contracts."""
     exchange = FakeExchange(

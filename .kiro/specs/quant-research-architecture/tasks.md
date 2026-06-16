@@ -81,7 +81,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
 - [x] 4. Build Data Agent with quality validation
   - [x] 4.1 Implement OHLCV data ingestion from CCXT (crypto)
     - Create data source adapter for CCXT
-    - Implement download logic for multiple exchanges (Binance, Coinbase, Kraken)
+    - Implement download logic for active exchanges (Bybit first, then Binance, OKX, Deribit)
     - Handle rate limiting and retries with exponential backoff
     - Store raw data in Parquet format partitioned by symbol and date
     - _Requirements: 2.1-2.10, 20.1-20.12_
@@ -818,35 +818,37 @@ This implementation plan breaks down the multi-agent quantitative research syste
     Structured Registry schema: `docs/architecture.md`, `docs/agents.md`, `docs/data.md`,
     `docs/schema.md`.
 
-  - [ ] 19.1 Write comprehensive README.md
+  - [x] 19.1 Write comprehensive README.md
     - Project overview and architecture
     - Setup instructions (uv sync, database init, ApeRAG init)
     - Usage examples (CLI commands, scripted workflows)
     - Hardware requirements and constraints
     - _Requirements: 1.1-1.9, 22.1-22.14_
   
-  - [ ] 19.2 Document repository structure
+  - [x] 19.2 Document repository structure
     - Explain purpose of each directory
     - Document file naming conventions
     - Decide and implement remaining Requirement 27 top-level directories only when there
       is a real entrypoint/service/research/Rust/report owner
     - _Requirements: 27.1-27.16_
   
-  - [ ] 19.3 Create architecture documentation
+  - [x] 19.3 Create architecture documentation
     - Executive summary
     - Agent role definitions with inputs/outputs/permissions
     - Data architecture (timezone handling, missing bars, alignment)
     - Database schema documentation
     - _Requirements: 1.1-1.9_
 
-  - [ ] 19.4 Document data source evaluation
+  - [x] 19.4 Document data source evaluation
     - Document CCXT for crypto (exchanges, rate limits, historical depth)
     - Document Alpaca for equities (free tier limitations)
     - Document licensing and compliance considerations
+    - Documented Bybit as startup crypto venue; Binance, OKX, and Deribit as active planned venues
+    - Documented why live CCXT smoke remains opt-in and outside pre-commit
     - _Requirements: 20.1-20.12_
   
   - [ ] 19.5 Create example workflows
-    - Example: Ingest crypto data from Binance
+    - Example: Ingest crypto data from Bybit
     - Example: Screen pairs by sector
     - Example: Run statistical tests on pair
     - Example: Run backtest and generate report

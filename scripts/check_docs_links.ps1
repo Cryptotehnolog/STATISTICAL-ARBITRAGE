@@ -113,6 +113,15 @@ function Test-WildcardTargetExists {
 $violations = @()
 $linkPattern = '(?<!\!)\[[^\]]+\]\(([^)]+)\)'
 $inlineMarkdownPathPattern = '`([^`]+\.md(?:#[^`]*)?)`'
+$scriptCommandPattern = '(?:\.\\|\.\/)scripts[\\/][A-Za-z0-9_.-]+\.ps1'
+$statArbCommandPattern = '\buv\s+run\s+stat-arb\b'
+$pyprojectPath = Join-Path $repoRoot "pyproject.toml"
+$pyprojectText = if (Test-Path -LiteralPath $pyprojectPath) {
+    Get-Content -LiteralPath $pyprojectPath -Raw
+}
+else {
+    ""
+}
 
 foreach ($file in Get-MarkdownFiles | Sort-Object FullName -Unique) {
     $relative = $file.FullName.Substring($repoRoot.Length + 1)
@@ -211,6 +220,29 @@ foreach ($file in Get-MarkdownFiles | Sort-Object FullName -Unique) {
                     Target = $target
                     Kind = "inline code local markdown paths"
                 }
+            }
+        }
+
+        foreach ($match in [regex]::Matches($lines[$index], $scriptCommandPattern)) {
+            $target = $match.Value.Trim()
+            $normalizedTarget = $target.Substring(2) -replace "/", "\"
+            $targetPath = Join-Path $repoRoot $normalizedTarget
+            if (-not (Test-Path -LiteralPath $targetPath)) {
+                $violations += [pscustomobject]@{
+                    File = $relative
+                    Line = $index + 1
+                    Target = $target
+                    Kind = "referenced script commands"
+                }
+            }
+        }
+
+        if ($lines[$index] -match $statArbCommandPattern -and $pyprojectText -notmatch '(?m)^\s*stat-arb\s*=') {
+            $violations += [pscustomobject]@{
+                File = $relative
+                Line = $index + 1
+                Target = "uv run stat-arb"
+                Kind = "referenced stat-arb commands"
             }
         }
     }

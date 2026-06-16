@@ -125,6 +125,21 @@ Update: Failed `DataQualityReport` objects can now be converted to policy-safe
 and written through `write_data_quality_failure_memory`. Registry persistence remains
 independent from the LLM gateway; runtime writes go through `MemoryAgentService`.
 
+## DEC-0039: Use Bybit as the first crypto exchange for live CCXT smoke
+
+Status: Accepted
+
+Bybit is the first crypto venue for early live CCXT smoke and manual ingestion checks.
+Binance, OKX, and Deribit remain active planned venues for cross-venue validation and
+future derivatives research.
+
+Excluded legacy venues are not part of the active project roadmap. They must not appear as
+recommended exchanges in README examples, docs, or user-facing scripts.
+
+Live CCXT smoke remains opt-in because exchange API checks depend on network state,
+rate limits, regional availability, credentials, and terms of service. Pre-commit must
+stay deterministic and must not depend on live exchange APIs.
+
 ## DEC-0066: Start Task 15 CLI with guarded data commands
 
 Status: accepted

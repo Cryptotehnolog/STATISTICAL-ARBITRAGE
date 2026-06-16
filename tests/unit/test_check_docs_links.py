@@ -16,6 +16,8 @@ def test_docs_link_guard_script_exists_and_targets_readme_docs_and_kiro_specs() 
     assert "docs\\knowledge_graph" in script
     assert "local markdown links" in script
     assert "inline code local markdown paths" in script
+    assert "referenced script commands" in script
+    assert "referenced stat-arb commands" in script
 
 
 def test_docs_link_guard_is_wired_into_pre_commit_checklist() -> None:
