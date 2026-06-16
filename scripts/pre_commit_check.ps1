@@ -2,6 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $checkScript = Join-Path $PSScriptRoot "check.ps1"
+$docsLinksCheckScript = Join-Path $PSScriptRoot "check_docs_links.ps1"
 $russianCheckScript = Join-Path $PSScriptRoot "check_user_facing_russian.ps1"
 $deferredWorkChecklistScript = Join-Path $PSScriptRoot "check_deferred_work_checklist.ps1"
 $secretLeakCheckScript = Join-Path $PSScriptRoot "check_secret_leaks.ps1"
@@ -41,6 +42,7 @@ function Invoke-RequiredCheck {
 }
 
 Write-Output "Запуск локального pre-commit checklist..."
+Write-Output "- Проверка local markdown links: check_docs_links.ps1"
 Write-Output "- Русификация user-facing текста: check_user_facing_russian.ps1"
 Write-Output "- Проверка deferred work checklist: check_deferred_work_checklist.ps1"
 Write-Output "- Secret leak guard: check_secret_leaks.ps1"
@@ -70,6 +72,7 @@ Write-Output "- LLM readiness намеренно исключен; отдель�
 
 Push-Location $repoRoot
 try {
+    Invoke-RequiredCheck $docsLinksCheckScript
     Invoke-RequiredCheck $russianCheckScript
     Invoke-RequiredCheck $deferredWorkChecklistScript
     Invoke-RequiredCheck $secretLeakCheckScript

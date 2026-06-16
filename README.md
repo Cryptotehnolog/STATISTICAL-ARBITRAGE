@@ -249,8 +249,14 @@ experiment quarantine и runtime budget guard:
 
 Запустить dashboard:
 
-```bash
-uv run streamlit run src/stat_arb/dashboard/app.py
+```powershell
+.\scripts\start_dashboard.ps1
+```
+
+После запуска откройте `http://localhost:8501`. Остановить dashboard можно так:
+
+```powershell
+.\scripts\start_dashboard.ps1 -Stop
 ```
 
 CLI examples:
@@ -361,8 +367,8 @@ uv run mypy src/stat_arb
 
 Pre-commit checks:
 
-```bash
-uv run pytest && uv run ruff check . && uv run mypy src/stat_arb
+```powershell
+.\scripts\pre_commit_check.ps1
 ```
 
 ## Структура repository
@@ -371,22 +377,25 @@ uv run pytest && uv run ruff check . && uv run mypy src/stat_arb
 .
 ├── src/stat_arb/           # Основной package code
 │   ├── agents/             # Agent implementations
-│   ├── models/             # Pydantic data models
-│   ├── storage/            # Database interfaces
-│   ├── data/               # Data ingestion и validation
-│   ├── statistical/        # Statistical testing functions
-│   ├── backtest/           # Backtesting engine
+│   ├── backtest/           # Backtesting, costs, metrics, reproducibility
+│   ├── cli/                # CLI commands и stage execution
 │   ├── dashboard/          # Streamlit dashboard
-│   ├── cli/                # CLI commands
+│   ├── data_quality/       # OHLCV validation, alignment, resampling
+│   ├── domain/             # Pydantic domain contracts
+│   ├── ingestion/          # CCXT source adapter и ingestion pipeline
+│   ├── memory/             # ApeRAG client boundary и Memory Agent policy
+│   ├── reports/            # Report generation
+│   ├── secrets/            # Infisical client/config
+│   ├── statistical/        # Statistical testing functions
+│   ├── storage/            # SQLite Structured Registry
 │   └── utils/              # Shared utilities
 ├── tests/                  # Test suite
 │   ├── unit/               # Unit tests
 │   ├── integration/        # Integration tests
 │   └── property/           # Property-based tests
-├── data/                   # Runtime data, ignored by Git
-│   ├── parquet/            # OHLCV data
-│   └── aperag/             # ApeRAG runtime config и manifests
-├── docs/                   # Документация
+├── data/                   # Runtime data и local registry, ignored by Git
+├── docs/                   # Документация и curated knowledge shards
+├── infra/                  # Local Docker-supported runtime configs
 ├── scripts/                # Utility scripts
 ├── .github/                # GitHub Actions CI/CD
 ├── pyproject.toml          # Project configuration
@@ -560,17 +569,18 @@ uv run stat-arb experiment execute-stage \
 
 Dashboard:
 
-```bash
-uv run streamlit run src/stat_arb/dashboard/app.py
+```powershell
+.\scripts\start_dashboard.ps1
 ```
 
 ## Документация
 
-- **Architecture**: `docs/architecture.md`.
-- **Agent roles**: `docs/agents.md`.
-- **Data architecture**: `docs/data.md`.
-- **API reference**: `docs/api.md`.
-- **Database schema**: `docs/schema.md`.
+- **Структура repository**: `docs/repository_structure.md`.
+- **Безопасная runtime cleanup**: `docs/runtime_maintenance.md`.
+- **Rust strategy**: `docs/rust_strategy.md`.
+- **Deferred roadmap**: `docs/deferred_work_checklist.md`.
+- **Technical debt**: `docs/technical_debt.md`.
+- **Architecture decisions и agent memory**: `docs/knowledge/*.md`.
 
 ## Юридические предупреждения
 

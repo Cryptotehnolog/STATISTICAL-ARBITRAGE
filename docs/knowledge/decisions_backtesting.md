@@ -38,7 +38,7 @@ Status: accepted
 
 Decision: Backtest PnL and cost attribution must require an explicit cost assumption
 snapshot. Commission, spread cost, slippage, funding, and borrow rates are not hidden
-runtime defaults. Historical planning values from `.kiro/tasks.md` are not trusted cost
+runtime defaults. Historical planning values from `.kiro/specs/quant-research-architecture/tasks.md` are not trusted cost
 assumptions and must not be used by agents as real market data.
 
 Rationale: Costs are market, venue, account-tier, instrument, liquidity, and time dependent.

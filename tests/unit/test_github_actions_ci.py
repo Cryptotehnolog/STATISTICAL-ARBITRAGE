@@ -19,6 +19,7 @@ def test_ci_workflow_runs_core_python_checks() -> None:
     assert "actions/setup-python@v5" not in workflow
     assert "astral-sh/setup-uv@v5" not in workflow
     assert "uv sync --extra dev" in workflow
+    assert "./scripts/check_docs_links.ps1" in workflow
     assert "./scripts/check_user_facing_russian.ps1" in workflow
     assert "./scripts/check_secret_leaks.ps1" in workflow
     assert "./scripts/check_research_defaults.ps1" in workflow

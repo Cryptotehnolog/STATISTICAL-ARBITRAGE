@@ -4,7 +4,7 @@ This file is the tracked backlog for every "do later" item that is too small or 
 cross-cutting for the Kiro task plan.
 
 Working rule: no deferred item should stay only in chat. When a decision creates follow-up
-work, add it here in the same task unless it is already represented in `.kiro/tasks.md`.
+work, add it here in the same task unless it is already represented in `.kiro/specs/quant-research-architecture/tasks.md`.
 
 ## Open
 

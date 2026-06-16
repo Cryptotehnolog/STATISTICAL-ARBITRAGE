@@ -6,7 +6,7 @@
 
 Проект готов к переходу от пунктов 1-6 к пункту 7 `Build Backtest Agent`.
 
-Предыдущая быстрая проверка была checkpoint-проверкой, а не полным аудитом. Этот отчет фиксирует более глубокую проверку: состояние `.kiro/tasks.md`, локальный pre-commit, CI, ApeRAG memory health, graph export, data pipeline checkpoint и поиск явных технических хвостов.
+Предыдущая быстрая проверка была checkpoint-проверкой, а не полным аудитом. Этот отчет фиксирует более глубокую проверку: состояние `.kiro/specs/quant-research-architecture/tasks.md`, локальный pre-commit, CI, ApeRAG memory health, graph export, data pipeline checkpoint и поиск явных технических хвостов.
 
 ## Проверено
 
