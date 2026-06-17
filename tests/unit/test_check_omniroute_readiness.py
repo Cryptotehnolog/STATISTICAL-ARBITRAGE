@@ -29,3 +29,11 @@ def test_omniroute_readiness_has_explicit_warning_policy() -> None:
     assert "[int]$RecentLogTail" in script
     assert "[switch]$WarnOnly" in script
     assert "ReadinessIssue" in script
+
+
+def test_omniroute_readiness_scopes_log_risk_scan_to_current_check() -> None:
+    """Old Docker logs from a fixed provider session should not poison fresh readiness."""
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    assert "$readinessStartedAtUtc" in script
+    assert "--since $readinessStartedAtUtc" in script

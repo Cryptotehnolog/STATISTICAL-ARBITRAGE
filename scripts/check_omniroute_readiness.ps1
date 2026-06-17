@@ -11,6 +11,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$readinessStartedAtUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
 function Add-ReadinessIssue {
     param(
@@ -220,7 +221,7 @@ finally {
     Remove-Item Env:\OMNIROUTE_WARN_TOKEN_EXPIRES_MINUTES -ErrorAction SilentlyContinue
 }
 
-$recentLogs = (& cmd.exe /c "docker logs $ContainerName --tail $RecentLogTail 2>&1") -join "`n"
+$recentLogs = (& cmd.exe /c "docker logs $ContainerName --since $readinessStartedAtUtc --tail $RecentLogTail 2>&1") -join "`n"
 $logRiskPatterns = @(
     "credits_exhausted",
     "quota_exhausted",
