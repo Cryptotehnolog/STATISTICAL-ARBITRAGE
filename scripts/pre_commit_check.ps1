@@ -7,6 +7,7 @@ $russianCheckScript = Join-Path $PSScriptRoot "check_user_facing_russian.ps1"
 $deferredWorkChecklistScript = Join-Path $PSScriptRoot "check_deferred_work_checklist.ps1"
 $secretLeakCheckScript = Join-Path $PSScriptRoot "check_secret_leaks.ps1"
 $memoryContractsCheckScript = Join-Path $PSScriptRoot "check_memory_contracts.ps1"
+$noProductionPrintsCheckScript = Join-Path $PSScriptRoot "check_no_production_prints.ps1"
 $researchDefaultsCheckScript = Join-Path $PSScriptRoot "check_research_defaults.ps1"
 $assetAdjustmentPolicyCheckScript = Join-Path $PSScriptRoot "check_asset_adjustment_policy.ps1"
 $pairAlignmentBoundaryCheckScript = Join-Path $PSScriptRoot "check_pair_alignment_boundary.ps1"
@@ -52,6 +53,7 @@ Write-Output "- Русификация user-facing текста: check_user_faci
 Write-Output "- Проверка deferred work checklist: check_deferred_work_checklist.ps1"
 Write-Output "- Secret leak guard: check_secret_leaks.ps1"
 Write-Output "- Проверка memory contracts: check_memory_contracts.ps1"
+Write-Output "- Проверка отсутствия debug print в production modules: check_no_production_prints.ps1"
 Write-Output "- Проверка research defaults: check_research_defaults.ps1"
 Write-Output "- Проверка asset-class adjustment policy: check_asset_adjustment_policy.ps1"
 Write-Output "- Проверка pair alignment boundary: check_pair_alignment_boundary.ps1"
@@ -87,6 +89,7 @@ try {
     Invoke-RequiredCheck $deferredWorkChecklistScript
     Invoke-RequiredCheck $secretLeakCheckScript
     Invoke-RequiredCheck $memoryContractsCheckScript
+    Invoke-RequiredCheck $noProductionPrintsCheckScript
     Invoke-RequiredCheck $researchDefaultsCheckScript
     Invoke-RequiredCheck $assetAdjustmentPolicyCheckScript
     Invoke-RequiredCheck $pairAlignmentBoundaryCheckScript

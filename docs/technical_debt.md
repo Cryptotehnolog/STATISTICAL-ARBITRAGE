@@ -8,6 +8,95 @@ work, add it here in the same task unless it is already represented in `.kiro/sp
 
 ## Open
 
+### TD-0043: Unify external API retry policy across data and runtime adapters
+
+Status: open
+
+Why deferred: `CCXTOHLCVSource` already has bounded exponential retry behavior and tests,
+while Task 17 has a separate `RetryPolicy`/`plan_api_retry` contract for failure handling.
+The current behavior is safe enough, but the project will become easier to audit if
+external API adapters report retry attempts through one shared policy vocabulary.
+
+Follow-up:
+- Keep the existing CCXT retry tests passing.
+- Reuse or adapt `RetryPolicy` for future data adapters without changing current
+  deterministic ingestion behavior.
+- Do not add a broad "all HTTP calls must use retry" grep rule; prefer adapter-specific
+  tests so CLI health checks and explicit one-shot probes do not become noisy.
+
+Related tasks: 4.1, 17.x, 22.1.
+
+### TD-0042: Add dashboard research analytics panels after stable factual artifacts
+
+Status: open
+
+Why deferred: The Streamlit dashboard is intentionally small and read-only. Adding rolling
+Sharpe, spread distributions, correlation heatmaps, and richer strategy diagnostics is
+valuable, but these views should read factual registry/sidecar artifacts rather than
+invent chart data from aggregate metrics.
+
+Follow-up:
+- Add rolling metrics, spread distribution, and correlation heatmap panels only from
+  persisted factual artifacts.
+- Keep dashboard actions behind Coordinator APIs and Memory Agent read boundaries.
+- Add focused projection/helper tests instead of brittle browser-only UI assertions.
+
+Related tasks: 12.x, 15.3, 16.x, TD-0023.
+
+### TD-0041: Add event bus and heartbeat only after long-running workers exist
+
+Status: open
+
+Why deferred: The current architecture uses deterministic CLI workflows, registry-backed
+state, Coordinator queue contracts, and explicit stage execution. A Redis/RabbitMQ/asyncio
+event bus or heartbeat layer would be premature until agents become long-running workers
+or live/paper services that can actually go stale.
+
+Follow-up:
+- Add heartbeat only when agent processes are persistent rather than short-lived service
+  calls.
+- Add an event bus only when workflow execution needs asynchronous fan-out, live data,
+  or multiple concurrent workers.
+- Keep Coordinator registry state as the source of truth, and do not let events bypass
+  registry, Memory Agent policy, or permission checks.
+
+Related tasks: 13.x, 15.x, 17.x, 21.x, TD-0031.
+
+### TD-0040: Add explicit model-comparison harness for Kalman, Johansen, and Phillips-Perron
+
+Status: open
+
+Why deferred: External reviews correctly identified Kalman hedge ratios, Johansen/VECM,
+and Phillips-Perron stationarity checks as useful research extensions. Adding them directly
+to the active pipeline now would create unproven model branches and dependency decisions.
+
+Follow-up:
+- Define a model-comparison contract before adding runtime flags.
+- Compare Engle-Granger/rolling OLS against Kalman or Johansen on the same datasets.
+- Evaluate Phillips-Perron or other stationarity diagnostics only with explicit dependency,
+  multiple-testing, and conflict-resolution policy.
+- Persist model method, parameters, dependency versions, metrics, and out-of-sample
+  evidence in registry/reproducibility metadata.
+
+Related tasks: 6.x, 10.3, 15.x, 24.2.
+
+### TD-0039: Wire agent audit events through real workflows
+
+Status: open
+
+Why deferred: The project now has an operator-safe `AgentAuditEvent` contract and local
+JSONL writer foundation, but full workflow wiring should be staged so audit logs are not
+duplicated, noisy, or allowed to leak secrets/raw payloads.
+
+Follow-up:
+- Record key agent actions with event ID, timestamp, agent name, action, reason, status,
+  registry refs, memory refs, and sanitized metadata.
+- Keep exact numeric artifacts in registry/sidecars; audit logs should point to them.
+- Add redaction tests for secrets, tokens, credentials, raw logs, and raw payloads.
+- Add dashboard/CLI inspection only after the event schema is used by real workflows.
+
+Related tasks: 11.x, 13.x, 15.x, 16.x, 17.x.
+
 ### TD-0038: Add arbitrary full experiment runner only after all stages have mature boundaries
 
 Status: open

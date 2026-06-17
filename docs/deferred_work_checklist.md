@@ -9,6 +9,34 @@
 
 ## Делать после нового runner, workflow или service boundary
 
+- [ ] **Подключить audit trail действий агентов к реальным workflow** (`TD-0039`).
+  Базовый безопасный контракт `AgentAuditEvent` и JSONL writer уже добавлены. Следующий
+  шаг позже: чтобы каждый важный вызов агента оставлял понятный след: кто действовал, что
+  сделал, зачем, с каким статусом, на какие registry/memory записи ссылается. В audit log
+  нельзя писать secrets, raw logs или сырые payload.
+
+- [ ] **Сравнить Engle-Granger с Kalman/Johansen/Phillips-Perron как отдельный research
+  benchmark** (`TD-0040`).
+  Это не замена текущего pipeline. Нужно сделать честное сравнение моделей на одинаковых
+  данных: качество residuals, stability, turnover, out-of-sample результат и стоимость
+  ошибок. Только после такого сравнения можно решать, какие методы включать в runtime.
+
+- [ ] **Добавить event bus и heartbeat только когда появятся долгоживущие worker-агенты**
+  (`TD-0041`).
+  Сейчас агенты работают через явные service/CLI/registry boundaries. Event bus нужен не
+  потому что “агентов много”, а когда будут persistent workers, live/paper services,
+  асинхронные задачи и реальный риск stale/failed worker.
+
+- [ ] **Расширить dashboard исследовательскими графиками из factual artifacts** (`TD-0042`).
+  Позже dashboard должен показывать rolling metrics, распределения spread и correlation
+  heatmap. Но графики должны строиться только из сохраненных registry/sidecar данных, а не
+  из aggregate-only metrics.
+
+- [ ] **Унифицировать retry policy для внешних API adapters** (`TD-0043`).
+  CCXT adapter уже умеет bounded exponential retry. Позже стоит привести retry-отчеты
+  разных adapters к общему failure-handling vocabulary, но не через грубый запрет “любой
+  HTTP без retry”, а через точечные adapter tests.
+
 - [ ] **Подготовить перенос на Ubuntu/server** (`TD-0001`, `TD-0015`).
   Нужны Linux-friendly команды, `.sh` wrappers или точные инструкции для `uv`, Docker,
   ApeRAG, Infisical, memory checks, SQLite, Parquet и CCXT smoke. Делать ближе к реальному

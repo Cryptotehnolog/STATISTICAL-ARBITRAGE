@@ -188,7 +188,7 @@ def get_session(
     Usage:
         with get_session() as session:
             hypothesis = session.query(Hypothesis).first()
-            print(hypothesis.asset_a)
+            asset_a = hypothesis.asset_a
 
     Args:
         db_path: Path to the SQLite database file. If None, uses DEFAULT_DB_PATH.
@@ -260,7 +260,7 @@ class DatabaseManager:
             db = DatabaseManager()
             with db.session() as session:
                 hypothesis = session.query(Hypothesis).first()
-                print(hypothesis.asset_a)
+                asset_a = hypothesis.asset_a
 
         Yields:
             SQLAlchemy Session instance.

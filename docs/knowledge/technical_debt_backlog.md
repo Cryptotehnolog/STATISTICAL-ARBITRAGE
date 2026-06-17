@@ -20,6 +20,23 @@ retrieved ApeRAG context; it is not a generative LLM judge.
 
 ## Active Follow-up Themes
 
+- Agent audit trail: `AgentAuditEvent` and a JSONL writer foundation exist for
+  operator-safe audit events. Future workflow wiring should record key agent actions with
+  event IDs, timestamps, agent/action/reason/status, registry refs, memory refs, and
+  sanitized metadata. Audit logs must not carry secrets, tokens, raw logs, or raw payloads.
+- Model comparison: keep Kalman, Johansen/VECM, and Phillips-Perron as explicit research
+  extensions. Add them through a model-comparison harness with persisted method,
+  parameters, dependency versions, out-of-sample evidence, and multiple-testing/conflict
+  policy, not as hidden replacements for Engle-Granger.
+- Event bus and heartbeat: add these only after real long-running worker agents or
+  live/paper services exist. Current CLI/registry workflows should stay deterministic and
+  should not gain Redis/RabbitMQ/asyncio infrastructure without a measured workflow need.
+- Dashboard research analytics: rolling metrics, spread distributions, and correlation
+  heatmaps are useful, but they must read factual registry/sidecar artifacts and remain
+  behind the existing read-only dashboard and Coordinator action boundaries.
+- External API retry unification: CCXT already has bounded exponential retry tests. Future
+  adapters should report retry behavior through a shared failure-handling vocabulary, but
+  the project should avoid broad grep-style rules that make one-shot health probes noisy.
 - Ubuntu portability: add Linux-friendly commands or shell wrappers, then verify `uv sync`,
   checks, SQLite, Parquet, ApeRAG, Infisical Docker Compose, graph export, and CCXT smoke
   on Ubuntu before server deployment.

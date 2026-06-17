@@ -1,5 +1,6 @@
 """Agent service boundaries."""
 
+from stat_arb.agents.audit import AgentAuditEvent, AgentAuditJsonlWriter
 from stat_arb.agents.backtest import (
     BacktestAgentInput,
     BacktestAgentRunResult,
@@ -111,6 +112,8 @@ __all__ = [
     "BacktestAgentRunResult",
     "BacktestSeriesArtifactInput",
     "AbnormalConditionEvidence",
+    "AgentAuditEvent",
+    "AgentAuditJsonlWriter",
     "AgentToolPermissionPolicy",
     "AgentToolPermissionRequest",
     "AgentToolPermissionResult",

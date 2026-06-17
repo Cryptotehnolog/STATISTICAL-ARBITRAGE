@@ -77,3 +77,34 @@ Rationale: The audit correctly identifies risk areas, but speed work and broad p
 rewrites should be profile- and deployment-driven. The project should continue to prefer
 explicit contracts, registry provenance, guarded memory writes, and staged implementation
 over large cross-cutting rewrites.
+
+## DEC-0094: Accept third-party audit ideas through staged contracts
+
+Status: accepted
+
+Decision: Accept the updated third-party audit as useful direction, but implement only the
+low-risk hygiene and contract foundations immediately. Defer Kalman/Johansen/Phillips-
+Perron runtime branches, event bus, heartbeat, async live data workers, macro adapters,
+and dashboard analytics until their boundaries are justified by real workflow needs.
+
+Accepted now:
+
+- Remove debug `print` usage from production modules.
+- Add a guard against future `print()` calls in production packages where logging or
+  structured records should be used instead.
+- Add an operator-safe `AgentAuditEvent` contract and JSONL writer foundation with
+  metadata redaction.
+
+Deferred:
+
+- Kalman, Johansen/VECM, and Phillips-Perron belong in a model-comparison harness before
+  becoming runtime options.
+- Event bus and heartbeat belong after long-running worker agents or live/paper services
+  exist.
+- Dashboard research analytics should read factual registry/sidecar artifacts.
+- Retry behavior should be unified through adapter-specific tests and shared policy
+  vocabulary, not broad grep rules for every HTTP call.
+
+Rationale: The project is tied to financial decisions, so adding impressive architecture
+too early can be as dangerous as missing features. Staged contracts preserve
+reproducibility, auditability, and explicit assumptions.
