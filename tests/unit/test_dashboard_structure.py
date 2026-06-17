@@ -10,10 +10,12 @@ import pandas as pd
 import pytest
 
 from stat_arb.dashboard.data import (
+    DEFAULT_AGENT_AUDIT_LOG_PATH,
     DashboardExperimentFilters,
     DashboardExperimentSort,
     DashboardMemorySearchRequest,
     get_dashboard_navigation,
+    load_agent_audit_events,
     load_dashboard_snapshot,
     run_dashboard_memory_search,
 )
@@ -451,9 +453,67 @@ def test_dashboard_navigation_is_read_only_and_russian() -> None:
         "Бэктесты",
         "Отчеты",
         "Память",
+        "Журнал действий агентов",
         "Очередь одобрения",
     ]
     assert all(item.mode == "read_only" for item in navigation)
+
+
+def test_load_agent_audit_events_returns_recent_safe_projection(tmp_path: Path) -> None:
+    """Dashboard should read recent operator-safe audit events without exposing raw metadata."""
+    audit_path = tmp_path / "agent_audit.jsonl"
+    audit_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "event_id": "evt-old",
+                        "timestamp": "2026-01-01T00:00:00+00:00",
+                        "agent_name": "coordinator",
+                        "action": "advance",
+                        "reason": "Old event",
+                        "status": "ok",
+                        "registry_refs": ["registry:experiments/old"],
+                        "memory_refs": [],
+                        "metadata": {"token": "<redacted>", "operator": "Victor"},
+                    }
+                ),
+                "not-json",
+                json.dumps(
+                    {
+                        "event_id": "evt-new",
+                        "timestamp": "2026-01-02T00:00:00+00:00",
+                        "agent_name": "coordinator",
+                        "action": "final_decision",
+                        "reason": "Human approved final decision.",
+                        "status": "approved",
+                        "registry_refs": ["registry:experiments/exp-1"],
+                        "memory_refs": ["memory:summary-1"],
+                        "metadata": {"operator": "Victor", "raw_log": "<redacted>"},
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    events = load_agent_audit_events(audit_path, limit=1)
+
+    assert len(events) == 1
+    event = events[0]
+    assert event.event_id == "evt-new"
+    assert event.agent_name == "coordinator"
+    assert event.action == "final_decision"
+    assert event.status == "approved"
+    assert event.registry_refs == ("registry:experiments/exp-1",)
+    assert event.memory_refs == ("memory:summary-1",)
+    assert event.metadata_keys == ("operator", "raw_log")
+    assert "raw_log" not in event.reason.lower()
+
+
+def test_load_agent_audit_events_missing_file_is_empty() -> None:
+    """Missing audit log should render as an empty read-only dashboard state."""
+    assert load_agent_audit_events(DEFAULT_AGENT_AUDIT_LOG_PATH) == []
 
 
 def test_dashboard_presentation_helpers_are_streamlit_free() -> None:
@@ -900,6 +960,7 @@ def test_dashboard_task16_pages_are_rendered_read_only() -> None:
         "_render_backtests(snapshot)",
         "_render_reports(snapshot)",
         "_render_memory_search(snapshot)",
+        "_render_agent_audit_log(audit_log_path)",
         "_render_approval_queue(snapshot)",
     ):
         assert call in app
@@ -909,10 +970,14 @@ def test_dashboard_task16_pages_are_rendered_read_only() -> None:
     assert "Cost attribution" in app
     assert "Журнал ошибок" in app
     assert "Поиск по памяти" in app
+    assert "Журнал действий агентов" in app
+    assert "load_agent_audit_events" in app
     assert "query_dashboard_memory" in app
     assert "audited Coordinator API" in app
     assert "_read_only_session" in data
     assert "session.rollback()" in data
+    assert "AgentAuditJsonlWriter" not in data
+    assert ".open(\"a\"" not in data
     assert "st.button" not in app
     assert "form_submit_button" not in app
 
@@ -944,6 +1009,8 @@ def test_dashboard_structure_guard_blocks_raw_http_and_bytecode_output() -> None
     script = Path("scripts/check_dashboard_structure.ps1").read_text(encoding="utf-8")
 
     assert "httpx|requests|urllib|/api/v1/collections|Invoke-RestMethod" in script
+    assert "AgentAuditJsonlWriter" in script
+    assert "\\.open\\s*\\(\\s*[" in script
     assert "PYTHONDONTWRITEBYTECODE" in script
 
 

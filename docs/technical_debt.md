@@ -89,16 +89,18 @@ JSONL writer foundation, Coordinator lifecycle transitions can write sanitized a
 through an optional audit writer after successful registry/memory boundary work, and the
 operator CLI `experiment advance` command can persist final-decision audit events to a
 physical JSONL artifact with `--audit-log-path`. The CLI also has a read-only
-`experiment audit-log` inspection command for recent audit events. Full workflow wiring
-should still be staged so audit logs are not duplicated, noisy, or allowed to leak
-secrets/raw payloads.
+`experiment audit-log` inspection command for recent audit events. The read-only
+dashboard now has a `Журнал действий агентов` section that reads the same JSONL audit log
+as a safe projection, without importing the audit writer or mutating registry/memory
+state. Full workflow wiring should still be staged so audit logs are not duplicated,
+noisy, or allowed to leak secrets/raw payloads.
 
 Follow-up:
 - Extend the same audit pattern from Coordinator lifecycle transitions to other real agent
   workflows when they become active execution boundaries.
 - Keep exact numeric artifacts in registry/sidecars; audit logs should point to them.
-- Add dashboard inspection only after the event schema is used by more real workflows and
-  the dashboard write/approval UX is ready for operator feedback.
+- Keep dashboard audit inspection read-only; any future approval action must continue to
+  go through the audited Coordinator API.
 
 Related tasks: 11.x, 13.x, 15.x, 16.x, 17.x.
 

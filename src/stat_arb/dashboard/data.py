@@ -32,6 +32,8 @@ from stat_arb.storage.database import (
     create_session_factory,
 )
 
+DEFAULT_AGENT_AUDIT_LOG_PATH = Path("data/agent_audit/agent_audit.jsonl")
+
 
 @dataclass(frozen=True)
 class DashboardNavigationItem:
@@ -136,6 +138,21 @@ class DashboardMemorySearchResult:
     graph_edges: int | None = None
 
 
+@dataclass(frozen=True)
+class DashboardAgentAuditEvent:
+    """Operator-safe audit event projection for dashboard rendering."""
+
+    event_id: str
+    timestamp: str
+    agent_name: str
+    action: str
+    status: str
+    reason: str
+    registry_refs: tuple[str, ...]
+    memory_refs: tuple[str, ...]
+    metadata_keys: tuple[str, ...]
+
+
 def get_dashboard_navigation() -> list[DashboardNavigationItem]:
     """Return the initial read-only dashboard navigation model."""
     return [
@@ -147,9 +164,40 @@ def get_dashboard_navigation() -> list[DashboardNavigationItem]:
         DashboardNavigationItem("reports", "Отчеты", "Report artifacts из registry."),
         DashboardNavigationItem("memory", "Память", "Готовность ApeRAG и будущий поиск."),
         DashboardNavigationItem(
+            "agent_audit", "Журнал действий агентов", "Безопасные audit events для оператора."
+        ),
+        DashboardNavigationItem(
             "approval", "Очередь одобрения", "Статус будущих approvals только на чтение."
         ),
     ]
+
+
+def load_agent_audit_events(
+    audit_log_path: Path | str = DEFAULT_AGENT_AUDIT_LOG_PATH,
+    *,
+    limit: int = 50,
+) -> list[DashboardAgentAuditEvent]:
+    """Load recent append-only agent audit events as a read-only dashboard projection."""
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        raise TypeError("limit must be an integer")
+    if not 1 <= limit <= 500:
+        raise ValueError("limit must be between 1 and 500")
+
+    path = Path(audit_log_path)
+    if not path.exists():
+        return []
+
+    events: list[DashboardAgentAuditEvent] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            events.append(_agent_audit_event_from_payload(payload))
+    return events[-limit:]
 
 
 def run_dashboard_memory_search(
@@ -305,6 +353,27 @@ def _empty_counts() -> dict[str, int]:
         "coordinator_tasks": 0,
         "report_artifacts": 0,
     }
+
+
+def _agent_audit_event_from_payload(payload: dict[str, Any]) -> DashboardAgentAuditEvent:
+    metadata = payload.get("metadata")
+    return DashboardAgentAuditEvent(
+        event_id=str(payload.get("event_id") or ""),
+        timestamp=str(payload.get("timestamp") or ""),
+        agent_name=str(payload.get("agent_name") or ""),
+        action=str(payload.get("action") or ""),
+        status=str(payload.get("status") or ""),
+        reason=_sanitize_memory_snippet(str(payload.get("reason") or ""), max_chars=240),
+        registry_refs=_string_tuple(payload.get("registry_refs")),
+        memory_refs=_string_tuple(payload.get("memory_refs")),
+        metadata_keys=tuple(sorted(str(key) for key in metadata)) if isinstance(metadata, dict) else (),
+    )
+
+
+def _string_tuple(value: object) -> tuple[str, ...]:
+    if isinstance(value, list | tuple):
+        return tuple(str(item) for item in value)
+    return ()
 
 
 @contextmanager

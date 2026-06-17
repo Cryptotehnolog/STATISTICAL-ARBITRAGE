@@ -22,8 +22,10 @@ $forbiddenPatterns = @(
     "st\.form_submit_button\s*\(",
     "MemoryAgentService",
     "ApeRAGMemoryClient",
+    "AgentAuditJsonlWriter",
     "httpx|requests|urllib|/api/v1/collections|Invoke-RestMethod",
     "insert\s+into",
+    "\.open\s*\(\s*[""']a",
     "\.add\s*\(",
     "\.delete\s*\(",
     "\.commit\s*\("

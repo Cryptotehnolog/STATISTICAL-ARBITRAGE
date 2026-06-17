@@ -26,7 +26,9 @@ retrieved ApeRAG context; it is not a generative LLM judge.
   events with agent/action/reason/status, registry refs, memory refs, and metadata. The CLI
   `experiment advance --audit-log-path` command can persist final-decision audit events to
   a physical JSONL artifact through `AgentAuditJsonlWriter`, and `experiment audit-log`
-  can inspect recent audit events read-only without touching the registry. Future workflow
+  can inspect recent audit events read-only without touching the registry. The dashboard
+  now has a read-only `Журнал действий агентов` view over the same JSONL audit artifact;
+  it must not import the audit writer or mutate registry/memory state. Future workflow
   wiring should extend this pattern to other real agent boundaries. Audit logs must not
   carry secrets, tokens, raw logs, or raw payloads.
 - Model comparison: keep Kalman, Johansen/VECM, and Phillips-Perron as explicit research

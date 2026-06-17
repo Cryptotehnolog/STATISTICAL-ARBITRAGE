@@ -8,12 +8,14 @@ import pandas as pd
 import streamlit as st
 
 from stat_arb.dashboard.data import (
+    DEFAULT_AGENT_AUDIT_LOG_PATH,
     DashboardExperimentFilters,
     DashboardExperimentSort,
     DashboardMemorySearchRequest,
     DashboardMemorySearchResult,
     DashboardSnapshot,
     get_dashboard_navigation,
+    load_agent_audit_events,
     load_dashboard_snapshot,
 )
 from stat_arb.dashboard.presentation import (
@@ -64,6 +66,13 @@ def main() -> None:
             "Путь к registry", value="data/registry.db", help="Файл SQLite registry."
         )
     )
+    audit_log_path = Path(
+        st.sidebar.text_input(
+            "Путь к audit log",
+            value=str(DEFAULT_AGENT_AUDIT_LOG_PATH),
+            help="JSONL-файл событий AgentAuditEvent.",
+        )
+    )
     st.sidebar.markdown("### Навигация")
     selected = st.sidebar.radio(
         "Раздел",
@@ -106,6 +115,8 @@ def main() -> None:
         _render_reports(snapshot)
     elif selected == "memory":
         _render_memory_search(snapshot)
+    elif selected == "agent_audit":
+        _render_agent_audit_log(audit_log_path)
     elif selected == "approval":
         _render_approval_queue(snapshot)
     else:
@@ -386,6 +397,43 @@ def _render_memory_search_result(result: DashboardMemorySearchResult) -> None:
         ),
         use_container_width=True,
         hide_index=True,
+    )
+
+
+def _render_agent_audit_log(audit_log_path: Path) -> None:
+    st.markdown("### Журнал действий агентов")
+    st.caption("Последние безопасные для оператора события из append-only JSONL audit log.")
+    events = load_agent_audit_events(audit_log_path)
+    if not events:
+        st.info("Audit log пока пуст или файл не найден.")
+        return
+    table = pd.DataFrame(
+        [
+            {
+                "timestamp": event.timestamp,
+                "agent_name": event.agent_name,
+                "action": event.action,
+                "status": event.status,
+                "reason": event.reason,
+                "registry_refs": ", ".join(event.registry_refs),
+                "memory_refs": ", ".join(event.memory_refs),
+                "metadata_keys": ", ".join(event.metadata_keys),
+            }
+            for event in events
+        ]
+    )
+    _render_dataframe(
+        table,
+        [
+            "timestamp",
+            "agent_name",
+            "action",
+            "status",
+            "reason",
+            "registry_refs",
+            "memory_refs",
+            "metadata_keys",
+        ],
     )
 
 

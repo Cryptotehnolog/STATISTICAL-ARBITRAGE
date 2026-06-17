@@ -74,6 +74,12 @@ COLUMN_LABELS: dict[str, str] = {
     "last_error": "Ошибка",
     "started_at": "Начато в",
     "completed_at": "Завершено в",
+    "timestamp": "Время",
+    "action": "Действие",
+    "reason": "Причина",
+    "registry_refs": "Ссылки registry",
+    "memory_refs": "Ссылки memory",
+    "metadata_keys": "Ключи metadata",
 }
 
 
