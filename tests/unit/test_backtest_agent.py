@@ -10,6 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.agents import (
+    AgentAuditEvent,
     BacktestAgentInput,
     BacktestSeriesArtifactInput,
     run_backtest_agent_persistence,
@@ -50,6 +51,17 @@ class FakeMemoryService:
 
     def write(self, request: MemoryWriteRequest) -> object:
         self.requests.append(request)
+        return object()
+
+
+class FakeAuditWriter:
+    """Fake append-only audit sink that records safe audit events."""
+
+    def __init__(self) -> None:
+        self.events: list[AgentAuditEvent] = []
+
+    def append(self, event: AgentAuditEvent) -> object:
+        self.events.append(event)
         return object()
 
 
@@ -106,6 +118,86 @@ def test_backtest_agent_persists_registry_result_and_memory_summary(
     assert memory.requests[0].registry_reference == f"registry:backtest_results/{stored.backtest_id}"
     assert "Structured performance metrics" in memory.requests[0].body
     assert "net_pnl" not in memory.requests[0].body
+
+
+def test_backtest_agent_writes_operator_safe_audit_event_after_registry_persistence(
+    session: Session,
+    tmp_path: Path,
+) -> None:
+    """Backtest Agent should audit after registry result and optional memory summary."""
+    hypothesis_id, test_id, dataset_a_id, dataset_b_id = _seed_prerequisites(
+        session,
+        with_quality=True,
+        passed_test=True,
+    )
+    experiment_id = uuid4()
+    session.add(
+        Experiment(
+            experiment_id=str(experiment_id),
+            hypothesis_id=str(hypothesis_id),
+            status="backtesting",
+            current_agent="backtest_agent",
+        )
+    )
+    session.commit()
+    request = _agent_input(tmp_path, hypothesis_id, test_id, dataset_a_id, dataset_b_id)
+    request_with_series = BacktestAgentInput(
+        hypothesis_id=request.hypothesis_id,
+        test_id=request.test_id,
+        dataset_a_id=request.dataset_a_id,
+        dataset_b_id=request.dataset_b_id,
+        core_result=request.core_result,
+        pnl=request.pnl,
+        metrics=request.metrics,
+        baseline=request.baseline,
+        sensitivity=request.sensitivity,
+        reproducibility=request.reproducibility,
+        train_window_days=request.train_window_days,
+        test_window_days=request.test_window_days,
+        num_windows=request.num_windows,
+        experiment_id=experiment_id,
+        artifact_output_dir=tmp_path / "artifacts",
+        series=BacktestSeriesArtifactInput(
+            timestamps=tuple(step.timestamp for step in request.core_result.steps),
+            equity_curve=(100.0, 102.0, 100.98, 102.49, 103.0),
+            drawdown_curve=(0.0, 0.0, 0.01, 0.0, 0.0),
+            z_scores=tuple(step.z_score for step in request.core_result.steps),
+            entry_markers=tuple(
+                step.index for step in request.core_result.trades if "enter" in step.action.value
+            ),
+            exit_markers=tuple(
+                step.index for step in request.core_result.trades if step.action.value == "exit"
+            ),
+            rolling_sharpe=(0.0, 0.2, 0.3, 0.4, 0.5),
+            trade_pnls=(5.0, -2.0),
+        ),
+    )
+    memory = FakeMemoryService()
+    audit = FakeAuditWriter()
+
+    result = run_backtest_agent_persistence(
+        request_with_series,
+        session=session,
+        memory_service=memory,
+        audit_writer=audit,
+    )
+
+    assert result.memory_written is True
+    assert result.audit_written is True
+    assert len(audit.events) == 1
+    event = audit.events[0]
+    assert event.agent_name == "backtest_agent"
+    assert event.action == "backtest_result_persisted"
+    assert event.status == "completed"
+    assert event.registry_refs == (
+        f"registry:backtest_results/{result.stored_result.backtest_id}",
+        f"registry:report_artifacts/{result.series_artifact.artifact_id}",
+    )
+    assert event.memory_refs == (memory.requests[0].registry_reference,)
+    assert event.metadata["hypothesis_id"] == str(hypothesis_id)
+    assert event.metadata["test_id"] == str(test_id)
+    assert event.metadata["series_artifact_written"] is True
+    assert "net_pnl" not in event.reason
 
 
 def test_backtest_agent_persists_factual_series_sidecar(
@@ -292,6 +384,8 @@ def test_backtest_agent_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "ApeRAGMemoryClient" in script
     assert "StoredBacktestResult" in script
     assert "DataQualityReportRecord" in script
+    assert "AgentAuditEvent" in script
+    assert "audit_writer\\.append" in script
     assert "check_backtest_agent_boundaries.ps1" in pre_commit
     assert "Invoke-RequiredCheck $backtestAgentBoundaryCheckScript" in pre_commit
     assert "Check Backtest Agent boundaries" in ci

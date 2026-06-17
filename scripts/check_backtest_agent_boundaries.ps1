@@ -17,6 +17,14 @@ if ($source -notmatch "MemoryWriteRequest" -or $source -notmatch "memory_service
     Write-Error "Backtest Agent summary должен проходить через MemoryAgentService-compatible writer."
 }
 
+if (
+    $source -notmatch "AgentAuditEvent" -or
+    $source -notmatch "audit_writer\.append" -or
+    $source -notmatch "backtest_result_persisted"
+) {
+    Write-Error "Backtest Agent должен писать operator-safe AgentAuditEvent через audit_writer после registry persistence."
+}
+
 if ($source -notmatch "StoredBacktestResult" -or $source -notmatch "session\.add\(stored\)" -or $source -notmatch "session\.flush\(\)") {
     Write-Error "Backtest Agent должен писать structured results в registry перед memory summary."
 }

@@ -15,6 +15,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from stat_arb.agents.audit import AgentAuditEvent
 from stat_arb.backtest import (
     BacktestCoreResult,
     BaselineComparisonResult,
@@ -43,6 +44,13 @@ class MemoryWriter(Protocol):
 
     def write(self, request: MemoryWriteRequest) -> object:
         """Write a policy-approved memory record."""
+
+
+class AuditWriter(Protocol):
+    """Minimal append-only audit writer used by this boundary."""
+
+    def append(self, event: AgentAuditEvent) -> object:
+        """Append one operator-safe audit event."""
 
 
 @dataclass(frozen=True)
@@ -88,6 +96,7 @@ class BacktestAgentRunResult:
     stored_result: StoredBacktestResult
     memory_written: bool
     series_artifact: StoredReportArtifact | None = None
+    audit_written: bool = False
 
 
 def run_backtest_agent_persistence(
@@ -95,6 +104,7 @@ def run_backtest_agent_persistence(
     *,
     session: Session,
     memory_service: MemoryWriter | None = None,
+    audit_writer: AuditWriter | None = None,
 ) -> BacktestAgentRunResult:
     """Persist structured backtest results and write a concise memory summary."""
     _validate_request(request)
@@ -117,10 +127,23 @@ def run_backtest_agent_persistence(
         memory_service.write(_memory_request_for(stored))
         memory_written = True
 
+    audit_written = False
+    if audit_writer is not None:
+        audit_writer.append(
+            _audit_event_for(
+                request=request,
+                stored=stored,
+                series_artifact=series_artifact,
+                memory_written=memory_written,
+            )
+        )
+        audit_written = True
+
     return BacktestAgentRunResult(
         stored_result=stored,
         memory_written=memory_written,
         series_artifact=series_artifact,
+        audit_written=audit_written,
     )
 
 
@@ -276,6 +299,41 @@ def _memory_request_for(result: StoredBacktestResult) -> MemoryWriteRequest:
             "test_id": result.test_id,
             "dataset_a_id": result.dataset_a_id,
             "dataset_b_id": result.dataset_b_id,
+        },
+    )
+
+
+def _audit_event_for(
+    *,
+    request: BacktestAgentInput,
+    stored: StoredBacktestResult,
+    series_artifact: StoredReportArtifact | None,
+    memory_written: bool,
+) -> AgentAuditEvent:
+    registry_refs = [f"registry:backtest_results/{stored.backtest_id}"]
+    if series_artifact is not None:
+        registry_refs.append(f"registry:report_artifacts/{series_artifact.artifact_id}")
+    return AgentAuditEvent(
+        event_id=f"backtest-agent-{stored.backtest_id}",
+        agent_name="backtest_agent",
+        action="backtest_result_persisted",
+        reason=(
+            "Backtest result persisted after passed data-quality and statistical-test "
+            "prerequisites. Exact metrics, costs, reproducibility hashes, and series "
+            "sidecars remain in registry/artifacts."
+        ),
+        status="completed",
+        registry_refs=tuple(registry_refs),
+        memory_refs=(f"registry:backtest_results/{stored.backtest_id}",)
+        if memory_written
+        else (),
+        metadata={
+            "hypothesis_id": str(request.hypothesis_id),
+            "test_id": str(request.test_id),
+            "dataset_a_id": str(request.dataset_a_id),
+            "dataset_b_id": str(request.dataset_b_id),
+            "series_artifact_written": series_artifact is not None,
+            "memory_written": memory_written,
         },
     )
 
