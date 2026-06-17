@@ -82,17 +82,18 @@ Related tasks: 6.x, 10.3, 15.x, 24.2.
 
 ### TD-0039: Wire agent audit events through real workflows
 
-Status: open
+Status: open; first Coordinator lifecycle slice implemented
 
-Why deferred: The project now has an operator-safe `AgentAuditEvent` contract and local
-JSONL writer foundation, but full workflow wiring should be staged so audit logs are not
-duplicated, noisy, or allowed to leak secrets/raw payloads.
+Current baseline: The project now has an operator-safe `AgentAuditEvent` contract, local
+JSONL writer foundation, and Coordinator lifecycle transitions can write sanitized audit
+events through an optional audit writer after successful registry/memory boundary work.
+Full workflow wiring should still be staged so audit logs are not duplicated, noisy, or
+allowed to leak secrets/raw payloads.
 
 Follow-up:
-- Record key agent actions with event ID, timestamp, agent name, action, reason, status,
-  registry refs, memory refs, and sanitized metadata.
+- Extend the same audit pattern from Coordinator lifecycle transitions to other real agent
+  workflows when they become active execution boundaries.
 - Keep exact numeric artifacts in registry/sidecars; audit logs should point to them.
-- Add redaction tests for secrets, tokens, credentials, raw logs, and raw payloads.
 - Add dashboard/CLI inspection only after the event schema is used by real workflows.
 
 Related tasks: 11.x, 13.x, 15.x, 16.x, 17.x.

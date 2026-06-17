@@ -15,6 +15,7 @@ from typing import Protocol
 
 from sqlalchemy.orm import Session
 
+from stat_arb.agents.audit import AgentAuditEvent
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
 from stat_arb.storage.models import CoordinatorTask, Experiment
 
@@ -24,6 +25,13 @@ class MemoryWriter(Protocol):
 
     def write(self, request: MemoryWriteRequest) -> object:
         """Write a policy-approved memory record."""
+
+
+class AuditWriter(Protocol):
+    """Minimal append-only audit writer used by agent boundaries."""
+
+    def append(self, event: AgentAuditEvent) -> object:
+        """Append one operator-safe audit event."""
 
 
 class ExperimentLifecycleStatus(StrEnum):
@@ -265,6 +273,7 @@ class CoordinatorTransitionResult:
     previous_status: ExperimentLifecycleStatus
     current_status: ExperimentLifecycleStatus
     memory_written: bool
+    audit_written: bool = False
 
 
 ALLOWED_TRANSITIONS: dict[ExperimentLifecycleStatus, frozenset[ExperimentLifecycleStatus]] = {
@@ -502,6 +511,7 @@ def apply_coordinator_final_decision(
     actor: str,
     session: Session,
     memory_service: MemoryWriter,
+    audit_writer: AuditWriter | None = None,
 ) -> CoordinatorTransitionResult:
     """Persist one final decision through lifecycle transition and Memory Agent policy."""
     decision = decide_coordinator_final_decision(evidence, policy=policy)
@@ -515,6 +525,7 @@ def apply_coordinator_final_decision(
         ),
         session=session,
         memory_service=memory_service,
+        audit_writer=audit_writer,
     )
 
 
@@ -523,6 +534,7 @@ def apply_coordinator_approval_action(
     *,
     session: Session,
     memory_service: MemoryWriter,
+    audit_writer: AuditWriter | None = None,
 ) -> CoordinatorTransitionResult:
     """Apply one audited human approval action through Coordinator lifecycle boundary."""
     return transition_experiment_lifecycle(
@@ -535,6 +547,7 @@ def apply_coordinator_approval_action(
         ),
         session=session,
         memory_service=memory_service,
+        audit_writer=audit_writer,
     )
 
 
@@ -578,6 +591,7 @@ def transition_experiment_lifecycle(
     *,
     session: Session,
     memory_service: MemoryWriter | None = None,
+    audit_writer: AuditWriter | None = None,
 ) -> CoordinatorTransitionResult:
     """Persist one allowed lifecycle transition and write a policy-safe memory event."""
     experiment = _require_experiment(session, experiment_id=request.experiment_id)
@@ -596,11 +610,17 @@ def transition_experiment_lifecycle(
         memory_service.write(_memory_request_for(experiment, previous_status, request))
         memory_written = True
 
+    audit_written = False
+    if audit_writer is not None:
+        audit_writer.append(_audit_event_for(experiment, previous_status, request, memory_written))
+        audit_written = True
+
     return CoordinatorTransitionResult(
         experiment=experiment,
         previous_status=previous_status,
         current_status=request.target_status,
         memory_written=memory_written,
+        audit_written=audit_written,
     )
 
 
@@ -692,6 +712,33 @@ def _memory_request_for(
         source_id=experiment.experiment_id,
         registry_reference=f"registry:experiments/{experiment.experiment_id}",
         tags=["coordinator", "experiment-lifecycle", request.target_status.value],
+        metadata=metadata,
+    )
+
+
+def _audit_event_for(
+    experiment: Experiment,
+    previous_status: ExperimentLifecycleStatus,
+    request: CoordinatorTransitionRequest,
+    memory_written: bool,
+) -> AgentAuditEvent:
+    registry_ref = f"registry:experiments/{experiment.experiment_id}"
+    metadata = {
+        "previous_status": previous_status.value,
+        "current_status": request.target_status.value,
+        "actor": request.actor,
+        "memory_written": memory_written,
+    }
+    if request.final_decision is not None:
+        metadata["final_decision"] = request.final_decision.value
+    return AgentAuditEvent(
+        event_id=f"coordinator-transition-{experiment.experiment_id}-{request.target_status.value}",
+        agent_name="coordinator_agent",
+        action="experiment_lifecycle_transition",
+        reason=request.reason.strip(),
+        status=request.target_status.value,
+        registry_refs=(registry_ref,),
+        memory_refs=(registry_ref,) if memory_written else (),
         metadata=metadata,
     )
 

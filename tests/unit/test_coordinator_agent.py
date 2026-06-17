@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from stat_arb.agents.audit import AgentAuditEvent
 from stat_arb.agents.coordinator import (
     AgentToolPermissionPolicy,
     AgentToolPermissionRequest,
@@ -44,6 +45,17 @@ class FakeMemoryService:
 
     def write(self, request: MemoryWriteRequest) -> object:
         self.requests.append(request)
+        return object()
+
+
+class FakeAuditWriter:
+    """Fake audit sink that records sanitized agent audit events."""
+
+    def __init__(self) -> None:
+        self.events: list[AgentAuditEvent] = []
+
+    def append(self, event: AgentAuditEvent) -> object:
+        self.events.append(event)
         return object()
 
 
@@ -91,6 +103,40 @@ def test_coordinator_persists_valid_lifecycle_transition_and_memory_event(
     assert memory.requests[0].registry_reference == f"registry:experiments/{stored.experiment_id}"
     assert "Lifecycle transition" in memory.requests[0].body
     assert "raw log" not in memory.requests[0].body.lower()
+
+
+def test_coordinator_lifecycle_transition_writes_safe_audit_event(
+    session: Session,
+) -> None:
+    """Coordinator lifecycle transitions should leave an operator-safe audit event."""
+    experiment_id = _seed_experiment(session, status="new")
+    memory = FakeMemoryService()
+    audit = FakeAuditWriter()
+
+    transition_experiment_lifecycle(
+        CoordinatorTransitionRequest(
+            experiment_id=experiment_id,
+            target_status=ExperimentLifecycleStatus.DATA_VALIDATION,
+            reason="Data validation is the next lifecycle stage.",
+            actor="coordinator_agent",
+        ),
+        session=session,
+        memory_service=memory,
+        audit_writer=audit,
+    )
+
+    assert len(audit.events) == 1
+    event = audit.events[0]
+    assert event.agent_name == "coordinator_agent"
+    assert event.action == "experiment_lifecycle_transition"
+    assert event.status == "data_validation"
+    assert event.reason == "Data validation is the next lifecycle stage."
+    assert event.registry_refs == (f"registry:experiments/{experiment_id}",)
+    assert event.memory_refs == (f"registry:experiments/{experiment_id}",)
+    assert event.metadata["previous_status"] == "new"
+    assert event.metadata["current_status"] == "data_validation"
+    assert event.metadata["actor"] == "coordinator_agent"
+    assert "raw_payload" not in event.to_safe_dict()["metadata"]
 
 
 def test_coordinator_rejects_invalid_transition_without_mutating_registry(
@@ -189,6 +235,8 @@ def test_coordinator_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "apply_coordinator_final_decision" in script
     assert "AgentToolPermissionPolicy" in script
     assert "enforce_agent_tool_permission" in script
+    assert "AgentAuditEvent" in script
+    assert "audit_writer\\.append" in script
     assert "memory_service\\.write" in script
     assert "check_coordinator_agent_boundaries.ps1" in pre_commit
     assert "Invoke-RequiredCheck $coordinatorAgentBoundaryCheckScript" in pre_commit

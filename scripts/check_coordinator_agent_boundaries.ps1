@@ -18,6 +18,15 @@ if ($source -notmatch "MemoryWriteRequest" -or $source -notmatch "memory_service
 }
 
 if (
+    $source -notmatch "AgentAuditEvent" -or
+    $source -notmatch "AuditWriter" -or
+    $source -notmatch "audit_writer\.append" -or
+    $source -notmatch "experiment_lifecycle_transition"
+) {
+    Write-Error "Coordinator lifecycle transitions должны писать operator-safe AgentAuditEvent через audit writer."
+}
+
+if (
     $source -notmatch "Experiment" -or
     $source -notmatch "CoordinatorTask" -or
     $source -notmatch "session\.flush\(\)" -or

@@ -10,10 +10,12 @@
 ## Делать после нового runner, workflow или service boundary
 
 - [ ] **Подключить audit trail действий агентов к реальным workflow** (`TD-0039`).
-  Базовый безопасный контракт `AgentAuditEvent` и JSONL writer уже добавлены. Следующий
-  шаг позже: чтобы каждый важный вызов агента оставлял понятный след: кто действовал, что
-  сделал, зачем, с каким статусом, на какие registry/memory записи ссылается. В audit log
-  нельзя писать secrets, raw logs или сырые payload.
+  Базовый безопасный контракт `AgentAuditEvent`, JSONL writer и первый реальный slice уже
+  есть: Coordinator lifecycle transition может писать audit event после успешной записи в
+  registry и Memory Agent policy. Осталось позже распространить этот же подход на другие
+  реальные agent workflow. Цель: каждый важный вызов агента оставляет понятный след: кто
+  действовал, что сделал, зачем, с каким статусом, на какие registry/memory записи
+  ссылается. В audit log нельзя писать secrets, raw logs или сырые payload.
 
 - [ ] **Сравнить Engle-Granger с Kalman/Johansen/Phillips-Perron как отдельный research
   benchmark** (`TD-0040`).
