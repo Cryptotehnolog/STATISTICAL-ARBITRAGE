@@ -425,6 +425,38 @@ def experiment_status(experiment_id: str, db_path: Path) -> None:
         engine.dispose()
 
 
+@experiment.command("audit-log")
+@click.option("--audit-log-path", type=click.Path(path_type=Path), required=True)
+@click.option("--limit", type=int, required=True)
+def inspect_experiment_audit_log(audit_log_path: Path, limit: int) -> None:
+    """Показать последние agent audit events без изменения registry."""
+    if limit <= 0:
+        raise click.BadParameter("limit должен быть положительным")
+    if not audit_log_path.exists():
+        raise click.ClickException(f"Audit log не найден: {audit_log_path}")
+
+    events = _read_audit_events(audit_log_path, limit=limit)
+    click.echo(f"Audit events: {len(events)}")
+    for event in events:
+        registry_refs = ", ".join(str(ref) for ref in event.get("registry_refs", [])) or "-"
+        raw_metadata = event.get("metadata")
+        metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
+        actor = str(metadata.get("actor") or "-")
+        click.echo(
+            " | ".join(
+                (
+                    str(event.get("timestamp") or "-"),
+                    str(event.get("agent_name") or "-"),
+                    str(event.get("action") or "-"),
+                    str(event.get("status") or "-"),
+                    f"actor={actor}",
+                    f"registry={registry_refs}",
+                    f"reason={event.get('reason') or '-'}",
+                )
+            )
+        )
+
+
 @experiment.command("advance")
 @click.option("--experiment-id", required=True)
 @click.option("--target-status", required=True)
@@ -753,6 +785,18 @@ def _read_json_object(path: Path) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise click.BadParameter(f"{path} должен содержать JSON object")
     return payload
+
+
+def _read_audit_events(path: Path, *, limit: int) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        payload = json.loads(line)
+        if not isinstance(payload, dict):
+            raise click.ClickException(f"Audit log содержит не JSON object: {path}")
+        rows.append(payload)
+    return rows[-limit:]
 
 
 def _execute_statistical_testing_task(payload: dict[str, object], *, session: Any) -> None:

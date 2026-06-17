@@ -13,8 +13,10 @@
   Базовый безопасный контракт `AgentAuditEvent`, JSONL writer и первый реальный slice уже
   есть: Coordinator lifecycle transition может писать audit event после успешной записи в
   registry и Memory Agent policy, а CLI `experiment advance --audit-log-path` уже умеет
-  сохранять final-decision audit в физический JSONL-файл. Осталось позже распространить
-  этот же подход на другие реальные agent workflow. Цель: каждый важный вызов агента
+  сохранять final-decision audit в физический JSONL-файл. CLI `experiment audit-log`
+  умеет read-only просматривать последние audit events без изменения registry. Осталось
+  позже распространить этот же подход на другие реальные agent workflow и, когда будет
+  готов operator UX, добавить dashboard inspection. Цель: каждый важный вызов агента
   оставляет понятный след: кто действовал, что сделал, зачем, с каким статусом, на какие
   registry/memory записи ссылается. В audit log нельзя писать secrets, raw logs или сырые
   payload.

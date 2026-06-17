@@ -88,14 +88,17 @@ Current baseline: The project now has an operator-safe `AgentAuditEvent` contrac
 JSONL writer foundation, Coordinator lifecycle transitions can write sanitized audit events
 through an optional audit writer after successful registry/memory boundary work, and the
 operator CLI `experiment advance` command can persist final-decision audit events to a
-physical JSONL artifact with `--audit-log-path`. Full workflow wiring should still be
-staged so audit logs are not duplicated, noisy, or allowed to leak secrets/raw payloads.
+physical JSONL artifact with `--audit-log-path`. The CLI also has a read-only
+`experiment audit-log` inspection command for recent audit events. Full workflow wiring
+should still be staged so audit logs are not duplicated, noisy, or allowed to leak
+secrets/raw payloads.
 
 Follow-up:
 - Extend the same audit pattern from Coordinator lifecycle transitions to other real agent
   workflows when they become active execution boundaries.
 - Keep exact numeric artifacts in registry/sidecars; audit logs should point to them.
-- Add dashboard/CLI inspection only after the event schema is used by real workflows.
+- Add dashboard inspection only after the event schema is used by more real workflows and
+  the dashboard write/approval UX is ready for operator feedback.
 
 Related tasks: 11.x, 13.x, 15.x, 16.x, 17.x.
 

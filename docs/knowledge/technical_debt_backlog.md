@@ -25,9 +25,10 @@ retrieved ApeRAG context; it is not a generative LLM judge.
   production boundary: after successful registry/memory work they can emit sanitized audit
   events with agent/action/reason/status, registry refs, memory refs, and metadata. The CLI
   `experiment advance --audit-log-path` command can persist final-decision audit events to
-  a physical JSONL artifact through `AgentAuditJsonlWriter`. Future workflow wiring should
-  extend this pattern to other real agent boundaries. Audit logs must not carry secrets,
-  tokens, raw logs, or raw payloads.
+  a physical JSONL artifact through `AgentAuditJsonlWriter`, and `experiment audit-log`
+  can inspect recent audit events read-only without touching the registry. Future workflow
+  wiring should extend this pattern to other real agent boundaries. Audit logs must not
+  carry secrets, tokens, raw logs, or raw payloads.
 - Model comparison: keep Kalman, Johansen/VECM, and Phillips-Perron as explicit research
   extensions. Add them through a model-comparison harness with persisted method,
   parameters, dependency versions, out-of-sample evidence, and multiple-testing/conflict

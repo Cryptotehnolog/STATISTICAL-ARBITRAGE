@@ -517,6 +517,56 @@ def test_experiment_advance_writes_operator_audit_jsonl_for_final_decision(
     assert "raw_payload" not in event["metadata"]
 
 
+def test_experiment_audit_log_lists_recent_events_read_only(tmp_path: Path) -> None:
+    """Audit inspection should read JSONL events without mutating registry or exposing secrets."""
+    db_path = tmp_path / "registry.db"
+    audit_path = tmp_path / "audit" / "agent_audit.jsonl"
+    experiment_id = _seed_cli_experiment(db_path, status="reporting")
+    advance_result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "advance",
+            "--experiment-id",
+            experiment_id,
+            "--target-status",
+            "final_decision",
+            "--reason",
+            "Human reviewer approved the report package.",
+            "--actor",
+            "cli_operator",
+            "--final-decision",
+            "approved",
+            "--audit-log-path",
+            str(audit_path),
+            "--db-path",
+            str(db_path),
+        ],
+    )
+    assert advance_result.exit_code == 0, advance_result.output
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "audit-log",
+            "--audit-log-path",
+            str(audit_path),
+            "--limit",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Audit events: 1" in result.output
+    assert "coordinator_agent" in result.output
+    assert "experiment_lifecycle_transition" in result.output
+    assert "final_decision" in result.output
+    assert f"registry:experiments/{experiment_id}" in result.output
+    assert "Human reviewer approved" in result.output
+    assert "secret" not in result.output.lower()
+
+
 def test_experiment_advance_rejects_invalid_lifecycle_jump(tmp_path: Path) -> None:
     """experiment advance should fail closed on invalid Coordinator transitions."""
     db_path = tmp_path / "registry.db"
