@@ -82,7 +82,7 @@ Related tasks: 6.x, 10.3, 15.x, 24.2.
 
 ### TD-0039: Wire agent audit events through real workflows
 
-Status: open; first Coordinator lifecycle slice implemented
+Status: open; Coordinator and Report Agent slices implemented
 
 Current baseline: The project now has an operator-safe `AgentAuditEvent` contract, local
 JSONL writer foundation, Coordinator lifecycle transitions can write sanitized audit events
@@ -92,11 +92,13 @@ physical JSONL artifact with `--audit-log-path`. The CLI also has a read-only
 `experiment audit-log` inspection command for recent audit events. The read-only
 dashboard now has a `Журнал действий агентов` section that reads the same JSONL audit log
 as a safe projection, without importing the audit writer or mutating registry/memory
-state. Full workflow wiring should still be staged so audit logs are not duplicated,
-noisy, or allowed to leak secrets/raw payloads.
+state. Report Agent can now emit a sanitized `report_artifacts_generated` audit event
+after matching `backtest_series` validation, registry artifact persistence, and optional
+Memory Agent summary. Full workflow wiring should still be staged so audit logs are not
+duplicated, noisy, or allowed to leak secrets/raw payloads.
 
 Follow-up:
-- Extend the same audit pattern from Coordinator lifecycle transitions to other real agent
+- Extend the same audit pattern from Coordinator and Report Agent to other real agent
   workflows when they become active execution boundaries.
 - Keep exact numeric artifacts in registry/sidecars; audit logs should point to them.
 - Keep dashboard audit inspection read-only; any future approval action must continue to

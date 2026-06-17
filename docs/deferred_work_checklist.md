@@ -16,10 +16,12 @@
   сохранять final-decision audit в физический JSONL-файл. CLI `experiment audit-log`
   умеет read-only просматривать последние audit events без изменения registry. Dashboard
   тоже умеет read-only показывать `Журнал действий агентов` из того же JSONL-файла, без
-  кнопок и без записи в registry/memory. Осталось позже распространить этот же подход на
-  другие реальные agent workflow. Цель: каждый важный вызов агента оставляет понятный
-  след: кто действовал, что сделал, зачем, с каким статусом, на какие registry/memory
-  записи ссылается. В audit log нельзя писать secrets, raw logs или сырые payload.
+  кнопок и без записи в registry/memory. Report Agent уже умеет писать audit event после
+  проверки `backtest_series`, сохранения report artifacts в registry и optional memory
+  summary. Осталось позже распространить этот же подход на другие реальные agent
+  workflow. Цель: каждый важный вызов агента оставляет понятный след: кто действовал, что
+  сделал, зачем, с каким статусом, на какие registry/memory записи ссылается. В audit log
+  нельзя писать secrets, raw logs или сырые payload.
 
 - [ ] **Сравнить Engle-Granger с Kalman/Johansen/Phillips-Perron как отдельный research
   benchmark** (`TD-0040`).

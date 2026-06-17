@@ -28,9 +28,11 @@ retrieved ApeRAG context; it is not a generative LLM judge.
   a physical JSONL artifact through `AgentAuditJsonlWriter`, and `experiment audit-log`
   can inspect recent audit events read-only without touching the registry. The dashboard
   now has a read-only `Журнал действий агентов` view over the same JSONL audit artifact;
-  it must not import the audit writer or mutate registry/memory state. Future workflow
-  wiring should extend this pattern to other real agent boundaries. Audit logs must not
-  carry secrets, tokens, raw logs, or raw payloads.
+  it must not import the audit writer or mutate registry/memory state. Report Agent now
+  emits a sanitized `report_artifacts_generated` audit event after sidecar validation,
+  registry artifact persistence, and optional Memory Agent summary. Future workflow wiring
+  should extend this pattern to other real agent boundaries. Audit logs must not carry
+  secrets, tokens, raw logs, or raw payloads.
 - Model comparison: keep Kalman, Johansen/VECM, and Phillips-Perron as explicit research
   extensions. Add them through a model-comparison harness with persisted method,
   parameters, dependency versions, out-of-sample evidence, and multiple-testing/conflict

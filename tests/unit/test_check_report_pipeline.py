@@ -43,3 +43,16 @@ def test_report_agent_uses_registry_linked_backtest_series_sidecars() -> None:
     assert "matching backtest_series sidecar is required" in source
     assert "backtest_series artifact does not match requested backtest" in source
     assert "test_report_agent_requires_factual_series_sidecar" in tests
+
+
+def test_report_pipeline_guard_preserves_audit_boundary() -> None:
+    """Report checkpoint should guard the staged audit-trail slice."""
+    script = Path("scripts/check_report_pipeline.ps1").read_text(encoding="utf-8")
+    source = Path("src/stat_arb/agents/report.py").read_text(encoding="utf-8")
+    tests = Path("tests/unit/test_report_agent.py").read_text(encoding="utf-8")
+
+    assert "AgentAuditEvent" in script
+    assert "audit_writer\\.append" in script
+    assert "AgentAuditEvent" in source
+    assert "audit_writer.append" in source
+    assert "test_report_agent_writes_operator_safe_audit_event" in tests

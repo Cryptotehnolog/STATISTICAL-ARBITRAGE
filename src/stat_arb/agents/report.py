@@ -10,6 +10,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from stat_arb.agents.audit import AgentAuditEvent
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
 from stat_arb.reports import (
     BacktestReportSnapshot,
@@ -50,6 +51,7 @@ class ReportAgentRunResult:
 
     artifacts: tuple[StoredReportArtifact, ...]
     memory_written: bool
+    audit_written: bool = False
 
 
 class MemoryWriter(Protocol):
@@ -59,11 +61,19 @@ class MemoryWriter(Protocol):
         """Write a policy-approved memory record."""
 
 
+class AuditWriter(Protocol):
+    """Minimal append-only audit writer used by this boundary."""
+
+    def append(self, event: AgentAuditEvent) -> object:
+        """Append one operator-safe audit event."""
+
+
 def run_report_agent(
     request: ReportAgentInput,
     *,
     session: Session,
     memory_service: MemoryWriter | None = None,
+    audit_writer: AuditWriter | None = None,
 ) -> ReportAgentRunResult:
     """Generate backtest report artifacts and persist registry links."""
     experiment = _require_experiment(session, experiment_id=request.experiment_id)
@@ -93,7 +103,22 @@ def run_report_agent(
         memory_service.write(_memory_request_for(stored[0], request.backtest_id))
         memory_written = True
 
-    return ReportAgentRunResult(artifacts=stored, memory_written=memory_written)
+    audit_written = False
+    if audit_writer is not None:
+        audit_writer.append(
+            _audit_event_for(
+                request=request,
+                artifacts=stored,
+                memory_written=memory_written,
+            )
+        )
+        audit_written = True
+
+    return ReportAgentRunResult(
+        artifacts=stored,
+        memory_written=memory_written,
+        audit_written=audit_written,
+    )
 
 
 def _require_experiment(session: Session, *, experiment_id: UUID) -> StoredExperiment:
@@ -299,5 +324,34 @@ def _memory_request_for(artifact: StoredReportArtifact, backtest_id: UUID) -> Me
         metadata={
             "backtest_id": str(backtest_id),
             "experiment_id": artifact.experiment_id,
+        },
+    )
+
+
+def _audit_event_for(
+    *,
+    request: ReportAgentInput,
+    artifacts: tuple[StoredReportArtifact, ...],
+    memory_written: bool,
+) -> AgentAuditEvent:
+    registry_refs = tuple(
+        f"registry:report_artifacts/{artifact.artifact_id}" for artifact in artifacts
+    )
+    return AgentAuditEvent(
+        event_id=f"report-agent-{request.experiment_id}-{request.backtest_id}",
+        agent_name="report_agent",
+        action="report_artifacts_generated",
+        reason=(
+            "Report artifacts generated after matching backtest_series sidecar validation. "
+            "Exact metrics and artifact paths remain in registry/sidecars."
+        ),
+        status="completed",
+        registry_refs=registry_refs,
+        memory_refs=registry_refs[:1] if memory_written else (),
+        metadata={
+            "experiment_id": str(request.experiment_id),
+            "backtest_id": str(request.backtest_id),
+            "artifact_count": len(artifacts),
+            "memory_written": memory_written,
         },
     )

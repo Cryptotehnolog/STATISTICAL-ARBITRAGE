@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from stat_arb.agents import ReportAgentInput, run_report_agent
+from stat_arb.agents import AgentAuditEvent, ReportAgentInput, run_report_agent
 from stat_arb.memory import MemoryWriteRequest
 from stat_arb.storage import Base, Hypothesis, ReportArtifact
 from stat_arb.storage.models import (
@@ -32,6 +32,17 @@ class FakeMemoryService:
 
     def write(self, request: MemoryWriteRequest) -> object:
         self.requests.append(request)
+        return object()
+
+
+class FakeAuditWriter:
+    """Fake append-only audit sink that records safe audit events."""
+
+    def __init__(self) -> None:
+        self.events: list[AgentAuditEvent] = []
+
+    def append(self, event: AgentAuditEvent) -> object:
+        self.events.append(event)
         return object()
 
 
@@ -189,6 +200,56 @@ def test_report_agent_persists_artifacts_and_memory_summary_with_sidecar(
     assert memory.requests[0].registry_reference.startswith("registry:report_artifacts/")
     assert "Report artifacts were generated" in memory.requests[0].body
     assert "net_pnl" not in memory.requests[0].body
+
+
+def test_report_agent_writes_operator_safe_audit_event_after_artifact_persistence(
+    session: Session,
+    tmp_path: Path,
+) -> None:
+    """Report Agent should leave an audit event only after registry artifacts exist."""
+    experiment_id, backtest_id = _seed_report_prerequisites(session)
+    matching_path = _write_series_sidecar(
+        tmp_path / "series" / "matching.series.json",
+        backtest_id=backtest_id,
+        equity_curve=[100.0, 101.0, 102.0],
+    )
+    session.add(
+        ReportArtifact(
+            experiment_id=str(experiment_id),
+            artifact_type="backtest_series",
+            file_path=str(matching_path),
+            format="json",
+            created_at=datetime(2024, 1, 2, tzinfo=UTC),
+        )
+    )
+    session.commit()
+    memory = FakeMemoryService()
+    audit = FakeAuditWriter()
+
+    result = run_report_agent(
+        ReportAgentInput(
+            experiment_id=experiment_id,
+            backtest_id=backtest_id,
+            output_dir=tmp_path / "reports",
+        ),
+        session=session,
+        memory_service=memory,
+        audit_writer=audit,
+    )
+
+    assert result.memory_written is True
+    assert result.audit_written is True
+    assert len(audit.events) == 1
+    event = audit.events[0]
+    assert event.agent_name == "report_agent"
+    assert event.action == "report_artifacts_generated"
+    assert event.status == "completed"
+    assert event.registry_refs
+    assert all(ref.startswith("registry:report_artifacts/") for ref in event.registry_refs)
+    assert event.memory_refs == (memory.requests[0].registry_reference,)
+    assert event.metadata["experiment_id"] == str(experiment_id)
+    assert event.metadata["backtest_id"] == str(backtest_id)
+    assert "net_pnl" not in event.reason
 
 
 def test_report_agent_selects_series_sidecar_for_requested_backtest(
