@@ -18,4 +18,6 @@ def test_check_statistical_pipeline_runs_statistical_and_agent_boundaries() -> N
     assert "test_zscore.py" in script
     assert "test_validation_windows.py" in script
     assert "test_statistical_properties.py" in script
+    assert "AgentAuditEvent" in script
+    assert "audit_writer\\.append" in script
     assert "--no-cov" in script

@@ -6,6 +6,15 @@ Write-Output "Проверка statistical testing pipeline..."
 
 Push-Location $repoRoot
 try {
+    $agentSource = Get-Content -Path "src/stat_arb/agents/statistical_testing.py" -Raw
+    if (
+        $agentSource -notmatch "AgentAuditEvent" -or
+        $agentSource -notmatch "audit_writer\.append" -or
+        $agentSource -notmatch "statistical_test_persisted"
+    ) {
+        Write-Error "Statistical Testing Agent должен писать operator-safe AgentAuditEvent через audit_writer после registry persistence."
+    }
+
     uv run pytest `
         tests/unit/test_statistical_testing_agent.py `
         tests/unit/test_cointegration.py `

@@ -12,6 +12,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from sqlalchemy.orm import Session
 
+from stat_arb.agents.audit import AgentAuditEvent
 from stat_arb.domain import StatisticalTestResult as DomainStatisticalTestResult
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
 from stat_arb.statistical import (
@@ -41,6 +42,13 @@ class MemoryWriter(Protocol):
 
     def write(self, request: MemoryWriteRequest) -> object:
         """Write a policy-approved memory record."""
+
+
+class AuditWriter(Protocol):
+    """Minimal append-only audit writer used by this boundary."""
+
+    def append(self, event: AgentAuditEvent) -> object:
+        """Append one operator-safe audit event."""
 
 
 @dataclass(frozen=True)
@@ -73,6 +81,7 @@ class StatisticalTestingRunResult:
     domain_result: DomainStatisticalTestResult
     stored_result: StoredStatisticalTestResult
     memory_written: bool
+    audit_written: bool = False
 
 
 def run_statistical_testing(
@@ -80,6 +89,7 @@ def run_statistical_testing(
     *,
     session: Session,
     memory_service: MemoryWriter | None = None,
+    audit_writer: AuditWriter | None = None,
 ) -> StatisticalTestingRunResult:
     """Run statistical pair validation after registry data-quality prerequisites."""
     prices_a = _as_1d_finite_array(request.prices_a, name="prices_a")
@@ -185,10 +195,16 @@ def run_statistical_testing(
         memory_service.write(_memory_request_for(domain_result))
         memory_written = True
 
+    audit_written = False
+    if audit_writer is not None:
+        audit_writer.append(_audit_event_for(domain_result, memory_written=memory_written))
+        audit_written = True
+
     return StatisticalTestingRunResult(
         domain_result=domain_result,
         stored_result=stored_result,
         memory_written=memory_written,
+        audit_written=audit_written,
     )
 
 
@@ -334,5 +350,34 @@ def _memory_request_for(result: DomainStatisticalTestResult) -> MemoryWriteReque
             "hypothesis_id": str(result.hypothesis_id),
             "dataset_a_id": str(result.dataset_a_id),
             "dataset_b_id": str(result.dataset_b_id),
+        },
+    )
+
+
+def _audit_event_for(
+    result: DomainStatisticalTestResult,
+    *,
+    memory_written: bool,
+) -> AgentAuditEvent:
+    status = "passed" if result.passed else "failed"
+    return AgentAuditEvent(
+        event_id=f"statistical-testing-agent-{result.test_id}",
+        agent_name="statistical_testing_agent",
+        action="statistical_test_persisted",
+        reason=(
+            f"Statistical validation {status} after passed data-quality prerequisites. "
+            "Exact test metrics and assumptions remain in registry."
+        ),
+        status="completed",
+        registry_refs=(f"registry:statistical_test_results/{result.test_id}",),
+        memory_refs=(f"registry:statistical_test_results/{result.test_id}",)
+        if memory_written
+        else (),
+        metadata={
+            "hypothesis_id": str(result.hypothesis_id),
+            "dataset_a_id": str(result.dataset_a_id),
+            "dataset_b_id": str(result.dataset_b_id),
+            "passed": result.passed,
+            "memory_written": memory_written,
         },
     )

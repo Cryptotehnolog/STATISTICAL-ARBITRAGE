@@ -20,7 +20,9 @@
   проверки `backtest_series`, сохранения report artifacts в registry и optional memory
   summary. Backtest Agent уже умеет писать audit event после проверки data quality/stat
   test prerequisites, сохранения backtest result в registry, optional factual series
-  sidecar и optional memory summary. Осталось позже распространить этот же подход на
+  sidecar и optional memory summary. Statistical Testing Agent уже умеет писать audit
+  event после проверки data-quality prerequisites, сохранения statistical-test result в
+  registry и optional memory summary. Осталось позже распространить этот же подход на
   другие реальные agent workflow. Цель: каждый важный вызов агента оставляет понятный
   след: кто действовал, что сделал, зачем, с каким статусом, на какие registry/memory
   записи ссылается. В audit log нельзя писать secrets, raw logs или сырые payload.

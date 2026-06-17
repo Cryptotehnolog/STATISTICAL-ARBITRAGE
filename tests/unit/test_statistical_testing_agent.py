@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from stat_arb.agents import StatisticalTestingInput, run_statistical_testing
+from stat_arb.agents import AgentAuditEvent, StatisticalTestingInput, run_statistical_testing
 from stat_arb.memory import MemoryWriteRequest
 from stat_arb.storage import Base, DataQualityReportRecord, Dataset, Hypothesis
 from stat_arb.storage.models import StatisticalTestResult as StoredStatisticalTestResult
@@ -22,6 +22,17 @@ class FakeMemoryService:
 
     def write(self, request: MemoryWriteRequest) -> object:
         self.requests.append(request)
+        return object()
+
+
+class FakeAuditWriter:
+    """Fake append-only audit sink that records safe audit events."""
+
+    def __init__(self) -> None:
+        self.events: list[AgentAuditEvent] = []
+
+    def append(self, event: AgentAuditEvent) -> object:
+        self.events.append(event)
         return object()
 
 
@@ -95,6 +106,59 @@ def test_run_statistical_testing_persists_registry_result_and_memory(session: Se
     assert len(memory.requests) == 1
     assert memory.requests[0].registry_reference == f"registry:statistical_test_results/{stored.test_id}"
     assert "Structured test metrics are stored in the registry" in memory.requests[0].body
+
+
+def test_run_statistical_testing_writes_operator_safe_audit_event_after_registry(
+    session: Session,
+) -> None:
+    """Statistical Testing Agent should audit after registry and optional memory writes."""
+    hypothesis_id, dataset_a_id, dataset_b_id = _seed_prerequisites(session, with_quality=True)
+    prices_a, prices_b, timestamps = _cointegrated_pair()
+    memory = FakeMemoryService()
+    audit = FakeAuditWriter()
+
+    result = run_statistical_testing(
+        StatisticalTestingInput(
+            hypothesis_id=hypothesis_id,
+            dataset_a_id=dataset_a_id,
+            dataset_b_id=dataset_b_id,
+            prices_a=prices_a,
+            prices_b=prices_b,
+            aligned_timestamps=timestamps,
+            train_fraction=0.7,
+            alpha=0.05,
+            adf_regression="c",
+            adf_autolag="AIC",
+            periods_per_day=96.0,
+            residual_diagnostics_lags=10,
+            stability_window=60,
+            stability_step=30,
+            regime_window=60,
+            regime_mean_shift_threshold=3.0,
+            regime_volatility_ratio_threshold=2.5,
+        ),
+        session=session,
+        memory_service=memory,
+        audit_writer=audit,
+    )
+
+    assert result.memory_written is True
+    assert result.audit_written is True
+    assert len(audit.events) == 1
+    event = audit.events[0]
+    assert event.agent_name == "statistical_testing_agent"
+    assert event.action == "statistical_test_persisted"
+    assert event.status == "completed"
+    assert event.registry_refs == (
+        f"registry:statistical_test_results/{result.stored_result.test_id}",
+    )
+    assert event.memory_refs == (memory.requests[0].registry_reference,)
+    assert event.metadata["hypothesis_id"] == str(hypothesis_id)
+    assert event.metadata["dataset_a_id"] == str(dataset_a_id)
+    assert event.metadata["dataset_b_id"] == str(dataset_b_id)
+    assert event.metadata["passed"] is True
+    assert event.metadata["memory_written"] is True
+    assert "cointegration_p_value" not in event.reason
 
 
 def test_run_statistical_testing_requires_passed_quality_reports(session: Session) -> None:
