@@ -991,7 +991,7 @@ This implementation plan breaks down the multi-agent quantitative research syste
   - Kept live market-data acceptance outside pre-commit/CI because it depends on external
     exchange availability, network state, and rate limits.
 
-- [ ] 24. Expert-review research hardening
+- [x] 24. Expert-review research hardening
   - [x] 24.1 Add statistical residual diagnostics
     - Add residual autocorrelation diagnostics such as Ljung-Box where configured
     - Add residual distribution-shape diagnostics such as Jarque-Bera or Shapiro where configured
