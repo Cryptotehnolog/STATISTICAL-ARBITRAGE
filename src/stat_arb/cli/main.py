@@ -11,6 +11,7 @@ from uuid import UUID
 import click
 
 from stat_arb.agents import (
+    AgentAuditJsonlWriter,
     CoordinatorResourcePolicy,
     CoordinatorTaskRequest,
     CoordinatorTransitionRequest,
@@ -430,6 +431,7 @@ def experiment_status(experiment_id: str, db_path: Path) -> None:
 @click.option("--reason", required=True)
 @click.option("--actor", required=True)
 @click.option("--final-decision")
+@click.option("--audit-log-path", type=click.Path(path_type=Path))
 @click.option("--db-path", type=click.Path(path_type=Path), required=True)
 def advance_experiment(
     experiment_id: str,
@@ -437,6 +439,7 @@ def advance_experiment(
     reason: str,
     actor: str,
     final_decision: str | None,
+    audit_log_path: Path | None,
     db_path: Path,
 ) -> None:
     """Перевести experiment в следующий lifecycle status через Coordinator."""
@@ -458,6 +461,11 @@ def advance_experiment(
                     ),
                 ),
                 session=session,
+                audit_writer=(
+                    AgentAuditJsonlWriter(audit_log_path)
+                    if audit_log_path is not None
+                    else None
+                ),
             )
         except ValueError as exc:
             session.rollback()
@@ -472,6 +480,8 @@ def advance_experiment(
         f"{result.experiment.experiment_id} "
         f"{result.previous_status.value} -> {result.current_status.value}"
     )
+    if audit_log_path is not None and result.audit_written:
+        click.echo(f"Audit записан: {audit_log_path}")
 
 
 @experiment.command("run-stage")

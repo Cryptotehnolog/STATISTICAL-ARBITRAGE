@@ -23,9 +23,11 @@ retrieved ApeRAG context; it is not a generative LLM judge.
 - Agent audit trail: `AgentAuditEvent` and a JSONL writer foundation exist for
   operator-safe audit events. Coordinator lifecycle transitions are the first wired
   production boundary: after successful registry/memory work they can emit sanitized audit
-  events with agent/action/reason/status, registry refs, memory refs, and metadata. Future
-  workflow wiring should extend this pattern to other real agent boundaries. Audit logs
-  must not carry secrets, tokens, raw logs, or raw payloads.
+  events with agent/action/reason/status, registry refs, memory refs, and metadata. The CLI
+  `experiment advance --audit-log-path` command can persist final-decision audit events to
+  a physical JSONL artifact through `AgentAuditJsonlWriter`. Future workflow wiring should
+  extend this pattern to other real agent boundaries. Audit logs must not carry secrets,
+  tokens, raw logs, or raw payloads.
 - Model comparison: keep Kalman, Johansen/VECM, and Phillips-Perron as explicit research
   extensions. Add them through a model-comparison harness with persisted method,
   parameters, dependency versions, out-of-sample evidence, and multiple-testing/conflict

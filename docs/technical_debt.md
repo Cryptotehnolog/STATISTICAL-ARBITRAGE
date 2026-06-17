@@ -85,10 +85,11 @@ Related tasks: 6.x, 10.3, 15.x, 24.2.
 Status: open; first Coordinator lifecycle slice implemented
 
 Current baseline: The project now has an operator-safe `AgentAuditEvent` contract, local
-JSONL writer foundation, and Coordinator lifecycle transitions can write sanitized audit
-events through an optional audit writer after successful registry/memory boundary work.
-Full workflow wiring should still be staged so audit logs are not duplicated, noisy, or
-allowed to leak secrets/raw payloads.
+JSONL writer foundation, Coordinator lifecycle transitions can write sanitized audit events
+through an optional audit writer after successful registry/memory boundary work, and the
+operator CLI `experiment advance` command can persist final-decision audit events to a
+physical JSONL artifact with `--audit-log-path`. Full workflow wiring should still be
+staged so audit logs are not duplicated, noisy, or allowed to leak secrets/raw payloads.
 
 Follow-up:
 - Extend the same audit pattern from Coordinator lifecycle transitions to other real agent

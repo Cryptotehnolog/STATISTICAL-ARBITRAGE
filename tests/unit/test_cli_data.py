@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from importlib import import_module
 from pathlib import Path
@@ -469,6 +470,51 @@ def test_experiment_advance_uses_coordinator_lifecycle_boundary(tmp_path: Path) 
     finally:
         session.close()
         engine.dispose()
+
+
+def test_experiment_advance_writes_operator_audit_jsonl_for_final_decision(
+    tmp_path: Path,
+) -> None:
+    """Final decisions should be able to leave a physical operator-safe audit artifact."""
+    db_path = tmp_path / "registry.db"
+    audit_path = tmp_path / "audit" / "agent_audit.jsonl"
+    experiment_id = _seed_cli_experiment(db_path, status="reporting")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "experiment",
+            "advance",
+            "--experiment-id",
+            experiment_id,
+            "--target-status",
+            "final_decision",
+            "--reason",
+            "Human reviewer approved the report package.",
+            "--actor",
+            "cli_operator",
+            "--final-decision",
+            "approved",
+            "--audit-log-path",
+            str(audit_path),
+            "--db-path",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Audit записан" in result.output
+    lines = audit_path.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    event = json.loads(lines[0])
+    assert event["agent_name"] == "coordinator_agent"
+    assert event["action"] == "experiment_lifecycle_transition"
+    assert event["status"] == "final_decision"
+    assert event["reason"] == "Human reviewer approved the report package."
+    assert event["registry_refs"] == [f"registry:experiments/{experiment_id}"]
+    assert event["metadata"]["actor"] == "cli_operator"
+    assert event["metadata"]["final_decision"] == "approved"
+    assert "raw_payload" not in event["metadata"]
 
 
 def test_experiment_advance_rejects_invalid_lifecycle_jump(tmp_path: Path) -> None:
