@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.agents import (
+    AgentAuditEvent,
     CriticAgentInput,
     CriticCostRealismAssessment,
     CriticDecisionAssessment,
@@ -38,6 +39,17 @@ class FakeMemoryService:
 
     def write(self, request: MemoryWriteRequest) -> object:
         self.requests.append(request)
+        return object()
+
+
+class FakeAuditWriter:
+    """Fake append-only audit sink that records safe audit events."""
+
+    def __init__(self) -> None:
+        self.events: list[AgentAuditEvent] = []
+
+    def append(self, event: AgentAuditEvent) -> object:
+        self.events.append(event)
         return object()
 
 
@@ -85,6 +97,38 @@ def test_critic_agent_persists_registry_review_and_memory_summary(session: Sessi
     assert "sharpe_degradation" not in memory.requests[0].body
 
 
+def test_critic_agent_writes_operator_safe_audit_event_after_registry(
+    session: Session,
+) -> None:
+    """Critic Agent should audit the final review after registry and memory writes."""
+    backtest_id = _seed_backtest(session)
+    memory = FakeMemoryService()
+    audit = FakeAuditWriter()
+
+    result = run_critic_agent_persistence(
+        _critic_input(backtest_id),
+        session=session,
+        memory_service=memory,
+        audit_writer=audit,
+    )
+
+    assert result.memory_written is True
+    assert result.audit_written is True
+    assert len(audit.events) == 1
+    event = audit.events[0]
+    assert event.agent_name == "critic_agent"
+    assert event.action == "critic_review_persisted"
+    assert event.status == "completed"
+    assert event.registry_refs == (f"registry:critic_reviews/{result.stored_review.review_id}",)
+    assert event.memory_refs == (memory.requests[0].registry_reference,)
+    assert event.metadata["backtest_id"] == str(backtest_id)
+    assert event.metadata["review_status"] == "rejected"
+    assert event.metadata["recommendation"] == "Reject"
+    assert event.metadata["memory_written"] is True
+    assert "signal_lookahead" not in event.reason
+    assert "sharpe_degradation" not in event.reason
+
+
 def test_critic_agent_requires_existing_backtest(session: Session) -> None:
     """Critic review persistence should not create orphan registry rows."""
     with pytest.raises(ValueError, match="backtest result is required"):
@@ -102,6 +146,8 @@ def test_critic_agent_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "ApeRAGMemoryClient" in script
     assert "StoredCriticReview" in script
     assert "memory_service\\.write" in script
+    assert "AgentAuditEvent" in script
+    assert "audit_writer\\.append" in script
     assert "check_critic_agent_boundaries.ps1" in pre_commit
     assert "Invoke-RequiredCheck $criticAgentBoundaryCheckScript" in pre_commit
     assert "Check Critic Agent boundaries" in ci

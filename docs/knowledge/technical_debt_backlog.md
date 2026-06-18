@@ -35,9 +35,11 @@ retrieved ApeRAG context; it is not a generative LLM judge.
   prerequisites, registry result persistence, optional factual series sidecar persistence,
   and optional Memory Agent summary. Statistical Testing Agent now emits a sanitized
   `statistical_test_persisted` audit event after data-quality prerequisites, registry
-  statistical-test result persistence, and optional Memory Agent summary. Future workflow
-  wiring should extend this pattern to other real agent boundaries. Audit logs must not
-  carry secrets, tokens, raw logs, or raw payloads.
+  statistical-test result persistence, and optional Memory Agent summary. Critic Agent now
+  emits a sanitized `critic_review_persisted` audit event after registered backtest
+  verification, registry critic-review persistence, and optional Memory Agent summary.
+  Future workflow wiring should extend this pattern to other real agent boundaries. Audit
+  logs must not carry secrets, tokens, raw logs, or raw payloads.
 - Model comparison: keep Kalman, Johansen/VECM, and Phillips-Perron as explicit research
   extensions. Add them through a model-comparison harness with persisted method,
   parameters, dependency versions, out-of-sample evidence, and multiple-testing/conflict

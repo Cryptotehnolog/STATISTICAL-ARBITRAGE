@@ -10,6 +10,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from stat_arb.agents.audit import AgentAuditEvent
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
 from stat_arb.statistical import WalkForwardWindow, assert_no_lookahead
 from stat_arb.storage.models import BacktestResult as StoredBacktestResult
@@ -21,6 +22,13 @@ class MemoryWriter(Protocol):
 
     def write(self, request: MemoryWriteRequest) -> object:
         """Write a policy-approved memory record."""
+
+
+class AuditWriter(Protocol):
+    """Minimal append-only audit writer used by this boundary."""
+
+    def append(self, event: AgentAuditEvent) -> object:
+        """Append one operator-safe audit event."""
 
 
 @dataclass(frozen=True)
@@ -577,6 +585,7 @@ class CriticAgentRunResult:
 
     stored_review: StoredCriticReview
     memory_written: bool
+    audit_written: bool = False
 
 
 def detect_lookahead_bias(
@@ -1012,6 +1021,7 @@ def run_critic_agent_persistence(
     *,
     session: Session,
     memory_service: MemoryWriter | None = None,
+    audit_writer: AuditWriter | None = None,
 ) -> CriticAgentRunResult:
     """Persist structured Critic review results and write a concise memory summary."""
     _require_backtest_result(session, backtest_id=request.backtest_id)
@@ -1020,7 +1030,15 @@ def run_critic_agent_persistence(
     if memory_service is not None:
         memory_service.write(_memory_request_for(stored))
         memory_written = True
-    return CriticAgentRunResult(stored_review=stored, memory_written=memory_written)
+    audit_written = False
+    if audit_writer is not None:
+        audit_writer.append(_audit_event_for(stored, memory_written=memory_written))
+        audit_written = True
+    return CriticAgentRunResult(
+        stored_review=stored,
+        memory_written=memory_written,
+        audit_written=audit_written,
+    )
 
 
 def _persist_critic_review(
@@ -1058,6 +1076,33 @@ def _memory_request_for(review: StoredCriticReview) -> MemoryWriteRequest:
         metadata={
             "backtest_id": review.backtest_id,
             "status": review.status,
+        },
+    )
+
+
+def _audit_event_for(
+    review: StoredCriticReview,
+    *,
+    memory_written: bool,
+) -> AgentAuditEvent:
+    return AgentAuditEvent(
+        event_id=f"critic-agent-{review.review_id}",
+        agent_name="critic_agent",
+        action="critic_review_persisted",
+        reason=(
+            "Critic review persisted after a registered backtest result. Exact objections, "
+            "indicators, and decision evidence remain in registry."
+        ),
+        status="completed",
+        registry_refs=(f"registry:critic_reviews/{review.review_id}",),
+        memory_refs=(f"registry:critic_reviews/{review.review_id}",)
+        if memory_written
+        else (),
+        metadata={
+            "backtest_id": review.backtest_id,
+            "review_status": review.status,
+            "recommendation": review.recommendation,
+            "memory_written": memory_written,
         },
     )
 

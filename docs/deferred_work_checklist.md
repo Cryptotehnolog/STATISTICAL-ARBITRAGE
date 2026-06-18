@@ -22,10 +22,12 @@
   test prerequisites, сохранения backtest result в registry, optional factual series
   sidecar и optional memory summary. Statistical Testing Agent уже умеет писать audit
   event после проверки data-quality prerequisites, сохранения statistical-test result в
-  registry и optional memory summary. Осталось позже распространить этот же подход на
-  другие реальные agent workflow. Цель: каждый важный вызов агента оставляет понятный
-  след: кто действовал, что сделал, зачем, с каким статусом, на какие registry/memory
-  записи ссылается. В audit log нельзя писать secrets, raw logs или сырые payload.
+  registry и optional memory summary. Critic Agent уже умеет писать audit event после
+  проверки registered backtest result, сохранения critic review в registry и optional
+  memory summary. Осталось позже распространить этот же подход на другие реальные agent
+  workflow. Цель: каждый важный вызов агента оставляет понятный след: кто действовал, что
+  сделал, зачем, с каким статусом, на какие registry/memory записи ссылается. В audit log
+  нельзя писать secrets, raw logs или сырые payload.
 
 - [ ] **Сравнить Engle-Granger с Kalman/Johansen/Phillips-Perron как отдельный research
   benchmark** (`TD-0040`).

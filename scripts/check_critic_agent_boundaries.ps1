@@ -18,6 +18,14 @@ if ($source -notmatch "MemoryWriteRequest" -or $source -notmatch "memory_service
 }
 
 if (
+    $source -notmatch "AgentAuditEvent" -or
+    $source -notmatch "audit_writer\.append" -or
+    $source -notmatch "critic_review_persisted"
+) {
+    Write-Error "Critic Agent должен писать operator-safe AgentAuditEvent через audit_writer после registry persistence."
+}
+
+if (
     $source -notmatch "StoredCriticReview" -or
     $source -notmatch "session\.add\(stored\)" -or
     $source -notmatch "session\.flush\(\)"
