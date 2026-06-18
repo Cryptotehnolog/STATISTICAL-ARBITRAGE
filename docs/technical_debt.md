@@ -8,6 +8,25 @@ work, add it here in the same task unless it is already represented in `.kiro/sp
 
 ## Open
 
+### TD-0044: Implement validated Kalman, Johansen, and Phillips-Perron scenarios one by one
+
+Status: open
+
+Why deferred: TD-0040 created the explicit model-comparison harness and artifact boundary,
+but the alternative methods themselves are not trusted runtime statistics yet. Adding all
+methods at once would mix dependency choices, parameter policy, multiple-testing behavior,
+and conflict resolution into one hard-to-audit change.
+
+Follow-up:
+- Add one candidate method at a time behind `ModelComparisonScenario`.
+- Persist method parameters, dependency versions, sample windows, p-values/statistics,
+  out-of-sample evidence, and any failure reason in the model-comparison JSON artifact.
+- Keep Engle-Granger as the required baseline until a separate Critic/Coordinator policy
+  explicitly changes promotion rules.
+- Do not let a candidate method produce an approval decision directly.
+
+Related tasks: TD-0040, 6.x, 10.3, 24.2.
+
 ### TD-0043: Unify external API retry policy across data and runtime adapters
 
 Status: open
@@ -64,19 +83,18 @@ Related tasks: 13.x, 15.x, 17.x, 21.x, TD-0031.
 
 ### TD-0040: Add explicit model-comparison harness for Kalman, Johansen, and Phillips-Perron
 
-Status: open
+Status: resolved baseline
 
-Why deferred: External reviews correctly identified Kalman hedge ratios, Johansen/VECM,
-and Phillips-Perron stationarity checks as useful research extensions. Adding them directly
-to the active pipeline now would create unproven model branches and dependency decisions.
+Resolution: Added an explicit model-comparison harness in
+`stat_arb.statistical.model_comparison`. It requires exactly one Engle-Granger baseline,
+records alternative methods only as explicitly named research scenarios, persists benchmark
+evidence through a JSON sidecar plus `ReportArtifact`, and returns no promotion decision.
+Kalman, Johansen, and Phillips-Perron are registered as scenario identifiers but remain
+`not_implemented` until separate validated method tasks implement them.
 
-Follow-up:
-- Define a model-comparison contract before adding runtime flags.
-- Compare Engle-Granger/rolling OLS against Kalman or Johansen on the same datasets.
-- Evaluate Phillips-Perron or other stationarity diagnostics only with explicit dependency,
-  multiple-testing, and conflict-resolution policy.
-- Persist model method, parameters, dependency versions, metrics, and out-of-sample
-  evidence in registry/reproducibility metadata.
+Closed baseline by: `scripts/check_model_comparison_pipeline.ps1`.
+
+Follow-up: TD-0044 owns real candidate-method implementation and validation.
 
 Related tasks: 6.x, 10.3, 15.x, 24.2.
 

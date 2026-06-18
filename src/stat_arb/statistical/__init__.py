@@ -8,6 +8,13 @@ from stat_arb.statistical.cointegration import (
 )
 from stat_arb.statistical.hedge_ratio import HedgeRatioResult, estimate_hedge_ratio
 from stat_arb.statistical.mean_reversion import HalfLifeResult, estimate_half_life
+from stat_arb.statistical.model_comparison import (
+    ModelComparisonMethod,
+    ModelComparisonReport,
+    ModelComparisonScenario,
+    ModelComparisonScenarioResult,
+    compare_cointegration_models,
+)
 from stat_arb.statistical.regime import (
     RegimeChangePoint,
     RegimeChangeResult,
@@ -39,6 +46,10 @@ __all__ = [
     "HalfLifeResult",
     "HedgeRatioResult",
     "IndexWindow",
+    "ModelComparisonMethod",
+    "ModelComparisonReport",
+    "ModelComparisonScenario",
+    "ModelComparisonScenarioResult",
     "MultipleTestingMethod",
     "RegimeChangePoint",
     "RegimeChangeResult",
@@ -52,6 +63,7 @@ __all__ = [
     "assert_no_lookahead",
     "adjust_p_values",
     "chronological_train_test_split",
+    "compare_cointegration_models",
     "construct_rolling_zscore",
     "detect_regime_changes",
     "diagnose_residuals",

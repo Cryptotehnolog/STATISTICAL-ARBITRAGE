@@ -43,10 +43,12 @@ retrieved ApeRAG context; it is not a generative LLM judge.
   summary. The audit-trail baseline is complete for current mature boundaries. Future
   workflow wiring should create a separate audit-hardening task for new real agent
   boundaries. Audit logs must not carry secrets, tokens, raw logs, or raw payloads.
-- Model comparison: keep Kalman, Johansen/VECM, and Phillips-Perron as explicit research
-  extensions. Add them through a model-comparison harness with persisted method,
-  parameters, dependency versions, out-of-sample evidence, and multiple-testing/conflict
-  policy, not as hidden replacements for Engle-Granger.
+- Model comparison: the explicit harness baseline exists. Engle-Granger is the required
+  baseline, alternative methods are named research scenarios, comparison evidence is
+  persisted as JSON sidecar plus registry artifact, and the harness never returns an
+  approve/promote decision. Kalman, Johansen/VECM, and Phillips-Perron remain future
+  candidate-method implementations that must be added one by one with explicit dependency,
+  parameter, multiple-testing, conflict-resolution, and out-of-sample evidence policy.
 - Event bus and heartbeat: add these only after real long-running worker agents or
   live/paper services exist. Current CLI/registry workflows should stay deterministic and
   should not gain Redis/RabbitMQ/asyncio infrastructure without a measured workflow need.

@@ -32,11 +32,20 @@
   статусом, на какие registry/memory записи ссылается. В audit log нельзя писать secrets,
   raw logs или сырые payload.
 
-- [ ] **Сравнить Engle-Granger с Kalman/Johansen/Phillips-Perron как отдельный research
-  benchmark** (`TD-0040`).
-  Это не замена текущего pipeline. Нужно сделать честное сравнение моделей на одинаковых
-  данных: качество residuals, stability, turnover, out-of-sample результат и стоимость
-  ошибок. Только после такого сравнения можно решать, какие методы включать в runtime.
+- [x] **Сделать explicit model-comparison harness для будущего сравнения методов**
+  (`TD-0040`).
+  Базовый слой закрыт: Engle-Granger остается единственным baseline, альтернативные методы
+  можно указывать только как явные research scenarios, результаты сохраняются в JSON
+  sidecar и registry artifact, а сам benchmark не выдает решение approve/promote. Это
+  защищает проект от ситуации, где Kalman/Johansen/Phillips-Perron “случайно” становятся
+  новой истиной без Critic/Coordinator policy.
+
+- [ ] **Реализовать и валидировать реальные Kalman/Johansen/Phillips-Perron сценарии**
+  (`TD-0044`).
+  Следующий слой после harness: добавить реальные методы по одному, с явными зависимостями,
+  параметрами, dependency versions, multiple-testing/conflict policy и out-of-sample
+  доказательствами. Пока метод не прошел такой путь, он остается research evidence, а не
+  runtime gate.
 
 - [ ] **Добавить event bus и heartbeat только когда появятся долгоживущие worker-агенты**
   (`TD-0041`).

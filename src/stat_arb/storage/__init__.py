@@ -44,6 +44,7 @@ from .migrations import (
     stamp_database,
     upgrade_database,
 )
+from .model_comparison import StoredModelComparisonArtifact, persist_model_comparison_artifact
 from .models import (
     BacktestResult,
     Base,
@@ -71,7 +72,9 @@ __all__ = [
     "ReportArtifact",
     # Data quality persistence
     "StoredOHLCVIngestionResult",
+    "StoredModelComparisonArtifact",
     "persist_ohlcv_ingestion_result",
+    "persist_model_comparison_artifact",
     # Database utilities
     "DatabaseManager",
     "get_database_url",
