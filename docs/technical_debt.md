@@ -10,15 +10,25 @@ work, add it here in the same task unless it is already represented in `.kiro/sp
 
 ### TD-0044: Implement validated Kalman, Johansen, and Phillips-Perron scenarios one by one
 
-Status: open
+Status: open; Johansen candidate implemented
 
-Why deferred: TD-0040 created the explicit model-comparison harness and artifact boundary,
-but the alternative methods themselves are not trusted runtime statistics yet. Adding all
-methods at once would mix dependency choices, parameter policy, multiple-testing behavior,
-and conflict resolution into one hard-to-audit change.
+Current baseline: Johansen is implemented as the first real candidate scenario through
+`statsmodels.tsa.vector_ar.vecm.coint_johansen`. The model-comparison harness requires
+explicit `det_order` and `k_ar_diff`, supports only the Johansen critical-value alpha
+levels exposed by statsmodels (`0.10`, `0.05`, `0.01`), stores trace/max-eigen evidence in
+artifact details, and does not invent a p-value. The result is research evidence only and
+does not produce an approval decision.
+
+Why still open: Kalman hedge-ratio/state-space benchmarking and Phillips-Perron
+stationarity checks are not implemented. Phillips-Perron is not available in the currently
+installed `statsmodels 0.14.6`, so adding it requires a focused dependency decision rather
+than silently pulling in a new package.
 
 Follow-up:
-- Add one candidate method at a time behind `ModelComparisonScenario`.
+- Add Kalman only after choosing explicit state/noise parameter policy and persistence
+  fields for hedge-ratio path evidence.
+- Add Phillips-Perron only after a dependency/spike confirms API quality, licensing,
+  Windows/Ubuntu compatibility, and deterministic test behavior.
 - Persist method parameters, dependency versions, sample windows, p-values/statistics,
   out-of-sample evidence, and any failure reason in the model-comparison JSON artifact.
 - Keep Engle-Granger as the required baseline until a separate Critic/Coordinator policy

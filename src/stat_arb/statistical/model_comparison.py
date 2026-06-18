@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import numpy as np
 from numpy.typing import ArrayLike
+from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 from stat_arb.statistical.cointegration import (
     MultipleTestingMethod,
@@ -61,6 +62,7 @@ class ModelComparisonScenarioResult:
     alpha: float
     observations: int
     parameters: dict[str, Any]
+    details: dict[str, Any]
     reason: str | None = None
 
 
@@ -97,6 +99,7 @@ class ModelComparisonReport:
                     "alpha": result.alpha,
                     "observations": result.observations,
                     "parameters": result.parameters,
+                    "details": result.details,
                     "reason": result.reason,
                 }
                 for result in self.results
@@ -167,7 +170,14 @@ def _run_scenario(
             alpha=scenario.alpha,
             observations=result.observations,
             parameters=scenario.parameters,
+            details={
+                "critical_values": result.critical_values,
+                "corrected_p_value": result.corrected_p_value,
+                "multiple_testing_method": result.multiple_testing_method,
+            },
         )
+    if scenario.method == ModelComparisonMethod.JOHANSEN:
+        return _run_johansen_scenario(asset_a, asset_b, scenario)
 
     observations = int(np.asarray(asset_a).size)
     return ModelComparisonScenarioResult(
@@ -181,8 +191,95 @@ def _run_scenario(
         alpha=scenario.alpha,
         observations=observations,
         parameters=scenario.parameters,
+        details={},
         reason=(
             f"{scenario.method} is registered as an explicit research scenario, "
             "but it is not implemented as a trusted production statistic yet."
         ),
     )
+
+
+def _run_johansen_scenario(
+    asset_a: ArrayLike,
+    asset_b: ArrayLike,
+    scenario: ModelComparisonScenario,
+) -> ModelComparisonScenarioResult:
+    series_a = _as_1d_finite_array(asset_a, name="asset_a")
+    series_b = _as_1d_finite_array(asset_b, name="asset_b")
+    if series_a.shape != series_b.shape:
+        raise ValueError("asset_a and asset_b must have the same length")
+    if series_a.size < 20:
+        raise ValueError("Johansen scenario requires at least 20 observations")
+
+    det_order = _required_int_parameter(scenario, "det_order")
+    k_ar_diff = _required_int_parameter(scenario, "k_ar_diff")
+    if k_ar_diff < 0:
+        raise ValueError("k_ar_diff must be non-negative")
+
+    critical_value_index, critical_value_level = _johansen_critical_value_level(scenario.alpha)
+    data = np.column_stack((series_a, series_b))
+    result = coint_johansen(data, det_order=det_order, k_ar_diff=k_ar_diff)
+    trace_statistic = float(result.lr1[0])
+    max_eigen_statistic = float(result.lr2[0])
+    trace_critical_values = tuple(float(value) for value in result.cvt[0])
+    max_eigen_critical_values = tuple(float(value) for value in result.cvm[0])
+    critical_value = trace_critical_values[critical_value_index]
+
+    return ModelComparisonScenarioResult(
+        name=scenario.name,
+        method=scenario.method,
+        is_baseline=scenario.is_baseline,
+        status="completed",
+        statistic=trace_statistic,
+        p_value=None,
+        passed=trace_statistic > critical_value,
+        alpha=scenario.alpha,
+        observations=int(series_a.size),
+        parameters=scenario.parameters,
+        details={
+            "trace_statistic_rank_0": trace_statistic,
+            "max_eigen_statistic_rank_0": max_eigen_statistic,
+            "critical_value": critical_value,
+            "critical_value_level": critical_value_level,
+            "trace_critical_values": {
+                "90%": trace_critical_values[0],
+                "95%": trace_critical_values[1],
+                "99%": trace_critical_values[2],
+            },
+            "max_eigen_critical_values": {
+                "90%": max_eigen_critical_values[0],
+                "95%": max_eigen_critical_values[1],
+                "99%": max_eigen_critical_values[2],
+            },
+        },
+    )
+
+
+def _required_int_parameter(scenario: ModelComparisonScenario, name: str) -> int:
+    if name not in scenario.parameters:
+        raise ValueError(f"{name} is required for {scenario.method}")
+    value = scenario.parameters[name]
+    if not isinstance(value, int):
+        raise ValueError(f"{name} must be an integer for {scenario.method}")
+    return value
+
+
+def _johansen_critical_value_level(alpha: float) -> tuple[int, str]:
+    supported = {
+        0.10: (0, "90%"),
+        0.05: (1, "95%"),
+        0.01: (2, "99%"),
+    }
+    for supported_alpha, value in supported.items():
+        if abs(alpha - supported_alpha) < 1e-12:
+            return value
+    raise ValueError("supported Johansen alpha values are 0.10, 0.05, and 0.01")
+
+
+def _as_1d_finite_array(values: ArrayLike, *, name: str) -> np.ndarray:
+    array = np.asarray(values, dtype=float)
+    if array.ndim != 1:
+        raise ValueError(f"{name} must be one-dimensional")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return array

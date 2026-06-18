@@ -42,10 +42,13 @@
 
 - [ ] **Реализовать и валидировать реальные Kalman/Johansen/Phillips-Perron сценарии**
   (`TD-0044`).
-  Следующий слой после harness: добавить реальные методы по одному, с явными зависимостями,
-  параметрами, dependency versions, multiple-testing/conflict policy и out-of-sample
-  доказательствами. Пока метод не прошел такой путь, он остается research evidence, а не
-  runtime gate.
+  Первый слой закрыт: Johansen уже считается через `statsmodels.coint_johansen` как
+  explicit candidate scenario, с обязательными `det_order`, `k_ar_diff`, trace/max-eigen
+  evidence и без p-value имитации. Он остается research evidence и не может сам
+  approve/promote гипотезу. Следующие слои: Kalman hedge ratio/state-space benchmark и
+  Phillips-Perron stationarity check. Phillips-Perron не найден в текущем `statsmodels`,
+  поэтому для него нужен отдельный dependency/spike вместо тихого добавления новой
+  библиотеки.
 
 - [ ] **Добавить event bus и heartbeat только когда появятся долгоживущие worker-агенты**
   (`TD-0041`).

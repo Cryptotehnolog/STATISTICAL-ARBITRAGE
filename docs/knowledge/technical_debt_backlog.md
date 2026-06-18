@@ -46,9 +46,11 @@ retrieved ApeRAG context; it is not a generative LLM judge.
 - Model comparison: the explicit harness baseline exists. Engle-Granger is the required
   baseline, alternative methods are named research scenarios, comparison evidence is
   persisted as JSON sidecar plus registry artifact, and the harness never returns an
-  approve/promote decision. Kalman, Johansen/VECM, and Phillips-Perron remain future
-  candidate-method implementations that must be added one by one with explicit dependency,
-  parameter, multiple-testing, conflict-resolution, and out-of-sample evidence policy.
+  approve/promote decision. Johansen is now the first implemented candidate scenario via
+  `statsmodels.coint_johansen`; it requires explicit `det_order` and `k_ar_diff`, stores
+  trace/max-eigen evidence, and does not fake a p-value. Kalman and Phillips-Perron remain
+  future candidate-method implementations. Phillips-Perron is not present in current
+  `statsmodels`, so it needs a dependency/spike before implementation.
 - Event bus and heartbeat: add these only after real long-running worker agents or
   live/paper services exist. Current CLI/registry workflows should stay deterministic and
   should not gain Redis/RabbitMQ/asyncio infrastructure without a measured workflow need.

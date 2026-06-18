@@ -86,7 +86,7 @@ def test_model_comparison_records_candidates_without_promotion_decision() -> Non
                 name="johansen-candidate",
                 method=ModelComparisonMethod.JOHANSEN,
                 alpha=0.05,
-                parameters={"det_order": 0, "k_ar_diff": "manual-review-required"},
+                parameters={"det_order": 0, "k_ar_diff": 1},
                 is_baseline=False,
             ),
             ModelComparisonScenario(
@@ -108,10 +108,73 @@ def test_model_comparison_records_candidates_without_promotion_decision() -> Non
     assert report.results[0].method == ModelComparisonMethod.ENGLE_GRANGER
     assert report.results[0].p_value is not None
     assert report.results[0].passed is True
-    assert {result.status for result in report.results[1:]} == {"not_implemented"}
-    assert all(result.passed is None for result in report.results[1:])
+    johansen = report.results[1]
+    phillips_perron = report.results[2]
+    assert johansen.status == "completed"
+    assert johansen.method == ModelComparisonMethod.JOHANSEN
+    assert johansen.p_value is None
+    assert johansen.passed is True
+    assert johansen.details["trace_statistic_rank_0"] == pytest.approx(johansen.statistic)
+    assert johansen.details["critical_value"] > 0.0
+    assert johansen.details["critical_value_level"] == "95%"
+    assert phillips_perron.status == "not_implemented"
+    assert phillips_perron.passed is None
     assert report.promotion_decision is None
     assert "Coordinator/Critic" in report.decision_boundary
+
+
+def test_johansen_scenario_requires_explicit_supported_parameters() -> None:
+    """Johansen scenarios should reject hidden lag/deterministic assumptions."""
+    asset_a, asset_b = _cointegrated_pair()
+
+    for parameters, error in (
+        ({"det_order": 0}, "k_ar_diff"),
+        ({"k_ar_diff": 1}, "det_order"),
+        ({"det_order": 0, "k_ar_diff": -1}, "k_ar_diff"),
+    ):
+        with pytest.raises(ValueError, match=error):
+            compare_cointegration_models(
+                asset_a,
+                asset_b,
+                scenarios=(
+                    ModelComparisonScenario(
+                        name="engle-granger-baseline",
+                        method=ModelComparisonMethod.ENGLE_GRANGER,
+                        alpha=0.05,
+                        parameters={"multiple_testing_method": "none"},
+                        is_baseline=True,
+                    ),
+                    ModelComparisonScenario(
+                        name="johansen-candidate",
+                        method=ModelComparisonMethod.JOHANSEN,
+                        alpha=0.05,
+                        parameters=parameters,
+                        is_baseline=False,
+                    ),
+                ),
+            )
+
+    with pytest.raises(ValueError, match="supported Johansen alpha"):
+        compare_cointegration_models(
+            asset_a,
+            asset_b,
+            scenarios=(
+                ModelComparisonScenario(
+                    name="engle-granger-baseline",
+                    method=ModelComparisonMethod.ENGLE_GRANGER,
+                    alpha=0.05,
+                    parameters={"multiple_testing_method": "none"},
+                    is_baseline=True,
+                ),
+                ModelComparisonScenario(
+                    name="johansen-candidate",
+                    method=ModelComparisonMethod.JOHANSEN,
+                    alpha=0.07,
+                    parameters={"det_order": 0, "k_ar_diff": 1},
+                    is_baseline=False,
+                ),
+            ),
+        )
 
 
 def test_model_comparison_rejects_hidden_or_unserializable_scenario_config() -> None:
@@ -175,6 +238,7 @@ def test_persist_model_comparison_artifact_writes_json_sidecar_and_registry(
     assert stored.path.exists()
     assert stored.payload["promotion_decision"] is None
     assert stored.payload["decision_boundary"].startswith("Model comparison")
+    assert stored.payload["results"][0]["details"]["critical_values"]
     artifact = session.query(ReportArtifact).one()
     assert artifact.artifact_type == "statistical_model_comparison"
     assert artifact.format == "json"
