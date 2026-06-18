@@ -10,6 +10,7 @@ from typing import Protocol
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from stat_arb.agents.audit import AgentAuditEvent
 from stat_arb.memory import MemoryRecordType, MemoryWriteRequest
 from stat_arb.statistical import MultipleTestingMethod, adjust_p_values
 from stat_arb.storage.models import Hypothesis
@@ -20,6 +21,13 @@ class MemoryWriter(Protocol):
 
     def write(self, request: MemoryWriteRequest) -> object:
         """Write a policy-approved memory record."""
+
+
+class AuditWriter(Protocol):
+    """Minimal append-only audit writer used by this boundary."""
+
+    def append(self, event: AgentAuditEvent) -> object:
+        """Append one operator-safe audit event."""
 
 
 @dataclass(frozen=True)
@@ -108,6 +116,7 @@ class HypothesisGenerationResult:
     generated_count: int
     skipped_count: int
     memory_written: bool
+    audit_written: bool = False
 
 
 def generate_rule_based_hypotheses(
@@ -121,6 +130,7 @@ def generate_rule_based_hypotheses(
     novelty_config: HypothesisNoveltyConfig | None = None,
     memory_searcher: HypothesisMemorySearcher | None = None,
     linking_config: HypothesisLinkingConfig | None = None,
+    audit_writer: AuditWriter | None = None,
 ) -> HypothesisGenerationResult:
     """Generate deterministic pair hypotheses, persist them, and write memory summaries."""
     _validate_config(config)
@@ -195,11 +205,25 @@ def generate_rule_based_hypotheses(
             if link_request is not None:
                 memory_service.write(link_request)
 
+    memory_written = memory_service is not None and bool(stored)
+    audit_written = False
+    if audit_writer is not None and stored:
+        audit_writer.append(
+            _audit_event_for(
+                stored,
+                generated_count=len(stored),
+                skipped_count=skipped_count,
+                memory_written=memory_written,
+            )
+        )
+        audit_written = True
+
     return HypothesisGenerationResult(
         hypotheses=tuple(stored),
         generated_count=len(stored),
         skipped_count=skipped_count,
-        memory_written=memory_service is not None and bool(stored),
+        memory_written=memory_written,
+        audit_written=audit_written,
     )
 
 
@@ -469,5 +493,32 @@ def _link_memory_request_for(
             "asset_a": hypothesis.asset_a,
             "asset_b": hypothesis.asset_b,
             "similar_count": str(len(novelty.similar_hypothesis_refs)),
+        },
+    )
+
+
+def _audit_event_for(
+    hypotheses: Sequence[Hypothesis],
+    *,
+    generated_count: int,
+    skipped_count: int,
+    memory_written: bool,
+) -> AgentAuditEvent:
+    registry_refs = tuple(f"registry:hypotheses/{hypothesis.hypothesis_id}" for hypothesis in hypotheses)
+    return AgentAuditEvent(
+        event_id=f"hypothesis-agent-generation-{hypotheses[0].hypothesis_id}",
+        agent_name="hypothesis_agent",
+        action="hypotheses_generated",
+        reason=(
+            "Rule-based hypotheses persisted after explicit screening configuration. "
+            "Exact assets, scores, novelty links, and rationale remain in registry."
+        ),
+        status="completed",
+        registry_refs=registry_refs,
+        memory_refs=registry_refs if memory_written else (),
+        metadata={
+            "generated_count": generated_count,
+            "skipped_count": skipped_count,
+            "memory_written": memory_written,
         },
     )

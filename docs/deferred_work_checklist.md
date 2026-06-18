@@ -9,7 +9,7 @@
 
 ## Делать после нового runner, workflow или service boundary
 
-- [ ] **Подключить audit trail действий агентов к реальным workflow** (`TD-0039`).
+- [x] **Подключить audit trail действий агентов к реальным workflow** (`TD-0039`).
   Базовый безопасный контракт `AgentAuditEvent`, JSONL writer и первый реальный slice уже
   есть: Coordinator lifecycle transition может писать audit event после успешной записи в
   registry и Memory Agent policy, а CLI `experiment advance --audit-log-path` уже умеет
@@ -24,10 +24,13 @@
   event после проверки data-quality prerequisites, сохранения statistical-test result в
   registry и optional memory summary. Critic Agent уже умеет писать audit event после
   проверки registered backtest result, сохранения critic review в registry и optional
-  memory summary. Осталось позже распространить этот же подход на другие реальные agent
-  workflow. Цель: каждый важный вызов агента оставляет понятный след: кто действовал, что
-  сделал, зачем, с каким статусом, на какие registry/memory записи ссылается. В audit log
-  нельзя писать secrets, raw logs или сырые payload.
+  memory summary. Hypothesis Agent уже умеет писать audit event после rule-based
+  screening, сохранения hypotheses в registry и optional memory summary. Для текущих
+  зрелых boundaries baseline закрыт. Если позже появится новый реальный agent/workflow
+  boundary, audit trail для него нужно заводить отдельной маленькой задачей. Цель: каждый
+  важный вызов агента оставляет понятный след: кто действовал, что сделал, зачем, с каким
+  статусом, на какие registry/memory записи ссылается. В audit log нельзя писать secrets,
+  raw logs или сырые payload.
 
 - [ ] **Сравнить Engle-Granger с Kalman/Johansen/Phillips-Perron как отдельный research
   benchmark** (`TD-0040`).

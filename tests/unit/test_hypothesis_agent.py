@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from stat_arb.agents import (
+    AgentAuditEvent,
     HypothesisGenerationConfig,
     HypothesisLinkingConfig,
     HypothesisMemorySearchResult,
@@ -40,6 +41,17 @@ class FakeMemoryService:
 
     def write(self, request: MemoryWriteRequest) -> object:
         self.requests.append(request)
+        return object()
+
+
+class FakeAuditWriter:
+    """Fake append-only audit sink that records safe audit events."""
+
+    def __init__(self) -> None:
+        self.events: list[AgentAuditEvent] = []
+
+    def append(self, event: AgentAuditEvent) -> object:
+        self.events.append(event)
         return object()
 
 
@@ -110,6 +122,50 @@ def test_hypothesis_agent_generates_registry_records_and_memory_summaries() -> N
     assert len(memory.requests) == 1
     assert memory.requests[0].registry_reference == f"registry:hypotheses/{stored[0].hypothesis_id}"
     assert "Generated rule-based pair hypothesis" in memory.requests[0].body
+
+
+def test_hypothesis_agent_writes_operator_safe_audit_event_after_registry() -> None:
+    """Hypothesis Agent should audit generated hypotheses after registry and memory writes."""
+    session = _session()
+    memory = FakeMemoryService()
+    audit = FakeAuditWriter()
+
+    result = generate_rule_based_hypotheses(
+        assets=(
+            HypothesisUniverseAsset(symbol="AAA", sector="Banks", market_cap=100_000_000_000),
+            HypothesisUniverseAsset(symbol="BBB", sector="Banks", market_cap=95_000_000_000),
+            HypothesisUniverseAsset(symbol="CCC", sector="Energy", market_cap=120_000_000_000),
+        ),
+        correlations={
+            ("AAA", "BBB"): 0.93,
+            ("AAA", "CCC"): 0.98,
+        },
+        candidate_p_values={
+            ("AAA", "BBB"): 0.01,
+            ("AAA", "CCC"): 0.01,
+        },
+        config=_generation_config(),
+        session=session,
+        memory_service=memory,
+        audit_writer=audit,
+    )
+
+    assert result.memory_written is True
+    assert result.audit_written is True
+    assert len(audit.events) == 1
+    event = audit.events[0]
+    assert event.agent_name == "hypothesis_agent"
+    assert event.action == "hypotheses_generated"
+    assert event.status == "completed"
+    assert event.registry_refs == (
+        f"registry:hypotheses/{result.hypotheses[0].hypothesis_id}",
+    )
+    assert event.memory_refs == (memory.requests[0].registry_reference,)
+    assert event.metadata["generated_count"] == 1
+    assert event.metadata["skipped_count"] == 2
+    assert event.metadata["memory_written"] is True
+    assert "absolute correlation" not in event.reason
+    assert "AAA" not in event.reason
 
 
 def test_hypothesis_agent_calculates_novelty_from_registry_and_aperag() -> None:
@@ -434,6 +490,8 @@ def test_hypothesis_agent_boundary_guard_is_in_pre_commit_and_ci() -> None:
     assert "ApeRAGMemoryClient" in script
     assert "Hypothesis" in script
     assert "session.add" in script
+    assert "AgentAuditEvent" in script
+    assert "audit_writer\\.append" in script
     assert "check_hypothesis_agent_boundaries.ps1" in pre_commit
     assert "Invoke-RequiredCheck $hypothesisAgentBoundaryCheckScript" in pre_commit
     assert "Check Hypothesis Agent boundaries" in ci

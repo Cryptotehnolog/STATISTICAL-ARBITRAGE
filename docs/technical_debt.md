@@ -82,7 +82,7 @@ Related tasks: 6.x, 10.3, 15.x, 24.2.
 
 ### TD-0039: Wire agent audit events through real workflows
 
-Status: open; Coordinator, Statistical Testing Agent, Backtest Agent, Critic Agent, and Report Agent slices implemented
+Status: baseline complete for current mature boundaries
 
 Current baseline: The project now has an operator-safe `AgentAuditEvent` contract, local
 JSONL writer foundation, Coordinator lifecycle transitions can write sanitized audit events
@@ -101,13 +101,14 @@ Memory Agent summary. Statistical Testing Agent can now emit a sanitized
 `statistical_test_persisted` audit event after data-quality prerequisites, registry
 statistical-test persistence, and optional Memory Agent summary. Critic Agent can now
 emit a sanitized `critic_review_persisted` audit event after registered backtest
-verification, registry critic-review persistence, and optional Memory Agent summary. Full
-workflow wiring should still be staged so audit logs are not duplicated, noisy, or allowed
-to leak secrets/raw payloads.
+verification, registry critic-review persistence, and optional Memory Agent summary.
+Hypothesis Agent can now emit a sanitized `hypotheses_generated` audit event after
+rule-based screening, registry hypothesis persistence, and optional Memory Agent summary.
+Full future workflow wiring should still be staged so audit logs are not duplicated,
+noisy, or allowed to leak secrets/raw payloads.
 
 Follow-up:
-- Extend the same audit pattern from Coordinator, Statistical Testing Agent, Backtest
-  Agent, Critic Agent, and Report Agent to other real agent workflows when they become
+- Treat new agent/workflow boundaries as a separate audit-hardening task when they become
   active execution boundaries.
 - Keep exact numeric artifacts in registry/sidecars; audit logs should point to them.
 - Keep dashboard audit inspection read-only; any future approval action must continue to

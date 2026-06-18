@@ -17,6 +17,14 @@ if ($source -notmatch "MemoryWriteRequest" -or $source -notmatch "memory_service
     Write-Error "Hypothesis Agent summary должен проходить через MemoryAgentService-compatible writer."
 }
 
+if (
+    $source -notmatch "AgentAuditEvent" -or
+    $source -notmatch "audit_writer\.append" -or
+    $source -notmatch "hypotheses_generated"
+) {
+    Write-Error "Hypothesis Agent должен писать operator-safe AgentAuditEvent через audit_writer после registry persistence."
+}
+
 $hasRegistryAdd = $source.Contains("session.add(")
 $hasRegistryFlush = $source.Contains("session.flush()")
 if ($source -notmatch "Hypothesis" -or -not $hasRegistryAdd -or -not $hasRegistryFlush) {

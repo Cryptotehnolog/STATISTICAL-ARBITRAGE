@@ -38,8 +38,11 @@ retrieved ApeRAG context; it is not a generative LLM judge.
   statistical-test result persistence, and optional Memory Agent summary. Critic Agent now
   emits a sanitized `critic_review_persisted` audit event after registered backtest
   verification, registry critic-review persistence, and optional Memory Agent summary.
-  Future workflow wiring should extend this pattern to other real agent boundaries. Audit
-  logs must not carry secrets, tokens, raw logs, or raw payloads.
+  Hypothesis Agent now emits a sanitized `hypotheses_generated` audit event after
+  rule-based screening, registry hypothesis persistence, and optional Memory Agent
+  summary. The audit-trail baseline is complete for current mature boundaries. Future
+  workflow wiring should create a separate audit-hardening task for new real agent
+  boundaries. Audit logs must not carry secrets, tokens, raw logs, or raw payloads.
 - Model comparison: keep Kalman, Johansen/VECM, and Phillips-Perron as explicit research
   extensions. Add them through a model-comparison harness with persisted method,
   parameters, dependency versions, out-of-sample evidence, and multiple-testing/conflict
